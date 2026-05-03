@@ -7,6 +7,7 @@ export interface Evaluation {
   status: 'borrador' | 'finalizada';
   total_score: number;
   general_analysis: string | null;
+  history?: any[];
   results: EvaluationResult[];
 }
 
