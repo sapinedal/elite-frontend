@@ -7,10 +7,12 @@ interface ModalProps {
   onClose: () => void;
   onConfirm?: () => void;
   title: string;
-  message: string;
+  message?: string;
   confirmText?: string;
+
   cancelText?: string;
   type?: 'info' | 'warning' | 'danger' | 'success';
+  children?: React.ReactNode;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -21,7 +23,8 @@ export const Modal: React.FC<ModalProps> = ({
   message,
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
-  type = 'info'
+  type = 'info',
+  children
 }) => {
   const getTypeStyles = () => {
     switch (type) {
@@ -36,7 +39,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <Portal isOpen={isOpen}>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 animate-in fade-in duration-200">
+      <div className="fixed inset-0 z-9999 flex items-center justify-center p-4 bg-slate-900/40 animate-in fade-in duration-200">
         <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
           <div className="p-8">
             <div className="flex justify-between items-start mb-6">
@@ -49,30 +52,40 @@ export const Modal: React.FC<ModalProps> = ({
             </div>
 
             <h3 className="text-xl font-extrabold text-slate-800 mb-2 tracking-tight">{title}</h3>
-            <p className="text-slate-500 font-medium leading-relaxed">{message}</p>
 
-            <div className="flex gap-4 mt-10">
-              <button
-                onClick={onClose}
-                className="flex-1 px-6 py-4 bg-slate-50 text-slate-500 rounded-2xl font-bold hover:bg-slate-100 transition-all tracking-tight"
-              >
-                {cancelText}
-              </button>
-              {onConfirm && (
-                <button
-                  onClick={() => {
-                    onConfirm();
-                    onClose();
-                  }}
-                  className={`flex-1 px-6 py-4 text-white rounded-2xl font-bold shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] tracking-tight ${styles.button}`}
-                >
-                  {confirmText}
-                </button>
-              )}
-            </div>
+            {children ? (
+              <div className="mt-4">
+                {children}
+              </div>
+            ) : (
+              <>
+                <p className="text-slate-500 font-medium leading-relaxed">{message}</p>
+
+                <div className="flex gap-4 mt-10">
+                  <button
+                    onClick={onClose}
+                    className="flex-1 px-6 py-4 bg-slate-50 text-slate-500 rounded-2xl font-bold hover:bg-slate-100 transition-all tracking-tight"
+                  >
+                    {cancelText}
+                  </button>
+                  {onConfirm && (
+                    <button
+                      onClick={() => {
+                        onConfirm();
+                        onClose();
+                      }}
+                      className={`flex-1 px-6 py-4 text-white rounded-2xl font-bold shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] tracking-tight ${styles.button}`}
+                    >
+                      {confirmText}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
     </Portal>
+
   );
 };

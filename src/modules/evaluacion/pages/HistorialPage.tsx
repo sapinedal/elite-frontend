@@ -8,6 +8,8 @@ import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Autocomplete } from '../../../components/ui/Autocomplete';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { EvaluationViewModal } from '../../../components/ui/EvaluationViewModal';
+import { Modal } from '../../../components/ui/Modal';
+
 
 export default function HistorialPage() {
   const { users } = useUsers();
@@ -15,6 +17,10 @@ export default function HistorialPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEval, setSelectedEval] = useState<Evaluation | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [selectedEvalForHistory, setSelectedEvalForHistory] = useState<Evaluation | null>(null);
+
 
   // Filters
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
@@ -242,10 +248,26 @@ export default function HistorialPage() {
                       {getStatusBadge(evalu.status)}
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <button className="h-10 w-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-[#EE9D4C] hover:border-[#EE9D4C] hover:bg-orange-50 group-hover:shadow-lg transition-all transform group-hover:scale-105 active:scale-95">
-                        <ArrowUpRight size={18} />
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        {(evalu.history?.length || 0) > 0 && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedEvalForHistory(evalu);
+                              setIsHistoryModalOpen(true);
+                            }}
+                            className="h-10 w-10 flex items-center justify-center bg-orange-50 border border-orange-100 rounded-xl text-[#EE9D4C] hover:bg-[#EE9D4C] hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-sm"
+                            title="Ver historial de cambios"
+                          >
+                            <History size={16} />
+                          </button>
+                        )}
+                        <button className="h-10 w-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-[#EE9D4C] hover:border-[#EE9D4C] hover:bg-orange-50 group-hover:shadow-lg transition-all transform group-hover:scale-105 active:scale-95">
+                          <ArrowUpRight size={18} />
+                        </button>
+                      </div>
                     </td>
+
                   </tr>
                 ))
               )}
@@ -259,6 +281,64 @@ export default function HistorialPage() {
         onClose={() => setIsModalOpen(false)}
         evaluation={selectedEval}
       />
+
+      <Modal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        title="Historial de Auditoría"
+      >
+        <div className="p-8 space-y-8">
+          <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <div className="h-12 w-12 bg-[#004C6C] rounded-xl flex items-center justify-center text-white">
+              <History size={24} />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-[#004C6C] uppercase tracking-tight">Registro de Revisiones</h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Se muestran los estados anteriores de esta evaluación</p>
+            </div>
+          </div>
+
+          <div className="space-y-6 relative before:absolute before:left-[17px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+            {[...(selectedEvalForHistory?.history || [])].reverse().map((rev, idx) => (
+              <div key={idx} className="relative pl-12 group">
+                <div className="absolute left-0 top-1.5 h-9 w-9 rounded-full bg-white border-4 border-slate-50 shadow-sm flex items-center justify-center z-10 group-hover:border-[#EE9D4C] transition-colors">
+                  <div className="h-2 w-2 rounded-full bg-slate-300 group-hover:bg-[#EE9D4C]" />
+                </div>
+                
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm group-hover:border-[#004C6C]/10 group-hover:shadow-md transition-all">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
+                      {new Date(rev.updated_at).toLocaleString('es-ES', { 
+                        day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+                      })}
+                    </span>
+                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${getScoreColor(rev.total_score)}`}>
+                      {Number(rev.total_score).toFixed(1)}%
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Análisis en esta versión:</p>
+                    <p className="text-xs text-slate-600 italic leading-relaxed bg-slate-50/50 p-3 rounded-xl border border-slate-50">
+                      "{rev.general_analysis || 'Sin análisis cualitativo registrado.'}"
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-6 border-t border-slate-100 flex justify-center">
+            <button
+              onClick={() => setIsHistoryModalOpen(false)}
+              className="px-8 py-3 bg-slate-100 text-slate-500 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
+            >
+              Cerrar Historial
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
+
   );
 }
