@@ -151,7 +151,8 @@ export default function NuevaEvaluacionPage() {
     item.real_value = numVal;
     item.score = numVal !== null ? calculateScore(numVal, item.kpi_target, !!item.lower_is_better) : 0;
 
-    const totalScore = calculateTotalScore(updatedResults.filter(r => r.real_value !== null));
+    const totalScore = calculateTotalScore(updatedResults);
+
 
     setEvaluation({
       ...evaluation,
@@ -216,7 +217,8 @@ export default function NuevaEvaluacionPage() {
       kpiRes.score = avgScore;
     }
 
-    const totalScore = calculateTotalScore(updatedResults.filter(r => r.real_value !== null));
+    const totalScore = calculateTotalScore(updatedResults);
+
 
     setEvaluation({
       ...evaluation,
@@ -290,7 +292,8 @@ export default function NuevaEvaluacionPage() {
       kpiRes.score = avgScore;
     }
 
-    const totalScore = calculateTotalScore(updatedResults.filter(r => r.real_value !== null));
+    const totalScore = calculateTotalScore(updatedResults);
+
     setEvaluation({ ...evaluation, results: updatedResults, total_score: totalScore });
   };
 
