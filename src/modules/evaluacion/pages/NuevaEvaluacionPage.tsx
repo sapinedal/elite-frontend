@@ -358,36 +358,7 @@ export default function NuevaEvaluacionPage() {
     }
   };
 
-  const handleUpdateDetailTable = (idx: number, tableData: any) => {
-    if (!evaluation || !evaluation.results) return;
 
-    const updatedResults = [...evaluation.results];
-    const item = updatedResults[idx];
-    item.tablaDetalle = tableData;
-
-    if (tableData && tableData.headers && tableData.rows) {
-      const valorColIdx = tableData.headers.findIndex((h: string) => h.toLowerCase() === 'valor');
-
-      if (valorColIdx !== -1) {
-        const total = tableData.rows.reduce((sum: number, row: string[]) => {
-          const val = parseFloat(row[valorColIdx]);
-          return sum + (isNaN(val) ? 0 : val);
-        }, 0);
-
-        const cappedTotal = Math.min(total, 100);
-        item.real_value = cappedTotal;
-        item.score = calculateScore(cappedTotal, item.kpi_target, !!item.lower_is_better);
-      }
-    }
-
-    const totalScore = calculateTotalScore(updatedResults.filter(r => r.real_value !== null));
-
-    setEvaluation({
-      ...evaluation,
-      results: updatedResults,
-      total_score: totalScore
-    });
-  };
 
   const handleUpdateAnalysis = (value: string) => {
     setEvaluation(prev => {
@@ -745,12 +716,7 @@ export default function NuevaEvaluacionPage() {
                     </div>
                   )}
 
-                  <div className="pt-2 border-t border-slate-50">
-                    <KPIDetailTable
-                      data={res.tablaDetalle}
-                      onChange={(data) => handleUpdateDetailTable(idx, data)}
-                    />
-                  </div>
+
                 </div>
               </Collapse>
             ))}

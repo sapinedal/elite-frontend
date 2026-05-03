@@ -38,5 +38,10 @@ export const userService = {
   syncUserKPIs: async (userId: number, kpis: Partial<KPI>[]): Promise<User> => {
     const { data } = await api.post(`/v1/users/${userId}/kpis/sync`, { kpis });
     return data;
+  },
+  
+  deleteKPI: async (kpiId: number): Promise<void> => {
+    await api.delete(`/v1/kpis/${kpiId}`);
   }
 };
+

@@ -5,6 +5,7 @@ import { Plus, Trash2, Save, Users, Target, ShieldAlert, ArrowLeft, List, Settin
 import { useNotification } from '../../../context/NotificationContext';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { Modal } from '../../../components/ui/Modal';
+import { userService } from '../../users/services/userService';
 
 export default function PlantillasPage() {
   const { users, isLoading: usersLoading } = useUsers();
@@ -45,14 +46,26 @@ export default function PlantillasPage() {
     showNotification('Nuevo KPI agregado a la lista', 'info');
   };
 
-  const handleRemoveKPI = () => {
+  const handleRemoveKPI = async () => {
     if (isRemoveModalOpen.index === null) return;
-    const updated = [...localKpis];
-    updated.splice(isRemoveModalOpen.index, 1);
-    setLocalKpis(updated);
-    setIsRemoveModalOpen({ open: false, index: null });
-    showNotification('KPI eliminado', 'warning');
+    const kpiToRemove = localKpis[isRemoveModalOpen.index];
+
+    try {
+      if (kpiToRemove.id) {
+        await userService.deleteKPI(kpiToRemove.id);
+      }
+
+      const updated = [...localKpis];
+      updated.splice(isRemoveModalOpen.index, 1);
+      setLocalKpis(updated);
+      setIsRemoveModalOpen({ open: false, index: null });
+      showNotification('KPI eliminado correctamente', 'success');
+    } catch (error) {
+      console.error(error);
+      showNotification('Error al intentar eliminar el KPI de la base de datos', 'error');
+    }
   };
+
 
   const handleUpdateKPI = (index: number, fields: Partial<KPI>) => {
     const updated = [...localKpis];
