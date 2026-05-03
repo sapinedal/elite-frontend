@@ -8,18 +8,22 @@ interface KPIDetailTableProps {
     rows: string[][];
   } | null;
   onChange: (newData: { headers: string[]; rows: string[][] } | null) => void;
+  defaultHeaders?: string[];
 }
 
-export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange }) => {
+export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, defaultHeaders }) => {
+
   const [isRemoveModalOpen, setIsRemoveModalOpen] = React.useState(false);
   const isEnabled = !!data && Array.isArray(data.headers) && Array.isArray(data.rows);
 
   const handleInitialize = () => {
+    const headers = defaultHeaders || ['Descripción', 'Valor', 'Observación'];
     onChange({
-      headers: ['Descripción', 'Valor', 'Observación'],
-      rows: [['', '', '']]
+      headers: headers,
+      rows: [new Array(headers.length).fill('')]
     });
   };
+
 
   const handleRemove = () => {
     setIsRemoveModalOpen(true);
@@ -132,16 +136,22 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange }
           <tbody>
             {data.rows.map((row, rowIdx) => (
               <tr key={rowIdx} className="hover:bg-white/80 group/row transition-colors">
-                {row.map((cell, colIdx) => (
-                  <td key={colIdx} className="p-0 border-b border-r border-slate-100">
-                    <input
-                      type="text"
-                      value={cell}
-                      onChange={(e) => handleUpdateCell(rowIdx, colIdx, e.target.value)}
-                      className="w-full p-4 text-sm font-medium text-slate-600 bg-transparent outline-none focus:bg-white focus:ring-inset focus:ring-1 focus:ring-blue-50 transition-all"
-                    />
-                  </td>
-                ))}
+                {row.map((cell, colIdx) => {
+                  const header = data.headers[colIdx].toLowerCase();
+                  const isDateField = header.includes('fecha') || header.includes('cierre');
+                  
+                  return (
+                    <td key={colIdx} className="p-0 border-b border-r border-slate-100">
+                      <input
+                        type={isDateField ? "date" : "text"}
+                        value={cell}
+                        onChange={(e) => handleUpdateCell(rowIdx, colIdx, e.target.value)}
+                        className="w-full p-4 text-sm font-medium text-slate-600 bg-transparent outline-none focus:bg-white focus:ring-inset focus:ring-1 focus:ring-blue-50 transition-all"
+                      />
+                    </td>
+                  );
+                })}
+
                 <td className="p-2 border-b border-slate-100 text-center">
                   <button
                     onClick={() => handleDeleteRow(rowIdx)}

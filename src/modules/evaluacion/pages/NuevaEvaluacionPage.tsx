@@ -225,6 +225,76 @@ export default function NuevaEvaluacionPage() {
     });
   };
 
+  const handleUpdateIndicatorDetailTable = (kpiIdx: number, indIdx: number, tableData: any) => {
+    if (!evaluation || !evaluation.results) return;
+
+    const updatedResults = [...evaluation.results];
+    const kpiRes = updatedResults[kpiIdx];
+    if (!kpiRes.indicator_results) return;
+
+    const indRes = kpiRes.indicator_results[indIdx];
+    indRes.tablaDetalle = tableData;
+
+    if (tableData && tableData.headers && tableData.rows) {
+      const headers = tableData.headers.map((h: string) => h.toLowerCase());
+      const initialIdx = headers.findIndex((h: string) => h.includes('inicial'));
+      const cierreIdx = headers.findIndex((h: string) => h === 'cierre');
+      const diasIdx = headers.findIndex((h: string) => h === 'dias' || h === 'días');
+
+      // Cálculo automático de días si están las columnas de fecha
+      if (initialIdx !== -1 && cierreIdx !== -1 && diasIdx !== -1) {
+        tableData.rows.forEach((row: string[]) => {
+          if (row[initialIdx] && row[cierreIdx]) {
+            const start = new Date(row[initialIdx]);
+            const end = new Date(row[cierreIdx]);
+            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+              const diffTime = end.getTime() - start.getTime();
+              const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+              row[diasIdx] = diffDays.toString();
+            }
+          }
+        });
+      }
+
+      const diasColIdx = tableData.headers.findIndex((h: string) => h.toLowerCase() === 'dias' || h.toLowerCase() === 'días');
+      const valorColIdx = tableData.headers.findIndex((h: string) => h.toLowerCase() === 'valor');
+
+      if (diasColIdx !== -1) {
+        // Lógica de promedio para Tiempo de Cierre (Excel: =PROMEDIO(BB75:BB88))
+        const validRows = tableData.rows.filter((row: string[]) => row[diasColIdx] !== '' && !isNaN(parseFloat(row[diasColIdx])));
+        const sum = validRows.reduce((acc: number, row: string[]) => acc + parseFloat(row[diasColIdx]), 0);
+        const avg = validRows.length > 0 ? sum / validRows.length : 0;
+        indRes.calculated_value = avg;
+      } else if (valorColIdx !== -1) {
+        const sum = tableData.rows.reduce((acc: number, row: string[]) => {
+          const val = parseFloat(row[valorColIdx]);
+          return acc + (isNaN(val) ? 0 : val);
+        }, 0);
+        indRes.calculated_value = sum;
+      }
+
+      const goals = (indRes as any).conditional_goals || [];
+      const matchedGoal = goals.find((g: any) => indRes.calculated_value >= g.min_value && indRes.calculated_value <= g.max_value);
+
+      if (matchedGoal) {
+        indRes.level = matchedGoal.level;
+        indRes.qualification = matchedGoal.qualification;
+        indRes.score = (matchedGoal.score !== undefined) ? matchedGoal.score : (indRes.calculated_value > 100 ? 100 : indRes.calculated_value);
+      }
+    }
+
+    if (kpiRes.indicator_results.length > 0) {
+      const sumScores = kpiRes.indicator_results.reduce((acc, curr) => acc + (curr.score || 0), 0);
+      const avgScore = sumScores / kpiRes.indicator_results.length;
+      kpiRes.real_value = avgScore;
+      kpiRes.score = avgScore;
+    }
+
+    const totalScore = calculateTotalScore(updatedResults.filter(r => r.real_value !== null));
+    setEvaluation({ ...evaluation, results: updatedResults, total_score: totalScore });
+  };
+
+
   const handleGenerateSubIndicatorAI = async (kpiIdx: number, indIdx: number) => {
     if (!evaluation || !evaluation.results) return;
 
@@ -258,6 +328,7 @@ export default function NuevaEvaluacionPage() {
         - Meta: ${indRes.fixed_goal || 'Según parámetros'}
         - Nivel: ${indRes.level}
         - Calificación: ${indRes.qualification}
+        ${indRes.tablaDetalle ? `- Datos de Soporte: ${JSON.stringify(indRes.tablaDetalle.rows.length)} registros procesados.` : ''}
         
         Responde directamente en español en un párrafo fluido.
       `;
@@ -626,6 +697,14 @@ export default function NuevaEvaluacionPage() {
                                   {ind.unit === '$' ? '$ ' : ''}{ind.calculated_value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}{ind.unit !== '$' ? (ind.unit || '%') : ''}
                                 </div>
                               </div>
+                            </div>
+
+                            <div className="mt-6 pt-4 border-t border-slate-100">
+                              <KPIDetailTable
+                                data={ind.tablaDetalle}
+                                onChange={(data) => handleUpdateIndicatorDetailTable(idx, iIdx, data)}
+                                defaultHeaders={ind.indicator_name === 'Tiempo Promedio de Cierre de Negocios' ? ['VENTAS', 'FECHA INICIAL', 'CIERRE', 'DIAS'] : undefined}
+                              />
                             </div>
 
                             <div className="mt-6 space-y-4">
