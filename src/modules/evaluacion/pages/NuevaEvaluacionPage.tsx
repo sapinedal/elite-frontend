@@ -352,6 +352,14 @@ export default function NuevaEvaluacionPage() {
       });
 
       const result = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = result.error?.message || "Error al conectar con la IA";
+        showNotification(errorMsg, "error");
+        setIsGeneratingAI(false);
+        return;
+      }
+
       const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (aiText) {
@@ -360,9 +368,9 @@ export default function NuevaEvaluacionPage() {
         setEvaluation({ ...evaluation, results: updatedResults });
         showNotification("Análisis del indicador generado", "success");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Error:", error);
-      showNotification("Error al generar análisis", "error");
+      showNotification(error.message || "Error al generar análisis", "error");
     } finally {
       setIsGeneratingAI(false);
     }
@@ -418,15 +426,23 @@ export default function NuevaEvaluacionPage() {
       });
 
       const result = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = result.error?.message || "Error al conectar con la IA";
+        showNotification(errorMsg, "error");
+        setIsGeneratingAI(false);
+        return;
+      }
+
       const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (aiText) {
         handleUpdateAnalysis(aiText.trim());
         showNotification("Análisis generado exitosamente por IA", "success");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Gemini AI Error:", error);
-      showNotification("Error al conectar con la IA", "error");
+      showNotification(error.message || "Error al conectar con la IA", "error");
     } finally {
       setIsGeneratingAI(false);
     }
