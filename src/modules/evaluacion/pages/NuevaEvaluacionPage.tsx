@@ -310,28 +310,35 @@ export default function NuevaEvaluacionPage() {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
 
     try {
+      const variablesStr = Object.entries(indRes.variables)
+        .map(([name, val]) => `- ${name}: ${val}`)
+        .join('\n        ');
+
       const prompt = `
         Razona y analiza como gerente de proyectos con 30 años de experiencia en proyectos inmobiliarios.
         Tu objetivo es generar un análisis técnico y profesional basado en los resultados de desempeño.
         
         EJEMPLO DE ESTILO DESEADO:
-        "El KPI de cumplimiento de la meta global de ventas refleja un desempeño excelente (🟢), alcanzando un 140% de cumplimiento con 14 cierres frente a una meta ajustada de 10 unidades. Este resultado evidencia una alta efectividad comercial y capacidad de cierre del equipo, incluso en un contexto retador..."
+        "El KPI de cumplimiento de la meta global de ventas refleja un desempeño excelente (🟢), alcanzando un 140% de cumplimiento. Este resultado, basado en una ejecución de 14 unidades frente a una meta de 10, evidencia una alta efectividad comercial..."
 
         INSTRUCCIONES:
         1. Comienza mencionando el indicador y el nivel de desempeño con un emoji (🟢 Excelente/Óptimo, 🟡 Aceptable/Bueno, 🔴 Crítico/Bajo).
-        2. Menciona el porcentaje alcanzado y los valores reales vs meta.
+        2. Menciona el porcentaje alcanzado y usa los valores de las variables proporcionadas para explicar el resultado.
         3. Integra el contexto del desempeño de forma narrativa y profesional.
         4. Si el resultado es muy bajo, propón un plan de acción ejecutivo al final.
         5. Mantén un tono ejecutivo, objetivo y motivador.
+        6. IMPORTANTE: No inventes números. Usa exclusivamente los datos proporcionados en "DATOS DEL INDICADOR".
 
         DATOS DEL INDICADOR:
         - Colaborador: ${selectedUser?.name}
         - Indicador: ${indRes.indicator_name}
         - Resultado Actual: ${indRes.calculated_value.toFixed(2)}${indRes.unit || '%'}
-        - Meta: ${indRes.fixed_goal || 'Según parámetros'}
+        - Meta Configurada: ${indRes.fixed_goal || 'Definida por variables'}
         - Nivel: ${indRes.level}
         - Calificación: ${indRes.qualification}
-        ${indRes.tablaDetalle ? `- Datos de Soporte: ${JSON.stringify(indRes.tablaDetalle.rows.length)} registros procesados.` : ''}
+        - Variables de Cálculo:
+        ${variablesStr}
+        ${indRes.tablaDetalle ? `- Datos de Soporte: Se procesaron ${indRes.tablaDetalle.rows.length} registros en la tabla de detalle.` : ''}
         
         Responde directamente en español en un párrafo fluido.
       `;
