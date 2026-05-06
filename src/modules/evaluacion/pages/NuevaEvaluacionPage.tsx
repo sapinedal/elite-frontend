@@ -5,7 +5,7 @@ import { evaluationService } from '../services/evaluationService';
 import { meses } from '../types';
 import type { Evaluation, EvaluationResult } from '../types';
 import { calculateScore, calculateTotalScore } from '../utils/calculations';
-import { Save, FileCheck, Info, AlertCircle, CheckCircle, Sparkles, Loader2, List } from 'lucide-react';
+import { Save, FileCheck, Info, AlertCircle, CheckCircle, Sparkles, Loader2, List, RefreshCw } from 'lucide-react';
 import { KPIDetailTable } from '../components/KPIDetailTable';
 import { userService } from '../../users/services/userService';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
@@ -450,6 +450,74 @@ export default function NuevaEvaluacionPage() {
     }
   };
 
+  const handleSyncWithTemplate = async () => {
+    if (!selectedUserId || !evaluation) return;
+    
+    setIsDataLoading(true);
+    try {
+      const userWithKpis = await userService.getUserById(selectedUserId);
+      const latestKpis = userWithKpis.kpis || [];
+      
+      const updatedResults = latestKpis.map((kpi: any) => {
+        // Buscar si este KPI ya estaba en la evaluación actual para conservar sus valores
+        const existingKpi = evaluation.results?.find(r => r.kpi_id === kpi.id);
+        
+        // Mapear indicadores de la plantilla actualizando su estructura pero manteniendo valores previos
+        const indicator_results = kpi.indicators?.map((ind: any) => {
+          const existingInd = existingKpi?.indicator_results?.find(ei => ei.indicator_name === ind.name);
+          
+          // Preservar valores de variables si el nombre del parámetro coincide
+          const currentVariables = ind.parameters?.reduce((acc: any, p: any) => ({ 
+            ...acc, 
+            [p.name]: (existingInd?.variables && existingInd.variables[p.name] !== undefined) ? existingInd.variables[p.name] : p.value 
+          }), {}) || {};
+
+          return {
+            indicator_name: ind.name,
+            formula: ind.formula,
+            unit: ind.unit,
+            variables: currentVariables,
+            calculated_value: existingInd?.calculated_value ?? 0,
+            level: existingInd?.level ?? '',
+            qualification: existingInd?.qualification ?? '',
+            score: existingInd?.score ?? 0,
+            parameters: ind.parameters,
+            conditional_goals: ind.conditional_goals,
+            fixed_goal: ind.fixed_goal,
+            tablaDetalle: existingInd?.tablaDetalle || ind.tablaDetalle || null,
+            ai_analysis: existingInd?.ai_analysis || null
+          };
+        }) || [];
+
+        return {
+          ...existingKpi, // Mantiene el id y otros campos del registro de la DB si ya existía
+          kpi_id: kpi.id,
+          kpi_name: kpi.name,
+          kpi_weight: Number(kpi.weight),
+          kpi_target: Number(kpi.target),
+          kpi_unit: kpi.unit,
+          lower_is_better: !!kpi.lower_is_better,
+          // Si el KPI no tiene sub-indicadores, mantenemos el valor real ingresado manualmente
+          real_value: (indicator_results.length === 0) ? (existingKpi?.real_value ?? null) : (existingKpi?.real_value ?? null),
+          score: existingKpi?.score ?? 0,
+          indicator_results
+        };
+      });
+
+      setEvaluation({
+        ...evaluation,
+        results: updatedResults
+      });
+      
+      showNotification('Estructura sincronizada con la plantilla actual. Revisa los parámetros y guarda los cambios.', 'success');
+    } catch (error) {
+      console.error('Sync Error:', error);
+      showNotification('Error al intentar sincronizar con la plantilla', 'error');
+    } finally {
+      setIsDataLoading(false);
+    }
+  };
+
   const handleSave = async (status: 'borrador' | 'finalizada') => {
     if (!evaluation || !selectedUserId) return;
     setIsSaving(true);
@@ -793,6 +861,17 @@ export default function NuevaEvaluacionPage() {
           </div>
 
           <div className="flex justify-end gap-6 pt-4">
+            <button
+              type="button"
+              onClick={handleSyncWithTemplate}
+              disabled={isSaving || isDataLoading}
+              className="px-8 py-5 bg-blue-50 text-blue-600 border-2 border-blue-100 rounded-[20px] font-extrabold hover:bg-blue-100 transition-all flex items-center gap-3 tracking-tight disabled:opacity-50"
+              title="Actualiza fórmulas y parámetros desde la plantilla original sin perder datos existentes"
+            >
+              <RefreshCw size={20} className={isDataLoading ? 'animate-spin' : ''} />
+              Sincronizar Plantilla
+            </button>
+
             <button
               onClick={() => handleSave('borrador')}
               disabled={isSaving}
