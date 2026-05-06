@@ -277,7 +277,7 @@ export default function HistorialPage() {
                         )}
                         {evalu.status === 'finalizada' && (
                           <button 
-                            onClick={(e) => handleExport(e, evalu.id)}
+                            onClick={(e) => evalu.id && handleExport(e, evalu.id)}
                             disabled={isExportingId === evalu.id}
                             className="h-10 w-10 flex items-center justify-center bg-green-50 border border-green-100 rounded-xl text-green-600 hover:bg-green-500 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Generar Reporte PDF"
