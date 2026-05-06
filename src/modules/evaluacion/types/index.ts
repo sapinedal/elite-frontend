@@ -29,6 +29,7 @@ export interface EvaluationResult {
 
 export interface IndicatorResult {
   indicator_name: string;
+  definition?: string;
   formula: string;
   unit?: string;
   variables: Record<string, number>;

@@ -98,6 +98,7 @@ export default function NuevaEvaluacionPage() {
 
                   return {
                     indicator_name: ind.name,
+                    definition: ind.definition,
                     formula: ind.formula,
                     unit: ind.unit,
                     variables: initialVariables,
@@ -377,6 +378,20 @@ export default function NuevaEvaluacionPage() {
       setIsGeneratingAI(false);
     }
   };
+  const handleUpdateSubIndicatorAIAnalysis = (kpiIdx: number, indIdx: number, value: string) => {
+    if (!evaluation || !evaluation.results) return;
+    const updatedResults = [...evaluation.results];
+    const indRes = updatedResults[kpiIdx].indicator_results![indIdx];
+    indRes.ai_analysis = value;
+    setEvaluation({ ...evaluation, results: updatedResults });
+  };
+
+  const handleUpdateKPIAIAnalysis = (kpiIdx: number, value: string) => {
+    if (!evaluation || !evaluation.results) return;
+    const updatedResults = [...evaluation.results];
+    updatedResults[kpiIdx].ai_analysis = value;
+    setEvaluation({ ...evaluation, results: updatedResults });
+  };
 
 
 
@@ -474,6 +489,7 @@ export default function NuevaEvaluacionPage() {
 
           return {
             indicator_name: ind.name,
+            definition: ind.definition,
             formula: ind.formula,
             unit: ind.unit,
             variables: currentVariables,
@@ -536,7 +552,10 @@ export default function NuevaEvaluacionPage() {
         }))
       };
 
-      await evaluationService.saveEvaluation(selectedUserId, dataToSave);
+
+      const savedEvaluation = await evaluationService.saveEvaluation(selectedUserId, dataToSave);
+      setEvaluation(savedEvaluation);
+
       showNotification(
         status === 'finalizada' ? 'Evaluación finalizada con éxito' : 'Borrador guardado correctamente',
         'success'
@@ -547,6 +566,7 @@ export default function NuevaEvaluacionPage() {
       setIsSaving(false);
     }
   };
+
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-green-600 bg-green-50 border-green-200';
@@ -731,7 +751,7 @@ export default function NuevaEvaluacionPage() {
                           <Collapse
                             key={iIdx}
                             title={ind.indicator_name}
-                            subtitle={`Fórmula: ${ind.formula}`}
+                            subtitle={`${ind.formula}`}
                             rightElement={
                               <div className="text-right">
                                 <p className={`text-xs font-black uppercase tracking-wider ${ind.level === 'Excelente' || ind.level === 'Óptimo' ? 'text-green-500' :
@@ -745,10 +765,15 @@ export default function NuevaEvaluacionPage() {
                               </div>
                             }
                           >
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                            <div className="mb-6">
+                              <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                {ind.definition || 'Sin definición registrada.'}
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-6 items-end">
                               {(ind as any).parameters?.map((param: any, pIdx: number) => (
                                 <div key={pIdx} className="space-y-2">
-                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block wrap-break-word leading-tight min-h-[20px]">
+                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block wrap-break-word leading-tight min-h-[20px] ml-1">
                                     {param.name.replace(/_/g, ' ')}
                                   </label>
                                   <input
@@ -760,12 +785,45 @@ export default function NuevaEvaluacionPage() {
                                   />
                                 </div>
                               ))}
-                              <div className="space-y-2 flex flex-col justify-end">
-                                <label className="text-[10px] font-black text-[#004C6C] uppercase tracking-widest">Resultado</label>
-                                <div className="w-full bg-[#004C6C]/5 border border-[#004C6C]/10 rounded-2xl px-6 py-4 text-sm font-black text-[#004C6C] shadow-sm flex items-center justify-center min-h-[52px]">
+
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black text-[#004C6C] uppercase tracking-widest block leading-tight min-h-[20px] ml-1">Resultado</label>
+                                <div className="w-full bg-[#004C6C]/5 border border-[#004C6C]/10 rounded-xl px-4 py-3 text-sm font-black text-[#004C6C] shadow-sm flex items-center justify-center min-h-[46px]">
                                   {ind.unit === '$' ? '$ ' : ''}{ind.calculated_value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}{ind.unit !== '$' ? (ind.unit || '%') : ''}
                                 </div>
                               </div>
+
+                              {/* Escala de Metas integrada en la grilla */}
+                              {ind.conditional_goals && ind.conditional_goals.length > 0 && (
+                                <div className="col-span-2 sm:col-span-3 lg:col-span-3 space-y-2">
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block leading-tight min-h-[20px] ml-1 text-center">Escala de Metas</label>
+                                  <div
+                                    className="grid items-center p-3 h-[52px]"
+                                    style={{ gridTemplateColumns: `repeat(${ind.conditional_goals.length}, minmax(0, 1fr))` }}
+                                  >
+                                    {ind.conditional_goals.map((goal: any, gIdx: number) => {
+                                      const isActive = ind.level === goal.level;
+                                      const colorClass =
+                                        goal.color === 'excellent' || goal.color === 'optimal' ? 'bg-green-500' :
+                                          goal.color === 'acceptable' ? 'bg-yellow-400' :
+                                            goal.color === 'at_risk' ? 'bg-orange-500' :
+                                              'bg-red-500';
+
+                                      return (
+                                        <div key={gIdx} className={`flex flex-col items-center gap-0.5 transition-all duration-500 ${isActive ? 'scale-110 opacity-100' : 'opacity-40'}`}>
+                                          <span className={`text-[8px] font-black uppercase tracking-tighter ${isActive ? 'text-slate-700' : 'text-slate-400'}`}>
+                                            {goal.level}
+                                          </span>
+                                          <div className={`w-3 h-3 rounded-full ${colorClass} shadow-md ring-2 ring-white`} />
+                                          <span className={`text-[11px] font-black ${isActive ? 'text-[#004C6C]' : 'text-slate-500'}`}>
+                                            {goal.min_value}<span className="opacity-30 mx-0.5">/</span>{goal.max_value}
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
                             </div>
 
                             <div className="mt-6 pt-4 border-t border-slate-100">
@@ -788,27 +846,36 @@ export default function NuevaEvaluacionPage() {
                                   <Sparkles size={10} /> {isGeneratingAI ? 'Procesando...' : 'Analizar con IA'}
                                 </button>
                               </div>
-                              <div className="relative">
-                                <div className="w-full bg-slate-100/50 border border-slate-100 rounded-2xl px-6 py-4 text-xs font-medium text-slate-500 italic outline-none min-h-[100px] leading-relaxed transition-all prose prose-sm max-w-none">
-                                  {ind.ai_analysis ? (
+                              <div className="relative group">
+                                <textarea
+                                  className="w-full bg-slate-100/50 border border-slate-100 rounded-2xl px-6 py-4 text-xs font-medium text-slate-500 italic outline-none min-h-[100px] leading-relaxed transition-all focus:bg-white focus:border-blue-200 resize-none"
+                                  placeholder="Haz clic en 'Analizar con IA' para generar una interpretación automática o escribe aquí tu propio análisis..."
+                                  value={ind.ai_analysis || ''}
+                                  onChange={(e) => handleUpdateSubIndicatorAIAnalysis(idx, iIdx, e.target.value)}
+                                />
+                                {ind.ai_analysis && (
+                                  <div className="mt-2 p-4 bg-blue-50/20 border border-blue-50 rounded-xl prose prose-sm max-w-none text-[10px] text-slate-400">
                                     <ReactMarkdown>{ind.ai_analysis}</ReactMarkdown>
-                                  ) : (
-                                    <p className="text-slate-300">Haz clic en 'Analizar con IA' para generar una interpretación automática...</p>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </Collapse>
                         ))}
                       </div>
 
-                      {res.ai_analysis && (
-                        <div className="p-4 bg-white rounded-2xl border border-blue-100 shadow-sm">
-                          <div className="flex items-center gap-2 mb-2">
+                      {res.ai_analysis !== undefined && (
+                        <div className="p-4 bg-white rounded-2xl border border-blue-100 shadow-sm space-y-2">
+                          <div className="flex items-center gap-2 mb-1">
                             <Sparkles size={12} className="text-blue-500" />
-                            <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Análisis IA del Indicador</span>
+                            <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Interpretación del KPI</span>
                           </div>
-                          <p className="text-xs text-slate-600 italic leading-relaxed">"{res.ai_analysis}"</p>
+                          <textarea
+                            className="w-full bg-slate-50/50 border border-transparent rounded-xl px-4 py-2 text-xs text-slate-600 italic leading-relaxed outline-none focus:bg-white focus:border-blue-100 transition-all resize-none min-h-[60px]"
+                            value={res.ai_analysis || ''}
+                            onChange={(e) => handleUpdateKPIAIAnalysis(idx, e.target.value)}
+                            placeholder="Análisis del KPI..."
+                          />
                         </div>
                       )}
                     </div>
@@ -881,12 +948,13 @@ export default function NuevaEvaluacionPage() {
             >
               <Save size={22} /> {isSaving ? 'GUARDANDO...' : 'GUARDAR BORRADOR'}
             </button>
+
             <button
               onClick={() => setIsFinalizeModalOpen(true)}
-              disabled={isSaving}
+              disabled={isSaving || evaluation.status === 'finalizada'}
               className="px-10 py-5 bg-[#004C6C] text-white rounded-[20px] font-extrabold hover:bg-[#003a53] shadow-2xl shadow-blue-900/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3 tracking-tight disabled:opacity-50"
             >
-              <FileCheck size={22} /> FINALIZAR EVALUACIÓN
+              <FileCheck size={22} /> {evaluation.status === 'finalizada' ? 'EVALUACIÓN FINALIZADA' : 'FINALIZAR EVALUACIÓN'}
             </button>
           </div>
 
@@ -900,8 +968,9 @@ export default function NuevaEvaluacionPage() {
             cancelText="Revisar todavía"
             type="warning"
           />
-        </div>
-      )}
-    </div>
+        </div >
+      )
+      }
+    </div >
   );
 }

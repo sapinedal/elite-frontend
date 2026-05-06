@@ -3,7 +3,7 @@ import { evaluationService } from '../services/evaluationService';
 import { useUsers } from '../../users/hooks/useUsers';
 import { meses } from '../types';
 import type { Evaluation } from '../types';
-import { Search, History, Calendar, Layout, ArrowUpRight, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import { Search, History, Calendar, Layout, ArrowUpRight, CheckCircle2, Clock, TrendingUp, FileText, Loader2 } from 'lucide-react';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Autocomplete } from '../../../components/ui/Autocomplete';
 import { Skeleton } from '../../../components/ui/Skeleton';
@@ -20,6 +20,7 @@ export default function HistorialPage() {
   
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedEvalForHistory, setSelectedEvalForHistory] = useState<Evaluation | null>(null);
+  const [isExportingId, setIsExportingId] = useState<number | null>(null);
 
 
   // Filters
@@ -70,6 +71,18 @@ export default function HistorialPage() {
         <Clock size={12} /> Borrador
       </span>
     );
+  };
+
+  const handleExport = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    setIsExportingId(id);
+    try {
+      await evaluationService.exportPdf(id);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+    } finally {
+      setIsExportingId(null);
+    }
   };
 
   return (
@@ -260,6 +273,20 @@ export default function HistorialPage() {
                             title="Ver historial de cambios"
                           >
                             <History size={16} />
+                          </button>
+                        )}
+                        {evalu.status === 'finalizada' && (
+                          <button 
+                            onClick={(e) => handleExport(e, evalu.id)}
+                            disabled={isExportingId === evalu.id}
+                            className="h-10 w-10 flex items-center justify-center bg-green-50 border border-green-100 rounded-xl text-green-600 hover:bg-green-500 hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Generar Reporte PDF"
+                          >
+                            {isExportingId === evalu.id ? (
+                              <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                              <FileText size={18} />
+                            )}
                           </button>
                         )}
                         <button className="h-10 w-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-[#EE9D4C] hover:border-[#EE9D4C] hover:bg-orange-50 group-hover:shadow-lg transition-all transform group-hover:scale-105 active:scale-95">

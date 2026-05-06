@@ -9,7 +9,9 @@ import {
   BarChart3,
   Building2,
   Trophy,
-  Target
+  Target,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import {
   LineChart,
@@ -104,6 +106,7 @@ export default function DashboardPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [view, setView] = useState<'areas' | 'detail'>('areas');
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
@@ -159,6 +162,18 @@ export default function DashboardPage() {
   const handleBack = () => {
     setView('areas');
     setSelectedArea(null);
+  };
+
+  const handleExportAreaPDF = async () => {
+    if (!selectedArea) return;
+    setIsExporting(true);
+    try {
+      await evaluationService.exportDashboardPdf(currentMonth, currentYear, selectedArea);
+    } catch (error) {
+      console.error("Error exporting dashboard PDF:", error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (usersLoading || isLoadingHistory) {
@@ -220,6 +235,21 @@ export default function DashboardPage() {
             <TrendingUp className="text-[#004C6C]" size={16} />
             <span className="text-sm font-black text-[#004C6C]">{averageScore.toFixed(1)}%</span>
           </div>
+
+          {view === 'detail' && selectedArea && (
+            <button
+              onClick={handleExportAreaPDF}
+              disabled={isExporting}
+              className="bg-green-50 text-green-600 px-6 py-2 rounded-2xl border border-green-100 shadow-sm flex items-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-green-500 hover:text-white hover:border-green-500 transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50"
+            >
+              {isExporting ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <FileText size={16} />
+              )}
+              {isExporting ? 'Exportando...' : 'Exportar PDF'}
+            </button>
+          )}
         </div>
       </div>
 
