@@ -452,24 +452,24 @@ export default function NuevaEvaluacionPage() {
 
   const handleSyncWithTemplate = async () => {
     if (!selectedUserId || !evaluation) return;
-    
+
     setIsDataLoading(true);
     try {
       const userWithKpis = await userService.getUserById(selectedUserId);
       const latestKpis = userWithKpis.kpis || [];
-      
+
       const updatedResults = latestKpis.map((kpi: any) => {
         // Buscar si este KPI ya estaba en la evaluación actual para conservar sus valores
         const existingKpi = evaluation.results?.find(r => r.kpi_id === kpi.id);
-        
+
         // Mapear indicadores de la plantilla actualizando su estructura pero manteniendo valores previos
         const indicator_results = kpi.indicators?.map((ind: any) => {
           const existingInd = existingKpi?.indicator_results?.find(ei => ei.indicator_name === ind.name);
-          
+
           // Preservar valores de variables si el nombre del parámetro coincide
-          const currentVariables = ind.parameters?.reduce((acc: any, p: any) => ({ 
-            ...acc, 
-            [p.name]: (existingInd?.variables && existingInd.variables[p.name] !== undefined) ? existingInd.variables[p.name] : p.value 
+          const currentVariables = ind.parameters?.reduce((acc: any, p: any) => ({
+            ...acc,
+            [p.name]: (existingInd?.variables && existingInd.variables[p.name] !== undefined) ? existingInd.variables[p.name] : p.value
           }), {}) || {};
 
           return {
@@ -508,7 +508,7 @@ export default function NuevaEvaluacionPage() {
         ...evaluation,
         results: updatedResults
       });
-      
+
       showNotification('Estructura sincronizada con la plantilla actual. Revisa los parámetros y guarda los cambios.', 'success');
     } catch (error) {
       console.error('Sync Error:', error);
@@ -748,7 +748,9 @@ export default function NuevaEvaluacionPage() {
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
                               {(ind as any).parameters?.map((param: any, pIdx: number) => (
                                 <div key={pIdx} className="space-y-2">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{param.name}</label>
+                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block wrap-break-word leading-tight min-h-[20px]">
+                                    {param.name.replace(/_/g, ' ')}
+                                  </label>
                                   <input
                                     type="number"
                                     value={ind.variables[param.name] || ''}
