@@ -80,6 +80,7 @@ export default function PlantillasPage() {
       name: '',
       definition: '',
       formula: '',
+      unit: '%',
       fixed_goal: 0,
       conditional_goals: [
         { level: 'Excelente', min_value: 100, max_value: 999, qualification: 'Meta alcanzada o superada', color: 'excellent', score: 100 },
@@ -668,14 +669,26 @@ export default function PlantillasPage() {
                                 className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-mono font-bold text-[#004C6C] focus:ring-4 focus:ring-blue-50 outline-none transition-all"
                               />
                             </div>
-                            <div className="space-y-2">
-                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Meta Fija Esperada</label>
-                              <input
-                                type="number"
-                                value={localKpis[activeKpiIdx!].indicators![activeIndIdx!].fixed_goal}
-                                onChange={e => handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, { fixed_goal: Number(e.target.value) })}
-                                className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-xl font-black text-slate-700 outline-none"
-                              />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Meta Fija Esperada</label>
+                                <input
+                                  type="number"
+                                  value={localKpis[activeKpiIdx!].indicators![activeIndIdx!].fixed_goal}
+                                  onChange={e => handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, { fixed_goal: Number(e.target.value) })}
+                                  className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-xl font-black text-slate-700 outline-none"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidad</label>
+                                <input
+                                  type="text"
+                                  value={localKpis[activeKpiIdx!].indicators![activeIndIdx!].unit || ''}
+                                  onChange={e => handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, { unit: e.target.value })}
+                                  className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-xl font-black text-slate-700 outline-none"
+                                  placeholder="%, $, pts, etc."
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>

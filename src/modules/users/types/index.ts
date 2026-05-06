@@ -32,6 +32,7 @@ export interface Indicator {
   name: string;
   definition: string;
   formula: string;
+  unit?: string;
   fixed_goal?: number;
   conditional_goals: ConditionalGoal[];
   parameters: IndicatorParameter[];
