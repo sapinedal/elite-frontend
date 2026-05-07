@@ -1015,7 +1015,9 @@ export default function PlantillasPage() {
                                         {row.map((cell, cIdx) => (
                                           <td key={cIdx} className="px-4 py-2 border-b border-slate-50">
                                             <input
-                                              type="text"
+                                              type={(localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.headers[cIdx].toLowerCase().includes('fecha') || 
+                                                     localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.headers[cIdx].toLowerCase().includes('cierre') || 
+                                                     localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.headers[cIdx].toLowerCase().includes('inicial')) ? "date" : "text"}
                                               value={cell}
                                               onChange={(e) => {
                                                 const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;

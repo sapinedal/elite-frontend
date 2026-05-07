@@ -253,9 +253,9 @@ export default function NuevaEvaluacionPage() {
 
     if (tableData && tableData.headers && tableData.rows) {
       const headers = tableData.headers.map((h: string) => h.toLowerCase());
-      const initialIdx = headers.findIndex((h: string) => h.includes('inicial'));
-      const cierreIdx = headers.findIndex((h: string) => h === 'cierre');
-      const diasIdx = headers.findIndex((h: string) => h === 'dias' || h === 'días');
+      const initialIdx = headers.findIndex((h: string) => h.includes('inicial') || h.includes('inicio'));
+      const cierreIdx = headers.findIndex((h: string) => h.includes('cierre') || h.includes('final'));
+      const diasIdx = headers.findIndex((h: string) => h.includes('dias') || h.includes('días'));
 
       // Cálculo automático de días si están las columnas de fecha
       if (initialIdx !== -1 && cierreIdx !== -1 && diasIdx !== -1) {
@@ -272,7 +272,10 @@ export default function NuevaEvaluacionPage() {
         });
       }
 
-      const diasColIdx = tableData.headers.findIndex((h: string) => h.toLowerCase() === 'dias' || h.toLowerCase() === 'días');
+      const diasColIdx = tableData.headers.findIndex((h: string) => {
+        const lower = h.toLowerCase();
+        return lower.includes('dias') || lower.includes('días');
+      });
       const valorColIdx = tableData.headers.findIndex((h: string) => h.toLowerCase() === 'valor');
 
       if (diasColIdx !== -1) {
@@ -281,6 +284,12 @@ export default function NuevaEvaluacionPage() {
         const sum = validRows.reduce((acc: number, row: string[]) => acc + parseFloat(row[diasColIdx]), 0);
         const avg = validRows.length > 0 ? sum / validRows.length : 0;
         indRes.calculated_value = avg;
+
+        // Sincronizar con la variable 'Días' si existe en los parámetros
+        const varName = Object.keys(indRes.variables).find(k => k.toLowerCase() === 'dias' || k.toLowerCase() === 'días');
+        if (varName) {
+          indRes.variables[varName] = avg;
+        }
       } else if (valorColIdx !== -1) {
         const sum = tableData.rows.reduce((acc: number, row: string[]) => {
           const val = parseFloat(row[valorColIdx]);
