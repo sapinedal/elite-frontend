@@ -949,7 +949,7 @@ export default function PlantillasPage() {
                                 </button>
                               </div>
                               <div className="flex flex-wrap gap-2">
-                                {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle.headers.map((header, hIdx) => (
+                                {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.headers.map((header, hIdx) => (
                                   <div key={hIdx} className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm">
                                     <input
                                       type="text"
@@ -1003,14 +1003,14 @@ export default function PlantillasPage() {
                                 <table className="w-full text-left border-collapse">
                                   <thead>
                                     <tr className="bg-white">
-                                      {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle.headers.map((header, hIdx) => (
+                                      {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.headers.map((header, hIdx) => (
                                         <th key={hIdx} className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase border-b border-slate-100">{header}</th>
                                       ))}
                                       <th className="px-4 py-3 border-b border-slate-100 w-10"></th>
                                     </tr>
                                   </thead>
                                   <tbody className="bg-white/50">
-                                    {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle.rows.map((row, rIdx) => (
+                                    {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.rows.map((row, rIdx) => (
                                       <tr key={rIdx} className="hover:bg-white transition-colors">
                                         {row.map((cell, cIdx) => (
                                           <td key={cIdx} className="px-4 py-2 border-b border-slate-50">
