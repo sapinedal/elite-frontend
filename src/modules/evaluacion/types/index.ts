@@ -35,6 +35,7 @@ export interface IndicatorResult {
   variables: Record<string, number>;
   calculated_value: number;
   level: string;
+  color?: string;
   qualification: string;
   score: number;
   ai_analysis?: string;

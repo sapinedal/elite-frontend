@@ -96,6 +96,10 @@ export default function NuevaEvaluacionPage() {
                     initialCalculated = 0;
                   }
 
+                  // Determinar nivel inicial basado en las metas de la plantilla
+                  const goals = ind.conditional_goals || [];
+                  const matchedGoal = goals.find((g: any) => initialCalculated >= g.min_value && initialCalculated <= g.max_value);
+
                   return {
                     indicator_name: ind.name,
                     definition: ind.definition,
@@ -103,9 +107,10 @@ export default function NuevaEvaluacionPage() {
                     unit: ind.unit,
                     variables: initialVariables,
                     calculated_value: initialCalculated,
-                    level: '',
-                    qualification: '',
-                    score: 0,
+                    level: matchedGoal?.level ?? '',
+                    color: matchedGoal?.color ?? '',
+                    qualification: matchedGoal?.qualification ?? '',
+                    score: matchedGoal ? (matchedGoal.score !== undefined ? matchedGoal.score : (initialCalculated > 100 ? 100 : initialCalculated)) : 0,
                     parameters: ind.parameters,
                     conditional_goals: ind.conditional_goals,
                     fixed_goal: ind.fixed_goal
@@ -200,10 +205,16 @@ export default function NuevaEvaluacionPage() {
 
       if (matchedGoal) {
         indRes.level = matchedGoal.level;
+        indRes.color = matchedGoal.color;
         indRes.qualification = matchedGoal.qualification;
         // Si el nivel tiene un score definido en la plantilla, usarlo. 
         // Si no, usar el valor calculado (ej: para el caso de 140% -> 100%)
         indRes.score = (matchedGoal.score !== undefined) ? matchedGoal.score : (indRes.calculated_value > 100 ? 100 : indRes.calculated_value);
+      } else {
+        indRes.level = '';
+        indRes.color = '';
+        indRes.qualification = 'Fuera de rango definido';
+        indRes.score = 0;
       }
     } catch (e) {
       console.error('Error al calcular fórmula', e);
@@ -283,8 +294,14 @@ export default function NuevaEvaluacionPage() {
 
       if (matchedGoal) {
         indRes.level = matchedGoal.level;
+        indRes.color = matchedGoal.color;
         indRes.qualification = matchedGoal.qualification;
         indRes.score = (matchedGoal.score !== undefined) ? matchedGoal.score : (indRes.calculated_value > 100 ? 100 : indRes.calculated_value);
+      } else {
+        indRes.level = '';
+        indRes.color = '';
+        indRes.qualification = 'Fuera de rango definido';
+        indRes.score = 0;
       }
     }
 
@@ -318,7 +335,10 @@ export default function NuevaEvaluacionPage() {
         .join('\n        ');
 
       const prompt = `
-        Razona y analiza como gerente de proyectos con 30 años de experiencia en proyectos inmobiliarios.
+        Analiza la siguiente información con criterio técnico avanzado propio de la gestión de proyectos inmobiliarios de alto nivel.
+        Genera un análisis profesional, estructurado y orientado a resultados, basado en indicadores de desempeño, desviaciones y oportunidades de mejora.
+        Usa un lenguaje ejecutivo, directo y basado en datos.
+        Evita referencias personales, narrativas en primera persona o cualquier mención a experiencia profesional.
         Tu objetivo es generar un análisis técnico y profesional basado en los resultados de desempeño.
         
         EJEMPLO DE ESTILO DESEADO:
@@ -487,6 +507,10 @@ export default function NuevaEvaluacionPage() {
             [p.name]: (existingInd?.variables && existingInd.variables[p.name] !== undefined) ? existingInd.variables[p.name] : p.value
           }), {}) || {};
 
+          // Re-determinar nivel y calificación basado en las nuevas metas de la plantilla
+          const goals = ind.conditional_goals || [];
+          const matchedGoal = goals.find((g: any) => (existingInd?.calculated_value ?? 0) >= g.min_value && (existingInd?.calculated_value ?? 0) <= g.max_value);
+
           return {
             indicator_name: ind.name,
             definition: ind.definition,
@@ -494,9 +518,10 @@ export default function NuevaEvaluacionPage() {
             unit: ind.unit,
             variables: currentVariables,
             calculated_value: existingInd?.calculated_value ?? 0,
-            level: existingInd?.level ?? '',
-            qualification: existingInd?.qualification ?? '',
-            score: existingInd?.score ?? 0,
+            level: matchedGoal?.level ?? '',
+            color: matchedGoal?.color ?? '',
+            qualification: matchedGoal?.qualification ?? 'Fuera de rango',
+            score: matchedGoal ? (matchedGoal.score !== undefined ? matchedGoal.score : ((existingInd?.calculated_value ?? 0) > 100 ? 100 : (existingInd?.calculated_value ?? 0))) : 0,
             parameters: ind.parameters,
             conditional_goals: ind.conditional_goals,
             fixed_goal: ind.fixed_goal,
@@ -572,6 +597,23 @@ export default function NuevaEvaluacionPage() {
     if (score >= 90) return 'text-green-600 bg-green-50 border-green-200';
     if (score >= 70) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
     return 'text-red-600 bg-red-50 border-red-200';
+  };
+
+  const getLevelColor = (color: string | undefined) => {
+    switch (color) {
+      case 'excellent':
+      case 'optimal':
+        return 'text-green-500';
+      case 'acceptable':
+        return 'text-yellow-500';
+      case 'at_risk':
+        return 'text-orange-500';
+      case 'deficient':
+      case 'inadequate':
+        return 'text-red-500';
+      default:
+        return 'text-slate-400';
+    }
   };
 
   return (
@@ -754,11 +796,7 @@ export default function NuevaEvaluacionPage() {
                             subtitle={`${ind.formula}`}
                             rightElement={
                               <div className="text-right">
-                                <p className={`text-xs font-black uppercase tracking-wider ${ind.level === 'Excelente' || ind.level === 'Óptimo' ? 'text-green-500' :
-                                  ind.level === 'Bueno' ? 'text-yellow-500' :
-                                    ind.level === 'Aceptable' ? 'text-blue-500' :
-                                      'text-red-500'
-                                  }`}>
+                                <p className={`text-xs font-black uppercase tracking-wider ${getLevelColor(ind.color)}`}>
                                   {ind.level || 'Pendiente'}
                                 </p>
                                 <p className="text-[9px] text-slate-400 font-bold">{ind.qualification}</p>

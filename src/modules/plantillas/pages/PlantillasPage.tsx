@@ -88,7 +88,8 @@ export default function PlantillasPage() {
         { level: 'En riesgo', min_value: 60, max_value: 79, qualification: 'Bajo cumplimiento, tendencia descendente', color: 'at_risk', score: 70 },
         { level: 'Deficiente', min_value: 0, max_value: 59, qualification: 'Incumplimiento crítico', color: 'deficient', score: 0 }
       ],
-      parameters: []
+      parameters: [],
+      tablaDetalle: null
     };
     kpi.indicators = [...(kpi.indicators || []), newIndicator];
     setLocalKpis(updated);
@@ -585,7 +586,21 @@ export default function PlantillasPage() {
                               </div>
                               <div>
                                 <p className="font-black text-slate-700">{ind.name || 'Indicador sin nombre'}</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{ind.definition || 'Sin definición'}</p>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate max-w-[200px]">{ind.definition || 'Sin definición'}</p>
+                                  <div className="flex items-center gap-1.5">
+                                    {ind.parameters && ind.parameters.length > 0 && (
+                                      <span className="px-1.5 py-0.5 bg-orange-50 text-[#EE9D4C] rounded text-[8px] font-black border border-orange-100 uppercase tracking-tighter">
+                                        {ind.parameters.length} Parámetros
+                                      </span>
+                                    )}
+                                    {ind.tablaDetalle && (
+                                      <span className="px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[8px] font-black border border-blue-100 uppercase tracking-tighter">
+                                        Tabla Activa
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -709,16 +724,28 @@ export default function PlantillasPage() {
                           <div className="space-y-3">
                             {localKpis[activeKpiIdx!].indicators![activeIndIdx!].parameters?.map((param, pIdx) => (
                               <div key={pIdx} className="flex gap-3 items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
-                                <input
-                                  type="text"
-                                  value={param.name}
-                                  onChange={e => handleUpdateParameter(activeKpiIdx!, activeIndIdx!, pIdx, { name: e.target.value })}
-                                  placeholder="Ej: Ventas"
-                                  className="flex-1 bg-transparent border-none text-[11px] font-bold text-slate-600 outline-none"
-                                />
+                                <div className="flex-1 space-y-1">
+                                  <label className="text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1">Nombre</label>
+                                  <input
+                                    type="text"
+                                    value={param.name}
+                                    onChange={e => handleUpdateParameter(activeKpiIdx!, activeIndIdx!, pIdx, { name: e.target.value })}
+                                    placeholder="Ej: Meta_Ventas"
+                                    className="w-full bg-transparent border-none text-[11px] font-bold text-slate-600 outline-none"
+                                  />
+                                </div>
+                                <div className="w-24 space-y-1 border-l border-slate-50 pl-3">
+                                  <label className="text-[8px] font-black text-slate-300 uppercase tracking-widest ml-1">Valor</label>
+                                  <input
+                                    type="number"
+                                    value={param.value}
+                                    onChange={e => handleUpdateParameter(activeKpiIdx!, activeIndIdx!, pIdx, { value: Number(e.target.value) })}
+                                    className="w-full bg-transparent border-none text-[11px] font-black text-[#004C6C] outline-none"
+                                  />
+                                </div>
                                 <button
                                   onClick={() => handleRemoveParameter(activeKpiIdx, activeIndIdx, pIdx)}
-                                  className="text-red-200 hover:text-red-500 transition-colors"
+                                  className="p-2 text-slate-200 hover:text-red-500 transition-colors"
                                 >
                                   <Trash2 size={14} />
                                 </button>
@@ -868,6 +895,163 @@ export default function PlantillasPage() {
                             </div>
                           ))}
                         </div>
+                      </div>
+
+                      {/* Sección de Tabla de Detalle */}
+                      <div className="space-y-6 pt-10 border-t border-slate-50">
+                        <div className="flex items-center justify-between px-2">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><List size={18} /></div>
+                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Tabla de Soporte (Detalle)</h4>
+                          </div>
+                          {!localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle ? (
+                            <button
+                              onClick={() => {
+                                handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                  tablaDetalle: { headers: ['COLUMNA 1'], rows: [['']] }
+                                });
+                              }}
+                              className="text-[9px] font-black text-blue-600 hover:underline"
+                            >
+                              + Activar Tabla
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                  tablaDetalle: null
+                                });
+                              }}
+                              className="text-[9px] font-black text-red-400 hover:underline"
+                            >
+                              Desactivar Tabla
+                            </button>
+                          )}
+                        </div>
+
+                        {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle && (
+                          <div className="bg-slate-50 p-8 rounded-[40px] space-y-6">
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Encabezados</label>
+                                <button
+                                  onClick={() => {
+                                    const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;
+                                    const newHeaders = [...current.headers, `COLUMNA ${current.headers.length + 1}`];
+                                    const newRows = current.rows.map(row => [...row, '']);
+                                    handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                      tablaDetalle: { ...current, headers: newHeaders, rows: newRows }
+                                    });
+                                  }}
+                                  className="text-[8px] font-black text-blue-500 uppercase hover:underline"
+                                >
+                                  + Agregar Columna
+                                </button>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle.headers.map((header, hIdx) => (
+                                  <div key={hIdx} className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm">
+                                    <input
+                                      type="text"
+                                      value={header}
+                                      onChange={(e) => {
+                                        const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;
+                                        const newHeaders = [...current.headers];
+                                        newHeaders[hIdx] = e.target.value;
+                                        handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                          tablaDetalle: { ...current, headers: newHeaders }
+                                        });
+                                      }}
+                                      className="bg-transparent border-none text-[10px] font-black text-slate-600 uppercase outline-none w-24"
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;
+                                        if (current.headers.length <= 1) return;
+                                        const newHeaders = current.headers.filter((_, i) => i !== hIdx);
+                                        const newRows = current.rows.map(row => row.filter((_, i) => i !== hIdx));
+                                        handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                          tablaDetalle: { ...current, headers: newHeaders, rows: newRows }
+                                        });
+                                      }}
+                                      className="text-slate-300 hover:text-red-500 transition-colors"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Filas Iniciales / Plantilla</label>
+                                <button
+                                  onClick={() => {
+                                    const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;
+                                    const newRows = [...current.rows, current.headers.map(() => '')];
+                                    handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                      tablaDetalle: { ...current, rows: newRows }
+                                    });
+                                  }}
+                                  className="text-[8px] font-black text-blue-500 uppercase hover:underline"
+                                >
+                                  + Agregar Fila
+                                </button>
+                              </div>
+                              <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                                <table className="w-full text-left border-collapse">
+                                  <thead>
+                                    <tr className="bg-white">
+                                      {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle.headers.map((header, hIdx) => (
+                                        <th key={hIdx} className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase border-b border-slate-100">{header}</th>
+                                      ))}
+                                      <th className="px-4 py-3 border-b border-slate-100 w-10"></th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="bg-white/50">
+                                    {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle.rows.map((row, rIdx) => (
+                                      <tr key={rIdx} className="hover:bg-white transition-colors">
+                                        {row.map((cell, cIdx) => (
+                                          <td key={cIdx} className="px-4 py-2 border-b border-slate-50">
+                                            <input
+                                              type="text"
+                                              value={cell}
+                                              onChange={(e) => {
+                                                const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;
+                                                const newRows = [...current.rows];
+                                                newRows[rIdx] = [...newRows[rIdx]];
+                                                newRows[rIdx][cIdx] = e.target.value;
+                                                handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                                  tablaDetalle: { ...current, rows: newRows }
+                                                });
+                                              }}
+                                              className="w-full bg-transparent border-none text-[11px] font-medium text-slate-600 outline-none"
+                                            />
+                                          </td>
+                                        ))}
+                                        <td className="px-4 py-2 border-b border-slate-50">
+                                          <button
+                                            onClick={() => {
+                                              const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;
+                                              const newRows = current.rows.filter((_, i) => i !== rIdx);
+                                              handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                                tablaDetalle: { ...current, rows: newRows }
+                                              });
+                                            }}
+                                            className="text-slate-200 hover:text-red-500 transition-colors"
+                                          >
+                                            <Trash2 size={14} />
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 

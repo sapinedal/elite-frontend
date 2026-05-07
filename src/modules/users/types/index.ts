@@ -36,6 +36,10 @@ export interface Indicator {
   fixed_goal?: number;
   conditional_goals: ConditionalGoal[];
   parameters: IndicatorParameter[];
+  tablaDetalle?: {
+    headers: string[];
+    rows: string[][];
+  } | null;
 }
 
 export interface ConditionalGoal {
