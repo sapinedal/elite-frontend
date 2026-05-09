@@ -176,18 +176,18 @@ export default function NuevaEvaluacionPage() {
     if (!kpiRes.indicator_results) return;
 
     const indRes = kpiRes.indicator_results[indIdx];
-    const numVal = value === '' ? 0 : Number(value);
+    const numVal = value === '' ? null : Number(value);
 
     indRes.variables = { ...indRes.variables, [varName]: numVal };
 
     // Intentar calcular valor basado en la fórmula
     // Ejemplo simple: (Ventas / Meta) * 100
-    // Reemplazamos nombres de variables en la fórmula
+    // Reemplazamos nombres de variables en la fórmulax
     let formula = indRes.formula || '';
     Object.entries(indRes.variables).forEach(([name, val]) => {
       // Escapar caracteres especiales para regex
       const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      formula = formula.replace(new RegExp(escapedName, 'g'), val.toString());
+      formula = formula.replace(new RegExp(escapedName, 'g'), (val ?? 0).toString());
     });
 
     try {
@@ -825,7 +825,7 @@ export default function NuevaEvaluacionPage() {
                                   </label>
                                   <input
                                     type="number"
-                                    value={ind.variables[param.name] || ''}
+                                    value={ind.variables[param.name] ?? ''}
                                     onChange={e => handleUpdateIndicatorVariable(idx, iIdx, param.name, e.target.value)}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:border-[#004C6C] focus:bg-white outline-none transition-all shadow-sm"
                                     placeholder="0"
@@ -887,7 +887,7 @@ export default function NuevaEvaluacionPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleGenerateSubIndicatorAI(idx, iIdx)}
-                                  disabled={isGeneratingAI || !ind.calculated_value}
+                                  disabled={isGeneratingAI || typeof ind.calculated_value !== 'number' || ind.calculated_value === null}
                                   className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all disabled:opacity-50"
                                 >
                                   <Sparkles size={10} /> {isGeneratingAI ? 'Procesando...' : 'Analizar con IA'}
