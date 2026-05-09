@@ -340,7 +340,7 @@ export default function NuevaEvaluacionPage() {
 
     try {
       const variablesStr = Object.entries(indRes.variables)
-        .map(([name, val]) => `- ${name}: ${val}`)
+        .map(([name, val]) => `- ${name}: ${val ?? 0}`)
         .join('\n        ');
 
       const prompt = `

@@ -32,7 +32,7 @@ export interface IndicatorResult {
   definition?: string;
   formula: string;
   unit?: string;
-  variables: Record<string, number>;
+  variables: Record<string, number | null>;
   calculated_value: number;
   level: string;
   color?: string;
