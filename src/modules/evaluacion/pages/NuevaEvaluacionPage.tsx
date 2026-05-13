@@ -47,25 +47,26 @@ export default function NuevaEvaluacionPage() {
           const existing = await evaluationService.getEvaluation(selectedUserId, selectedMonth, selectedYear);
 
           if (existing && existing.id) {
-            // Normalizar datos numéricos (pueden venir como strings desde la DB)
             const normalized: Evaluation = {
               ...existing,
               total_score: Number(existing.total_score || 0),
-              results: existing.results?.map(r => ({
-                ...r,
-                kpi_weight: Number(r.kpi_weight || 0),
-                kpi_target: Number(r.kpi_target || 0),
-                real_value: r.real_value !== null ? Number(r.real_value) : null,
-                score: Number(r.score || 0),
-                // Asegurar que cargamos los detalles si vienen del backend como 'details' o 'tablaDetalle'
-                tablaDetalle: (r as any).details?.tablaDetalle || (r.tablaDetalle && (r.tablaDetalle as any).headers ? r.tablaDetalle : null),
-                indicator_results: (r as any).details?.indicator_results || [],
-                ai_analysis: (r as any).details?.ai_analysis || null
-              }))
+              results: (existing.results || []).map(r => {
+                const details = (r as any).details || {};
+                return {
+                  ...r,
+                  kpi_weight: Number(r.kpi_weight || 0),
+                  kpi_target: Number(r.kpi_target || 0),
+                  real_value: r.real_value !== null ? Number(r.real_value) : null,
+                  score: Number(r.score || 0),
+                  tablaDetalle: details?.tablaDetalle || (r.tablaDetalle && (r.tablaDetalle as any).headers ? r.tablaDetalle : null),
+                  indicator_results: details?.indicator_results || r.indicator_results || [],
+                  ai_analysis: details?.ai_analysis || r.ai_analysis || null
+                };
+              })
             };
             setEvaluation(normalized);
           } else {
-            // 2. Si no hay (o es un objeto vacío), cargar KPIs de la persona para crear nueva
+
             const userWithKpis = await userService.getUserById(selectedUserId);
 
             if (userWithKpis.kpis && userWithKpis.kpis.length > 0) {
@@ -494,6 +495,37 @@ export default function NuevaEvaluacionPage() {
     }
   };
 
+  const handleRestoreFromHistory = (historyEntry: any) => {
+    if (!historyEntry || !historyEntry.results) return;
+
+    // Usar la misma lógica de normalización que en el load inicial
+    const restoredResults = historyEntry.results.map((r: any) => {
+      const details = r.details || {};
+      return {
+        ...r,
+        kpi_weight: Number(r.kpi_weight || 0),
+        kpi_target: Number(r.kpi_target || 0),
+        real_value: r.real_value !== null ? Number(r.real_value) : null,
+        score: Number(r.score || 0),
+        tablaDetalle: details?.tablaDetalle || (r.tablaDetalle && (r.tablaDetalle as any).headers ? r.tablaDetalle : null),
+        indicator_results: details?.indicator_results || r.indicator_results || [],
+        ai_analysis: details?.ai_analysis || r.ai_analysis || null
+      };
+    });
+
+    setEvaluation(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        total_score: Number(historyEntry.total_score || 0),
+        general_analysis: historyEntry.general_analysis || prev.general_analysis,
+        results: restoredResults
+      };
+    });
+
+    showNotification('Versión del historial restaurada. No olvides guardar los cambios.', 'success');
+  };
+
   const handleSyncWithTemplate = async () => {
     if (!selectedUserId || !evaluation) return;
 
@@ -836,7 +868,7 @@ export default function NuevaEvaluacionPage() {
                               <div className="space-y-2">
                                 <label className="text-[9px] font-black text-[#004C6C] uppercase tracking-widest block leading-tight min-h-[20px] ml-1">Resultado</label>
                                 <div className="w-full bg-[#004C6C]/5 border border-[#004C6C]/10 rounded-xl px-4 py-3 text-sm font-black text-[#004C6C] shadow-sm flex items-center justify-center min-h-[46px]">
-                                  {ind.unit === '$' ? '$ ' : ''}{ind.calculated_value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}{ind.unit !== '$' ? (ind.unit || '%') : ''}
+                                  {ind.unit === '$' ? '$ ' : ''}{(ind.calculated_value ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}{ind.unit !== '$' ? (ind.unit || '%') : ''}
                                 </div>
                               </div>
 
@@ -977,6 +1009,19 @@ export default function NuevaEvaluacionPage() {
           </div>
 
           <div className="flex justify-end gap-6 pt-4">
+            {evaluation.history && evaluation.history.length > 0 && (
+              <button
+                type="button"
+                onClick={() => handleRestoreFromHistory(evaluation.history![0])}
+                disabled={isSaving || isDataLoading}
+                className="px-8 py-5 bg-orange-50 text-orange-600 border-2 border-orange-100 rounded-[20px] font-extrabold hover:bg-orange-100 transition-all flex items-center gap-3 tracking-tight disabled:opacity-50"
+                title="Restaura la información de la última versión guardada en el historial"
+              >
+                <RefreshCw size={20} />
+                Restaurar Datos Perdidos
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleSyncWithTemplate}
