@@ -37,6 +37,35 @@ export default function NuevaEvaluacionPage() {
 
   const selectedUser = users.find(u => u.id === selectedUserId);
 
+  const normalizeEvaluation = (data: any): Evaluation => {
+    return {
+      ...data,
+      total_score: Number(data.total_score || 0),
+      results: (data.results || []).map((r: any) => {
+        const details = r.details || {};
+        const indicator_results = details?.indicator_results || r.indicator_results || [];
+        const ai_analysis = details?.ai_analysis || r.ai_analysis || null;
+        const tablaDetalle = details?.tablaDetalle || (r.tablaDetalle && (r.tablaDetalle as any).headers ? r.tablaDetalle : null);
+
+        return {
+          ...r,
+          kpi_weight: Number(r.kpi_weight || 0),
+          kpi_target: Number(r.kpi_target || 0),
+          real_value: r.real_value !== null ? Number(r.real_value) : null,
+          score: Number(r.score || 0),
+          tablaDetalle,
+          indicator_results,
+          ai_analysis,
+          details: {
+            tablaDetalle,
+            indicator_results,
+            ai_analysis
+          }
+        };
+      })
+    };
+  };
+
   // Load KPIs or existing evaluation when selection changes
   useEffect(() => {
     if (selectedUserId) {
@@ -47,24 +76,7 @@ export default function NuevaEvaluacionPage() {
           const existing = await evaluationService.getEvaluation(selectedUserId, selectedMonth, selectedYear);
 
           if (existing && existing.id) {
-            const normalized: Evaluation = {
-              ...existing,
-              total_score: Number(existing.total_score || 0),
-              results: (existing.results || []).map(r => {
-                const details = (r as any).details || {};
-                return {
-                  ...r,
-                  kpi_weight: Number(r.kpi_weight || 0),
-                  kpi_target: Number(r.kpi_target || 0),
-                  real_value: r.real_value !== null ? Number(r.real_value) : null,
-                  score: Number(r.score || 0),
-                  tablaDetalle: details?.tablaDetalle || (r.tablaDetalle && (r.tablaDetalle as any).headers ? r.tablaDetalle : null),
-                  indicator_results: details?.indicator_results || r.indicator_results || [],
-                  ai_analysis: details?.ai_analysis || r.ai_analysis || null
-                };
-              })
-            };
-            setEvaluation(normalized);
+            setEvaluation(normalizeEvaluation(existing));
           } else {
 
             const userWithKpis = await userService.getUserById(selectedUserId);
@@ -497,44 +509,10 @@ export default function NuevaEvaluacionPage() {
 
   const handleRestoreFromHistory = (historyEntry: any) => {
     if (!historyEntry || !historyEntry.results) return;
-
-    // Usar la misma lógica de normalización que en el load inicial
-    const restoredResults = historyEntry.results.map((r: any) => {
-      const details = r.details || {};
-      const indicator_results = details?.indicator_results || r.indicator_results || [];
-      const ai_analysis = details?.ai_analysis || r.ai_analysis || null;
-      const tablaDetalle = details?.tablaDetalle || (r.tablaDetalle && (r.tablaDetalle as any).headers ? r.tablaDetalle : null);
-
-      return {
-        ...r,
-        kpi_weight: Number(r.kpi_weight || 0),
-        kpi_target: Number(r.kpi_target || 0),
-        real_value: r.real_value !== null ? Number(r.real_value) : null,
-        score: Number(r.score || 0),
-        tablaDetalle,
-        indicator_results,
-        ai_analysis,
-        details: {
-          tablaDetalle,
-          indicator_results,
-          ai_analysis
-        }
-      };
-    });
-
-
-    setEvaluation(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        total_score: Number(historyEntry.total_score || 0),
-        general_analysis: historyEntry.general_analysis || prev.general_analysis,
-        results: restoredResults
-      };
-    });
-
+    setEvaluation(normalizeEvaluation(historyEntry));
     showNotification('Versión del historial restaurada. No olvides guardar los cambios.', 'success');
   };
+
 
   const handleSyncWithTemplate = async () => {
     if (!selectedUserId || !evaluation) return;
@@ -630,7 +608,7 @@ export default function NuevaEvaluacionPage() {
 
 
       const savedEvaluation = await evaluationService.saveEvaluation(selectedUserId, dataToSave);
-      setEvaluation(savedEvaluation);
+      setEvaluation(normalizeEvaluation(savedEvaluation));
 
       showNotification(
         status === 'finalizada' ? 'Evaluación finalizada con éxito' : 'Borrador guardado correctamente',
