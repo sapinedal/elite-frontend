@@ -50,10 +50,10 @@ export const Collapse: React.FC<CollapseProps> = ({
         className={`p-6 flex items-center justify-between cursor-pointer select-none transition-colors duration-300 ${isOpen ? 'bg-slate-50/30' : 'bg-white'}`}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <div className="flex-1">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-            <div className={`text-[15px] font-black transition-colors duration-300 ${isOpen ? 'text-[#004C6C]' : 'text-slate-700 group-hover:text-[#004C6C]'}`}>{title}</div>
-            {subtitle && <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{subtitle}</div>}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col gap-1">
+            <div className={`text-[15px] font-black leading-tight transition-colors duration-300 ${isOpen ? 'text-[#004C6C]' : 'text-slate-700 group-hover:text-[#004C6C]'}`}>{title}</div>
+            {subtitle && <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider break-all">{subtitle}</div>}
           </div>
         </div>
 

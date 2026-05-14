@@ -784,7 +784,7 @@ export default function NuevaEvaluacionPage() {
                           <Collapse
                             key={iIdx}
                             title={ind.indicator_name}
-                            subtitle={`${ind.formula}`}
+                            subtitle={ind.formula}
                             rightElement={
                               <div className="text-right">
                                 <p className={`text-xs font-black uppercase tracking-wider ${getLevelColor(ind.color)}`}>
