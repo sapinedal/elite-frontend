@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useUsers } from '../../users/hooks/useUsers';
 import { useLocation } from 'react-router-dom';
 import { evaluationService } from '../services/evaluationService';
+import { geminiService } from '../services/geminiService';
 import { meses } from '../types';
 import type { Evaluation, EvaluationResult } from '../types';
 import { calculateScore, calculateTotalScore } from '../utils/calculations';
@@ -348,8 +349,6 @@ export default function NuevaEvaluacionPage() {
     const indRes = kpiRes.indicator_results[indIdx];
 
     setIsGeneratingAI(true);
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
 
     try {
       const variablesStr = Object.entries(indRes.variables)
@@ -388,24 +387,7 @@ export default function NuevaEvaluacionPage() {
         Responde directamente en español en un párrafo fluido.
       `;
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        const errorMsg = result.error?.message || "Error al conectar con la IA";
-        showNotification(errorMsg, "error");
-        setIsGeneratingAI(false);
-        return;
-      }
-
-      const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      const aiText = await geminiService.generateAnalysis(prompt);
 
       if (aiText) {
         const updatedResults = [...evaluation.results];
@@ -447,9 +429,6 @@ export default function NuevaEvaluacionPage() {
   const handleGenerateAIAnalysis = async () => {
     if (!evaluation || !evaluation.results) return;
 
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
-
     setIsGeneratingAI(true);
 
     try {
@@ -476,24 +455,7 @@ export default function NuevaEvaluacionPage() {
         Responde directamente en español con un tono motivador y de alta gerencia.
       `;
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        const errorMsg = result.error?.message || "Error al conectar con la IA";
-        showNotification(errorMsg, "error");
-        setIsGeneratingAI(false);
-        return;
-      }
-
-      const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      const aiText = await geminiService.generateAnalysis(prompt);
 
       if (aiText) {
         handleUpdateAnalysis(aiText.trim());
