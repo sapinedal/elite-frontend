@@ -234,15 +234,17 @@ export default function NuevaEvaluacionPage() {
       console.error('Error al calcular fórmula', e);
     }
 
-    // Recalcular el valor real del KPI como el promedio de los puntajes (scores) de sus indicadores
-    if (kpiRes.indicator_results.length > 0) {
-      const sumScores = kpiRes.indicator_results.reduce((acc, curr) => acc + (curr.score || 0), 0);
-      const avgScore = sumScores / kpiRes.indicator_results.length;
+    // Recalcular el valor real del KPI como el promedio de los puntajes (scores) de sus indicadores activos
+    const activeIndicators = kpiRes.indicator_results.filter(ind => !ind.not_applicable);
+    if (activeIndicators.length > 0) {
+      const sumScores = activeIndicators.reduce((acc, curr) => acc + (curr.score || 0), 0);
+      const avgScore = sumScores / activeIndicators.length;
 
-      // El valor real para el KPI es el promedio de los puntajes alcanzados en sus indicadores
       kpiRes.real_value = avgScore;
-      // El score del KPI en este caso es el promedio directo de los indicadores (ya que cada indicador tiene su propia meta)
       kpiRes.score = avgScore;
+    } else if (kpiRes.indicator_results.length > 0) {
+      kpiRes.real_value = null;
+      kpiRes.score = 0;
     }
 
     const totalScore = calculateTotalScore(updatedResults);
@@ -328,15 +330,44 @@ export default function NuevaEvaluacionPage() {
       }
     }
 
-    if (kpiRes.indicator_results.length > 0) {
-      const sumScores = kpiRes.indicator_results.reduce((acc, curr) => acc + (curr.score || 0), 0);
-      const avgScore = sumScores / kpiRes.indicator_results.length;
+    const activeIndicators = kpiRes.indicator_results.filter(ind => !ind.not_applicable);
+    if (activeIndicators.length > 0) {
+      const sumScores = activeIndicators.reduce((acc, curr) => acc + (curr.score || 0), 0);
+      const avgScore = sumScores / activeIndicators.length;
       kpiRes.real_value = avgScore;
       kpiRes.score = avgScore;
+    } else if (kpiRes.indicator_results.length > 0) {
+      kpiRes.real_value = null;
+      kpiRes.score = 0;
     }
 
     const totalScore = calculateTotalScore(updatedResults);
 
+    setEvaluation({ ...evaluation, results: updatedResults, total_score: totalScore });
+  };
+  const handleToggleNotApplicable = (kpiIdx: number, indIdx: number) => {
+    if (!evaluation || !evaluation.results) return;
+
+    const updatedResults = [...evaluation.results];
+    const kpiRes = updatedResults[kpiIdx];
+    if (!kpiRes.indicator_results) return;
+
+    const indRes = kpiRes.indicator_results[indIdx];
+    indRes.not_applicable = !indRes.not_applicable;
+
+    // Recalcular KPI ignorando los N/A
+    const activeIndicators = kpiRes.indicator_results.filter(ind => !ind.not_applicable);
+    if (activeIndicators.length > 0) {
+      const sumScores = activeIndicators.reduce((acc, curr) => acc + (curr.score || 0), 0);
+      const avgScore = sumScores / activeIndicators.length;
+      kpiRes.real_value = avgScore;
+      kpiRes.score = avgScore;
+    } else if (kpiRes.indicator_results.length > 0) {
+      kpiRes.real_value = null;
+      kpiRes.score = 0;
+    }
+
+    const totalScore = calculateTotalScore(updatedResults);
     setEvaluation({ ...evaluation, results: updatedResults, total_score: totalScore });
   };
 
@@ -783,18 +814,43 @@ export default function NuevaEvaluacionPage() {
                         {res.indicator_results.map((ind, iIdx) => (
                           <Collapse
                             key={iIdx}
-                            title={ind.indicator_name}
+                            title={
+                              <div className="flex items-center gap-3">
+                                <span className={ind.not_applicable ? 'text-slate-300 line-through' : ''}>
+                                  {ind.indicator_name}
+                                </span>
+                                {ind.not_applicable && (
+                                  <span className="bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border border-slate-200">
+                                    No Aplica
+                                  </span>
+                                )}
+                              </div>
+                            }
                             subtitle={ind.formula}
                             rightElement={
-                              <div className="text-right">
-                                <p className={`text-xs font-black uppercase tracking-wider ${getLevelColor(ind.color)}`}>
-                                  {ind.level || 'Pendiente'}
-                                </p>
-                                <p className="text-[9px] text-slate-400 font-bold">{ind.qualification}</p>
+                              <div className="flex items-center gap-6">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleNotApplicable(idx, iIdx);
+                                  }}
+                                  className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${ind.not_applicable
+                                    ? 'bg-slate-800 text-white border-slate-800'
+                                    : 'bg-white text-slate-400 border-slate-200 hover:border-slate-800 hover:text-slate-800'
+                                    }`}
+                                >
+                                  {ind.not_applicable ? 'Aplicar' : 'N/A'}
+                                </button>
+                                <div className={`text-right ${ind.not_applicable ? 'opacity-30' : ''}`}>
+                                  <p className={`text-xs font-black uppercase tracking-wider ${getLevelColor(ind.color)}`}>
+                                    {ind.level || 'Pendiente'}
+                                  </p>
+                                  <p className="text-[9px] text-slate-400 font-bold">{ind.qualification}</p>
+                                </div>
                               </div>
                             }
                           >
-                            <div className="mb-6">
+                            <div className={`mb-6 ${ind.not_applicable ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
                               <p className="text-sm text-slate-500 font-medium leading-relaxed">
                                 {ind.definition || 'Sin definición registrada.'}
                               </p>

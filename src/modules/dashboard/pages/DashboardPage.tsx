@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users,
@@ -31,6 +32,7 @@ import { evaluationService } from '../../evaluacion/services/evaluationService';
 import type { User } from '../../users/types';
 import type { Evaluation } from '../../evaluacion/types';
 import { Skeleton } from '../../../components/ui/Skeleton';
+import { CustomSelect } from '../../../components/ui/CustomSelect';
 
 // --- Sub-components for specialized visualization ---
 
@@ -106,16 +108,32 @@ export default function DashboardPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [view, setView] = useState<'areas' | 'detail'>('areas');
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isExporting, setIsExporting] = useState(false);
 
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1;
-  const currentYear = now.getFullYear();
+  const currentMonth = Number(searchParams.get('month')) || new Date().getMonth() + 1;
+  const currentYear = Number(searchParams.get('year')) || new Date().getFullYear();
 
   const meses = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
   ];
+
+  const years = Array.from({ length: 5 }, (_, i) => 2024 + i);
+
+  const handleMonthChange = (month: number) => {
+    setSearchParams(prev => {
+      prev.set('month', month.toString());
+      return prev;
+    });
+  };
+
+  const handleYearChange = (year: number) => {
+    setSearchParams(prev => {
+      prev.set('year', year.toString());
+      return prev;
+    });
+  };
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -219,6 +237,24 @@ export default function DashboardPage() {
               </p>
             </motion.div>
           </AnimatePresence>
+        </div>
+
+        {/* Month/Year Selector */}
+        <div className="flex items-center gap-4 bg-white p-1.5 rounded-3xl border border-slate-200 shadow-lg relative z-50">
+          <div className="w-40">
+            <CustomSelect
+              options={meses.map((m, i) => ({ value: i + 1, label: m }))}
+              value={currentMonth}
+              onChange={handleMonthChange}
+            />
+          </div>
+          <div className="w-28">
+            <CustomSelect
+              options={years.map(y => ({ value: y, label: y.toString() }))}
+              value={currentYear}
+              onChange={handleYearChange}
+            />
+          </div>
         </div>
 
         {/* Mini Stats (Compact version of the old cards) */}

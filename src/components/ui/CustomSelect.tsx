@@ -36,7 +36,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ options, value, onCh
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-slate-50/50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-semibold text-left flex items-center justify-between transition-all hover:bg-white hover:border-[#004C6C]/30 ${isOpen ? 'ring-4 ring-blue-50 border-[#004C6C] bg-white' : ''}`}
+        className={`w-full bg-slate-50/50 border border-slate-200 rounded-2xl px-5 py-2.5 text-sm font-semibold text-left flex items-center justify-between transition-all hover:bg-white hover:border-[#004C6C]/30 ${isOpen ? 'ring-4 ring-blue-50 border-[#004C6C] bg-white' : ''}`}
       >
         <span className={selectedOption ? 'text-slate-700' : 'text-slate-400 font-medium'}>
           {selectedOption ? selectedOption.label : placeholder}
@@ -53,7 +53,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ options, value, onCh
                 onChange(option.value);
                 setIsOpen(false);
               }}
-              className="w-full text-left px-5 py-3 text-sm font-semibold flex items-center justify-between hover:bg-slate-50 transition-colors group"
+              className="w-full text-left px-5 py-2.5 text-sm font-semibold flex items-center justify-between hover:bg-slate-50 transition-colors group"
             >
               <span className={value === option.value ? 'text-[#004C6C]' : 'text-slate-600'}>
                 {option.label}

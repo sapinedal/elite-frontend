@@ -21,8 +21,10 @@ export const calculateTotalScore = (results: { score: number, kpi_weight: number
   let totalWeightsUsed = 0;
 
   results.forEach(res => {
-    totalScore += (res.score * (res.kpi_weight / 100));
-    totalWeightsUsed += res.kpi_weight;
+    if (res.real_value !== null) {
+      totalScore += (res.score * (res.kpi_weight / 100));
+      totalWeightsUsed += res.kpi_weight;
+    }
   });
 
   if (totalWeightsUsed === 0) return 0;

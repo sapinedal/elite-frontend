@@ -43,6 +43,7 @@ export interface IndicatorResult {
   conditional_goals?: any[];
   fixed_goal?: number | null;
   tablaDetalle?: any;
+  not_applicable?: boolean;
 }
 
 export type Mes = {
