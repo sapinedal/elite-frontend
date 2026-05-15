@@ -12,7 +12,7 @@ export const calculateScore = (real: number, target: number, lowerIsBetter: bool
   }
 };
 
-export const calculateTotalScore = (results: { score: number, kpi_weight: number }[]): number => {
+export const calculateTotalScore = (results: { score: number, kpi_weight: number, real_value: number | null }[]): number => {
   // Solo sumamos los pesos de los que tienen valor ingresado? 
   // No, el peso es fijo. Si no se ingresa valor, se cuenta como 0 o se ignora dependiendo de la lógica de negocio.
   // El usuario dijo: "calificacionTotal = Σ(puntajeItem × peso/100) para todos los ítems con valor ingresado. Si los pesos usados son <100, se normaliza."
