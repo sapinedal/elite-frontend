@@ -85,3 +85,9 @@ body {
     pointer-events: none;
     user-select: none;
 }
+
+/* Elevación de filas con dropdown abierto para evitar solapamientos */
+tr:has(.z-50) {
+    position: relative !important;
+    z-index: 50 !important;
+}

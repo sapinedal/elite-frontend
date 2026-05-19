@@ -57,6 +57,8 @@ export function DataTable<T extends { id: string | number }>({
                     group transition-all duration-300
                     ${onRowClick ? 'cursor-pointer hover:bg-[#004C6C]/2' : ''}
                     animate-slide-up
+                    relative
+                    [&:has(.z-50)]:z-50
                   `}
                   style={{ animationDelay: `${index * 30}ms` }}
                 >

@@ -6,6 +6,8 @@ import NuevaEvaluacionPage from '../modules/evaluacion/pages/NuevaEvaluacionPage
 import HistorialPage from '../modules/evaluacion/pages/HistorialPage';
 import UsersPage from '../modules/users/pages/UsersPage';
 import ConfiguracionPage from '../modules/configuracion/pages/ConfiguracionPage';
+import TasksPage from '../modules/tasks/pages/TasksPage';
+import TaskDashboardPage from '../modules/tasks/pages/TaskDashoardPage';
 import MainLayout from '../layouts/MainLayout';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 
@@ -50,6 +52,14 @@ export const router = createBrowserRouter([
         path: 'configuracion',
         element: <ConfiguracionPage />,
       },
+      {
+        path: 'task/dashboard',
+        element: <TaskDashboardPage />,
+      },
+      {
+        path: 'task/bitacora',
+        element: <TasksPage />,
+      }
     ],
   },
   {

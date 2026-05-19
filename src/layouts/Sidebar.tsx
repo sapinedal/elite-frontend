@@ -36,6 +36,25 @@ interface SidebarProps {
 
 const eliteMenuItems: SidebarItem[] = [
     {
+        id: 'task',
+        label: 'Tareas',
+        icon: <ClipboardList className="w-5 h-5" />,
+        children: [
+            {
+                id: 'dashboard',
+                label: 'Dashboard',
+                icon: <LayoutDashboard className="w-5 h-5" />,
+                href: '/app/task/dashboard',
+            },
+            {
+                id: 'bitacora',
+                label: 'Bitácora',
+                icon: <ClipboardList className="w-5 h-5" />,
+                href: '/app/task/bitacora',
+            }
+        ]
+    },
+    {
         id: 'kpi',
         label: 'KPI',
         icon: <BarChart3 className="w-5 h-5" />,
