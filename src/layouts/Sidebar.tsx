@@ -48,7 +48,7 @@ const eliteMenuItems: SidebarItem[] = [
             },
             {
                 id: 'bitacora',
-                label: 'Bitácora',
+                label: 'Kanban',
                 icon: <ClipboardList className="w-5 h-5" />,
                 href: '/app/task/bitacora',
             }
