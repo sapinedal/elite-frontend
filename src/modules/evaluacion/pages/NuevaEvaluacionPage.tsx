@@ -34,6 +34,10 @@ export default function NuevaEvaluacionPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  
+  // Local drafts state
+  const [hasLocalDraft, setHasLocalDraft] = useState(false);
+  const [localDraftData, setLocalDraftData] = useState<any>(null);
 
 
   const selectedUser = users.find(u => u.id === selectedUserId);
@@ -73,13 +77,32 @@ export default function NuevaEvaluacionPage() {
       const loadData = async () => {
         setIsDataLoading(true);
         try {
-          // 1. Intentar cargar evaluación existente
+          // 1. Intentar cargar evaluación existente del servidor
           const existing = await evaluationService.getEvaluation(selectedUserId, selectedMonth, selectedYear);
 
           if (existing && existing.id) {
-            setEvaluation(normalizeEvaluation(existing));
-          } else {
+            const normalized = normalizeEvaluation(existing);
+            setEvaluation(normalized);
 
+            // Verificar si hay borrador local para esta misma evaluación en localStorage
+            const draftKey = `elite_draft_${selectedUserId}_${selectedMonth}_${selectedYear}`;
+            const localDraftStr = localStorage.getItem(draftKey);
+            if (localDraftStr) {
+              const parsed = JSON.parse(localDraftStr);
+              // Si el borrador local difiere de lo que hay en el servidor
+              if (JSON.stringify(parsed.results) !== JSON.stringify(normalized.results) || parsed.general_analysis !== normalized.general_analysis) {
+                setHasLocalDraft(true);
+                setLocalDraftData(parsed);
+              } else {
+                setHasLocalDraft(false);
+                setLocalDraftData(null);
+              }
+            } else {
+              setHasLocalDraft(false);
+              setLocalDraftData(null);
+            }
+          } else {
+            // Cargar la plantilla por defecto del usuario
             const userWithKpis = await userService.getUserById(selectedUserId);
 
             if (userWithKpis.kpis && userWithKpis.kpis.length > 0) {
@@ -95,7 +118,6 @@ export default function NuevaEvaluacionPage() {
                 indicator_results: kpi.indicators?.map((ind: any) => {
                   const initialVariables = ind.parameters?.reduce((acc: any, p: any) => ({ ...acc, [p.name]: p.value }), {}) || {};
 
-                  // Calcular valor inicial si es posible
                   let initialCalculated = 0;
                   try {
                     let formula = ind.formula || '';
@@ -104,13 +126,11 @@ export default function NuevaEvaluacionPage() {
                       formula = formula.replace(new RegExp(escapedName, 'g'), (val as number).toString());
                     });
                     const cleanFormula = formula.replace(/[^-()\d/*+.]/g, '');
-                    // Use indirect eval to avoid build warnings and security risks
                     initialCalculated = (0, eval)(cleanFormula) || 0;
                   } catch (e) {
                     initialCalculated = 0;
                   }
 
-                  // Determinar nivel inicial basado en las metas de la plantilla
                   const goals = ind.conditional_goals || [];
                   const matchedGoal = goals.find((g: any) => initialCalculated >= g.min_value && initialCalculated <= g.max_value);
 
@@ -132,17 +152,33 @@ export default function NuevaEvaluacionPage() {
                 }) || []
               }));
 
-              setEvaluation({
+              const initialEval = {
                 user_id: selectedUserId,
                 month: selectedMonth,
                 year: selectedYear,
-                status: 'borrador',
+                status: 'borrador' as const,
                 total_score: 0,
                 general_analysis: '',
                 results: initialResults
-              });
+              };
+
+              setEvaluation(initialEval);
+
+              // Buscar si hay borrador local de una sesión inconclusa para este usuario nuevo
+              const draftKey = `elite_draft_${selectedUserId}_${selectedMonth}_${selectedYear}`;
+              const localDraftStr = localStorage.getItem(draftKey);
+              if (localDraftStr) {
+                const parsed = JSON.parse(localDraftStr);
+                setHasLocalDraft(true);
+                setLocalDraftData(parsed);
+              } else {
+                setHasLocalDraft(false);
+                setLocalDraftData(null);
+              }
             } else {
               setEvaluation(null);
+              setHasLocalDraft(false);
+              setLocalDraftData(null);
             }
           }
         } catch (error) {
@@ -155,6 +191,43 @@ export default function NuevaEvaluacionPage() {
       loadData();
     }
   }, [selectedUserId, selectedMonth, selectedYear]);
+
+  // Guardar borrador local automáticamente cada vez que cambie el formulario en estado "borrador"
+  useEffect(() => {
+    if (evaluation && selectedUserId && evaluation.status === 'borrador') {
+      const draftKey = `elite_draft_${selectedUserId}_${selectedMonth}_${selectedYear}`;
+      localStorage.setItem(draftKey, JSON.stringify(evaluation));
+    }
+  }, [evaluation, selectedUserId, selectedMonth, selectedYear]);
+
+  // Prevenir cierre accidental de pestaña del navegador si hay cambios sin guardar
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (evaluation && evaluation.status === 'borrador') {
+        const message = 'Tienes cambios locales sin guardar en la evaluación. ¿Seguro que quieres salir?';
+        e.preventDefault();
+        e.returnValue = message;
+        return message;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [evaluation]);
+
+  const handleRestoreLocalDraft = () => {
+    if (!localDraftData) return;
+    setEvaluation(localDraftData);
+    setHasLocalDraft(false);
+    showNotification('Se han restaurado los cambios locales no guardados de esta sesión.', 'success');
+  };
+
+  const handleDiscardLocalDraft = () => {
+    const draftKey = `elite_draft_${selectedUserId}_${selectedMonth}_${selectedYear}`;
+    localStorage.removeItem(draftKey);
+    setHasLocalDraft(false);
+    setLocalDraftData(null);
+    showNotification('Se ha descartado el borrador local.', 'info');
+  };
 
   const handleUpdateRealValue = (idx: number, val: string) => {
     if (!evaluation || !evaluation.results) return;
@@ -603,6 +676,12 @@ export default function NuevaEvaluacionPage() {
       const savedEvaluation = await evaluationService.saveEvaluation(selectedUserId, dataToSave);
       setEvaluation(normalizeEvaluation(savedEvaluation));
 
+      // Eliminar el borrador local tras guardar exitosamente en el servidor
+      const draftKey = `elite_draft_${selectedUserId}_${selectedMonth}_${selectedYear}`;
+      localStorage.removeItem(draftKey);
+      setHasLocalDraft(false);
+      setLocalDraftData(null);
+
       showNotification(
         status === 'finalizada' ? 'Evaluación finalizada con éxito' : 'Borrador guardado correctamente',
         'success'
@@ -733,6 +812,33 @@ export default function NuevaEvaluacionPage() {
         </div>
       ) : (
         <div className="space-y-6">
+          {hasLocalDraft && (
+            <div className="bg-orange-50 border border-orange-200 p-5 rounded-[24px] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 rounded-xl text-orange-600">
+                  <AlertCircle size={20} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-orange-800">Borrador local detectado</h4>
+                  <p className="text-xs text-orange-600 font-medium">Hemos detectado cambios locales sin guardar para esta evaluación en este navegador. ¿Deseas restaurarlos?</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <button
+                  onClick={handleDiscardLocalDraft}
+                  className="px-4 py-2 bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
+                >
+                  Descartar
+                </button>
+                <button
+                  onClick={handleRestoreLocalDraft}
+                  className="px-5 py-2 bg-orange-500 text-white hover:bg-orange-600 rounded-xl font-black text-xs uppercase tracking-widest shadow-md shadow-orange-500/20 transition-all"
+                >
+                  Restaurar borrador
+                </button>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-6">
             {evaluation.results?.map((res, idx) => (
               <Collapse
