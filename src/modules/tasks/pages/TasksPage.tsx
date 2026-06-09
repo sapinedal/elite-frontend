@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   PlusCircle,
   RotateCcw,
@@ -23,6 +24,7 @@ import { CustomSelect } from '../../../components/ui/CustomSelect';
 
 export default function TasksPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Verificamos el permiso de edición. Si el backend simula el permiso basado en cargo/email,
   // el objeto user del token ya contendrá 'bitacora.editar' de forma limpia y transparente.
@@ -246,14 +248,22 @@ export default function TasksPage() {
               Planificación y compromisos operativos en tiempo real
             </p>
           </div>
-
-          <button
-            onClick={handleAddNewTaskClick}
-            className="flex items-center justify-center gap-3 px-6 py-3.5 bg-[#004C6C] text-white rounded-[20px] font-black text-xs uppercase tracking-widest hover:bg-[#003a53] shadow-lg shadow-blue-900/10 transition-all hover:scale-[1.02] active:scale-95 group shrink-0 cursor-pointer"
-          >
-            <PlusCircle size={18} className="transition-transform group-hover:rotate-90 duration-300" />
-            Nueva Tarea
-          </button>
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <button
+              onClick={() => navigate('/app/task/dashboard')}
+              className="flex items-center justify-center gap-2 px-5 py-3.5 bg-slate-50 border border-slate-200 text-slate-600 hover:text-[#004C6C] hover:border-[#004C6C]/30 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
+            >
+              <BarChart3 size={16} className="text-[#004C6C]" />
+              Ver Dashboard
+            </button>
+            <button
+              onClick={handleAddNewTaskClick}
+              className="flex items-center justify-center gap-3 px-6 py-3.5 bg-[#004C6C] text-white rounded-[20px] font-black text-xs uppercase tracking-widest hover:bg-[#003a53] shadow-lg shadow-blue-900/10 transition-all hover:scale-[1.02] active:scale-95 group shrink-0 cursor-pointer"
+            >
+              <PlusCircle size={18} className="transition-transform group-hover:rotate-90 duration-300" />
+              Nueva Tarea
+            </button>
+          </div>
         </div>
 
         {/* METRICAS DE BITÁCORA - 5 clickable cards */}

@@ -10,7 +10,6 @@ import {
   BarChart3,
   Building2,
   Trophy,
-  Target,
   FileText,
   Loader2
 } from 'lucide-react';
@@ -19,12 +18,12 @@ import {
   Line,
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  Cell
+  ResponsiveContainer
 } from 'recharts';
 
 import { useUsers } from '../../users/hooks/useUsers';
@@ -102,9 +101,26 @@ const GaugeChart = ({ value, label }: { value: number, label: string }) => {
   );
 };
 
+const CustomKPITooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xl space-y-1 z-50">
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{data.role}</p>
+        <p className="text-xs font-black text-[#004C6C]">{data.category}</p>
+        <div className="flex gap-4 pt-2 text-xs font-bold">
+          <span className="text-[#004C6C]">Incidencia: {payload[0].value}%</span>
+          <span className="text-[#e65f2b]">Calificación: {payload[1].value}%</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function DashboardPage() {
   const { users, isLoading: usersLoading } = useUsers();
-  const [monthEvaluations, setMonthEvaluations] = useState<Evaluation[]>([]);
+  const [allEvaluations, setAllEvaluations] = useState<Evaluation[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [view, setView] = useState<'areas' | 'detail'>('areas');
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
@@ -139,11 +155,8 @@ export default function DashboardPage() {
     const fetchHistory = async () => {
       setIsLoadingHistory(true);
       try {
-        const data = await evaluationService.getAllHistory({
-          month: currentMonth,
-          year: currentYear
-        });
-        setMonthEvaluations(data);
+        const data = await evaluationService.getAllHistory();
+        setAllEvaluations(data);
       } catch (error) {
         console.error("Error fetching dashboard history:", error);
       } finally {
@@ -152,7 +165,11 @@ export default function DashboardPage() {
     };
 
     fetchHistory();
-  }, [currentMonth, currentYear]);
+  }, []);
+
+  const monthEvaluations = allEvaluations.filter(
+    e => Number(e.month) === currentMonth && Number(e.year) === currentYear
+  );
 
   // Global calculations
   const totalUsers = users.length;
@@ -171,6 +188,128 @@ export default function DashboardPage() {
     acc[key].push({ user, evaluation });
     return acc;
   }, {} as Record<string, { user: User, evaluation?: Evaluation }[]>);
+
+  const getCargoLabel = (user: User) => {
+    const posName = (typeof user.position === 'object' ? user.position?.name : user.position) || '';
+    const posUpper = posName.toUpperCase();
+    
+    const firstName = user.first_name ? user.first_name.split(' ')[0].toUpperCase() : user.name.split(' ')[0].toUpperCase();
+    const lastName = user.last_name ? user.last_name.split(' ')[0].toUpperCase() : '';
+    const shortName = lastName ? `${firstName} ${lastName}` : firstName;
+
+    if (posUpper.includes('DIRECTORA COMERCIAL') || posUpper.includes('DIRECTOR COMERCIAL')) {
+      return `DIRECTORA COMERCIAL - ${shortName}`;
+    }
+    if (posUpper.includes('LÍDER DE SALA') || posUpper.includes('LIDER DE SALA') || posUpper.includes('SALA DE VENTAS')) {
+      return `LIDER SALA DE VENTAS - ${shortName}`;
+    }
+    if (posUpper.includes('ASESORA COMERCIAL') || posUpper.includes('ASESOR COMERCIAL')) {
+      return `ASESORA COMERCIAL - ${shortName}`;
+    }
+    return `${posUpper} - ${shortName}` || user.name.toUpperCase();
+  };
+
+  // Construct comparison data for Commercial area
+  const rawComparisonData = (groupedData['Comercial'] || []).map(({ user }) => {
+    const userEvals = allEvaluations.filter(e => e.user_id === user.id);
+    
+    const findScore = (month: number, year: number) => {
+      const evalObj = userEvals.find(e => Number(e.month) === month && Number(e.year) === year);
+      return evalObj ? Number(evalObj.total_score) : undefined;
+    };
+
+    return {
+      cargo: getCargoLabel(user),
+      "Agosto": findScore(8, 2025),
+      "Septiembre": findScore(9, 2025),
+      "Octubre": findScore(10, 2025),
+      "Noviembre": findScore(11, 2025),
+      "Diciembre-Enero": findScore(12, 2025) ?? findScore(1, 2026),
+      "Febrero": findScore(2, 2026),
+      "Marzo": findScore(3, 2026)
+    };
+  });
+
+  const cargoOrder = [
+    'ASESORA COMERCIAL - PAOLA ARENAS',
+    'ASESORA COMERCIAL - NATALIA POSADA',
+    'LIDER SALA DE VENTAS - INGRID OSPICIO',
+    'DIRECTORA COMERCIAL - SARA MORENO'
+  ];
+
+  const monthsConfig = [
+    { key: 'Agosto', label: 'Ago', color: '#1a5b78' },
+    { key: 'Septiembre', label: 'Sep', color: '#e65f2b' },
+    { key: 'Octubre', label: 'Oct', color: '#1b5e20' },
+    { key: 'Noviembre', label: 'Nov', color: '#0288d1' },
+    { key: 'Diciembre-Enero', label: 'Dic-Ene', color: '#9c27b0' },
+    { key: 'Febrero', label: 'Feb', color: '#55a630' },
+    { key: 'Marzo', label: 'Mar', color: '#0b2c3d' },
+  ];
+
+  const comparisonData = rawComparisonData.sort((a, b) => {
+    return cargoOrder.indexOf(a.cargo) - cargoOrder.indexOf(b.cargo);
+  });
+
+  // Find users dynamically by matching position and name
+  const userSaraObj = users.find(u => {
+    const posName = ((typeof u.position === 'object' ? u.position?.name : u.position) || '').toLowerCase();
+    return posName.includes('directora comercial') || posName.includes('director comercial');
+  });
+
+  const userIngridObj = users.find(u => {
+    const posName = ((typeof u.position === 'object' ? u.position?.name : u.position) || '').toLowerCase();
+    return posName.includes('lider de sala') || posName.includes('líder de sala') || posName.includes('sala de ventas');
+  });
+
+  const userNataliaObj = users.find(u => {
+    const posName = ((typeof u.position === 'object' ? u.position?.name : u.position) || '').toLowerCase();
+    const fullName = (u.name || '').toLowerCase();
+    return (posName.includes('asesora comercial') || posName.includes('asesor comercial')) && 
+           (fullName.includes('natalia') || fullName.includes('posada'));
+  });
+
+  const userPaolaObj = users.find(u => {
+    const posName = ((typeof u.position === 'object' ? u.position?.name : u.position) || '').toLowerCase();
+    const fullName = (u.name || '').toLowerCase();
+    return (posName.includes('asesora comercial') || posName.includes('asesor comercial')) && 
+           (fullName.includes('paola') || fullName.includes('arenas'));
+  });
+
+  const evalSara = userSaraObj ? monthEvaluations.find(e => e.user_id === userSaraObj.id) : undefined;
+  const evalIngrid = userIngridObj ? monthEvaluations.find(e => e.user_id === userIngridObj.id) : undefined;
+  const evalPaola = userPaolaObj ? monthEvaluations.find(e => e.user_id === userPaolaObj.id) : undefined;
+  const evalNatalia = userNataliaObj ? monthEvaluations.find(e => e.user_id === userNataliaObj.id) : undefined;
+
+  const scoreSara = evalSara ? Number(evalSara.total_score) : 0;
+  const scoreIngrid = evalIngrid ? Number(evalIngrid.total_score) : 0;
+  const scorePaola = evalPaola ? Number(evalPaola.total_score) : 0;
+  const scoreNatalia = evalNatalia ? Number(evalNatalia.total_score) : 0;
+
+  const kpiBreakdownData = [
+    { role: 'ASESORA COMERCIAL', category: 'Gestión de Clientes y Leads', incid: 70, calif: 70 * (scoreNatalia / 100) },
+    { role: 'ASESORA COMERCIAL', category: 'Gestión Operativa y Control de Ventas', incid: 25, calif: 25 * (scoreNatalia / 100) },
+    { role: 'ASESORA COMERCIAL', category: 'Relaciones y Servicio', incid: 5, calif: 5 * (scoreNatalia / 100) },
+    
+    { role: 'ASESORA COMERCIAL ADMIN', category: 'Gestión de Clientes y Leads', incid: 60, calif: 60 * (scorePaola / 100) },
+    { role: 'ASESORA COMERCIAL ADMIN', category: 'Gestión Operativa y Control de Ventas', incid: 40, calif: 40 * (scorePaola / 100) },
+    { role: 'ASESORA COMERCIAL ADMIN', category: 'Relaciones y Servicio', incid: 0, calif: 0 },
+    
+    { role: 'DIRECTORA COMERCIAL', category: 'Estrategia y Planificación Comercial', incid: 30, calif: 30 * (scoreSara / 100) },
+    { role: 'DIRECTORA COMERCIAL', category: 'Gestión Documental y Procesos Legales/Internos', incid: 10, calif: 10 * (scoreSara / 100) },
+    { role: 'DIRECTORA COMERCIAL', category: 'Gestión Operativa y Control de Ventas', incid: 30, calif: 30 * (scoreSara / 100) },
+    { role: 'DIRECTORA COMERCIAL', category: 'Liderazgo y Gestión del Equipo Comercial', incid: 30, calif: 30 * (scoreSara / 100) },
+    
+    { role: 'LIDER SALA DE VENTAS', category: 'Gestión de Clientes y Leads', incid: 70, calif: 70 * (scoreIngrid / 100) },
+    { role: 'LIDER SALA DE VENTAS', category: 'Gestión Operativa y Control de Ventas', incid: 25, calif: 25 * (scoreIngrid / 100) },
+    { role: 'LIDER SALA DE VENTAS', category: 'Relaciones y Servicio', incid: 5, calif: 5 * (scoreIngrid / 100) },
+  ].map(d => ({
+    ...d,
+    displayLabel: `${d.role === 'ASESORA COMERCIAL' ? 'Asesora' : d.role === 'ASESORA COMERCIAL ADMIN' ? 'Admin' : d.role === 'DIRECTORA COMERCIAL' ? 'Directora' : 'Líder'} - ${d.category.substring(0, 16)}`,
+    "Suma de INCIDENCIA": Number(d.incid.toFixed(1)),
+    "Suma de CALIFICACIÓN": Number(d.calif.toFixed(1))
+  }));
+
 
   const handleAreaClick = (areaName: string) => {
     setSelectedArea(areaName);
@@ -365,10 +504,9 @@ export default function DashboardPage() {
             className="space-y-8"
           >
             {selectedArea === 'Comercial' ? (
-              <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-
-                {/* Visual Employee Columns (The Excel Core) */}
-                <div className="xl:col-span-3 overflow-x-auto pb-4">
+              <div className="space-y-8">
+                {/* Visual Employee Columns (The Excel Core) - Full Width */}
+                <div className="overflow-x-auto pb-4 w-full">
                   <div className="flex gap-6 min-w-max">
                     {groupedData[selectedArea]?.map(({ user, evaluation }, idx) => {
                       // Mock breakdown for visualization (in real app, would come from evaluation indicators)
@@ -420,62 +558,189 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Performance Analytics Sidebar */}
-                <div className="space-y-8">
-                  {/* Historical Line Chart */}
-                  <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
-                    <h4 className="text-xs font-black text-[#004C6C] uppercase tracking-widest mb-6 flex items-center gap-2">
-                      <BarChart3 size={14} /> Evolución Mensual
-                    </h4>
-                    <div className="h-48 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={[
-                          { name: 'Ene', score: 82 },
-                          { name: 'Feb', score: 85 },
-                          { name: 'Mar', score: averageScore || 88 },
-                        ]}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} />
-                          <YAxis hide domain={[0, 100]} />
-                          <Tooltip
-                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                            labelStyle={{ fontWeight: 'black', color: '#004C6C' }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="score"
-                            stroke="#004C6C"
-                            strokeWidth={4}
-                            dot={{ r: 6, fill: '#004C6C', strokeWidth: 2, stroke: '#fff' }}
-                            activeDot={{ r: 8 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
+                {/* Evolución Mensual - Full Width */}
+                <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm space-y-6">
+                  <div>
+                    <h4 className="text-lg font-black text-[#004C6C] tracking-tight">Evolución Mensual</h4>
+                    <p className="text-slate-400 font-bold uppercase tracking-wider text-[10px] mt-1">Evolución del puntaje promedio del área en los últimos meses</p>
+                  </div>
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={[
+                        { name: 'Ene', score: 82 },
+                        { name: 'Feb', score: 85 },
+                        { name: 'Mar', score: averageScore || 88 },
+                      ]}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} domain={[0, 100]} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                          labelStyle={{ fontWeight: 'black', color: '#004C6C' }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="score"
+                          name="Promedio"
+                          stroke="#004C6C"
+                          strokeWidth={4}
+                          dot={{ r: 6, fill: '#004C6C', strokeWidth: 2, stroke: '#fff' }}
+                          activeDot={{ r: 8 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Comparativa Equipo - Full Width */}
+                <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm space-y-6">
+                  <div>
+                    <h4 className="text-lg font-black text-[#004C6C] tracking-tight">Comparativa de Equipo</h4>
+                    <p className="text-slate-400 font-bold uppercase tracking-wider text-[10px] mt-1">Historial de calificaciones de los colaboradores por mes</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    {comparisonData.map((collab) => {
+                      const parts = collab.cargo.split(' - ');
+                      const cargoName = parts[0] || '';
+                      const name = parts[1] || '';
+
+                      const collabData = monthsConfig
+                        .map(m => ({
+                          name: m.label,
+                          score: collab[m.key as keyof typeof collab] as number | undefined,
+                          color: m.color
+                        }))
+                        .filter(item => item.score !== undefined && item.score !== null);
+
+                      if (collabData.length === 0) return null;
+
+                      return (
+                        <div key={collab.cargo} className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                          <div className="mb-4">
+                            <div className="text-sm font-black text-slate-800 tracking-tight leading-tight">{name}</div>
+                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">{cargoName}</div>
+                          </div>
+                          <div className="w-full">
+                            <ResponsiveContainer width="100%" height={collabData.length * 28 + 10}>
+                              <BarChart
+                                layout="vertical"
+                                data={collabData}
+                                margin={{ top: 5, right: 35, left: 0, bottom: 5 }}
+                              >
+                                <XAxis type="number" domain={[0, 100]} hide />
+                                <YAxis
+                                  dataKey="name"
+                                  type="category"
+                                  axisLine={false}
+                                  tickLine={false}
+                                  tick={{ fontSize: 9, fontWeight: 'bold', fill: '#64748b' }}
+                                  width={40}
+                                />
+                                <Tooltip
+                                  cursor={{ fill: '#f8fafc' }}
+                                  formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Puntaje']}
+                                  contentStyle={{ borderRadius: '8px', fontSize: '10px' }}
+                                />
+                                <Bar
+                                  dataKey="score"
+                                  radius={[0, 4, 4, 0]}
+                                  barSize={12}
+                                  label={{
+                                    position: 'right',
+                                    fontSize: 9,
+                                    fontWeight: 'bold',
+                                    fill: '#475569',
+                                    formatter: (v: any) => `${Number(v).toFixed(0)}%`
+                                  }}
+                                >
+                                  {collabData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom HTML Legend */}
+                  <div className="mt-6 pt-6 border-t border-slate-100">
+                    <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+                      {monthsConfig.map(m => (
+                        <div key={m.key} className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: m.color }} />
+                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">{m.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* KPI Breakdown Line Chart - Full Width */}
+                <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h4 className="text-lg font-black text-[#004C6C] tracking-tight">Desglose de KPIs: Incidencia vs Calificación</h4>
+                      <p className="text-slate-400 font-bold uppercase tracking-wider text-[10px] mt-1">Comparativa de peso estratégico vs calificación obtenida por el equipo comercial</p>
+                    </div>
+                    {/* Legend badges */}
+                    <div className="flex items-center gap-4 text-xs font-bold">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-md bg-[#004C6C]"></span>
+                        <span className="text-slate-600">Suma de INCIDENCIA</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-md bg-[#e65f2b]"></span>
+                        <span className="text-slate-600">Suma de CALIFICACIÓN</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Team Comparison Bar Chart */}
-                  <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
-                    <h4 className="text-xs font-black text-[#004C6C] uppercase tracking-widest mb-6 flex items-center gap-2">
-                      <Target size={14} /> Comparativa Equipo
-                    </h4>
-                    <div className="h-64 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart layout="vertical" data={groupedData[selectedArea]?.map(m => ({
-                          name: m.user.name.split(' ')[0],
-                          score: m.evaluation ? Number(m.evaluation.total_score) : 0
-                        })).sort((a, b) => b.score - a.score)}>
-                          <XAxis type="number" hide domain={[0, 100]} />
-                          <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#64748b' }} width={60} />
-                          <Tooltip cursor={{ fill: '#f8fafc' }} />
-                          <Bar dataKey="score" radius={[0, 10, 10, 0]} barSize={20}>
-                            {groupedData[selectedArea]?.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={index === 0 ? '#004C6C' : '#94a3b8'} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+                  <div className="h-[350px] w-full mt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart 
+                        data={kpiBreakdownData} 
+                        margin={{ top: 10, right: 30, left: 0, bottom: 40 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="displayLabel" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 8, fontWeight: 'bold', fill: '#64748b' }}
+                          height={60}
+                          interval={0}
+                          angle={-25}
+                          textAnchor="end"
+                        />
+                        <YAxis 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }}
+                          domain={[0, 100]}
+                        />
+                        <Tooltip content={<CustomKPITooltip />} />
+                        <Line 
+                          type="monotone" 
+                          dataKey="Suma de INCIDENCIA" 
+                          stroke="#004C6C" 
+                          strokeWidth={3}
+                          dot={{ r: 5, fill: '#004C6C', strokeWidth: 2, stroke: '#fff' }}
+                          activeDot={{ r: 7 }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="Suma de CALIFICACIÓN" 
+                          stroke="#e65f2b" 
+                          strokeWidth={3}
+                          dot={{ r: 5, fill: '#e65f2b', strokeWidth: 2, stroke: '#fff' }}
+                          activeDot={{ r: 7 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               </div>

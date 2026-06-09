@@ -22,7 +22,7 @@ export default function LoginPage() {
       const data = await authService.login({ email, password });
       await login({ token: data.token });
       showNotification(`Bienvenido de nuevo, ${data.user.name}`, 'success');
-      navigate('/app/dashboard');
+      navigate('/app/kpi/dashboard');
     } catch (error: any) {
       console.error(error);
       const message = error.response?.data?.message || 'Error al iniciar sesión. Verifica tus credenciales.';

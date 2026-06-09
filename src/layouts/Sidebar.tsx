@@ -63,24 +63,24 @@ const eliteMenuItems: SidebarItem[] = [
                 id: 'dashboard',
                 label: 'Dashboard',
                 icon: <LayoutDashboard className="w-5 h-5" />,
-                href: '/app/dashboard',
+                href: '/app/kpi/dashboard',
             },
             {
                 id: 'nueva-evaluacion',
                 label: 'Nueva Evaluación',
-                href: '/app/evaluacion',
+                href: '/app/kpi/evaluacion',
                 icon: <PlusCircle className="w-4 h-4" />,
             },
             {
                 id: 'historial',
                 label: 'Historial',
-                href: '/app/historial',
+                href: '/app/kpi/historial',
                 icon: <History className="w-4 h-4" />,
             },
             {
                 id: 'parametrizacion',
                 label: 'Parametrización',
-                href: '/app/plantillas',
+                href: '/app/kpi/plantillas',
                 icon: <ClipboardList className="w-4 h-4" />,
             }
         ]

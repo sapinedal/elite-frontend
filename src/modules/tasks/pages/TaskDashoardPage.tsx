@@ -7,7 +7,9 @@ import {
     CheckCircle,
     LayoutGrid,
     RotateCcw,
-    Clock
+    Clock,
+    PlusCircle,
+    AlertTriangle
 } from 'lucide-react';
 import {
     PieChart,
@@ -206,6 +208,61 @@ export default function TaskDashboardPage() {
 
     const completedRatio = totalTasksCount > 0 ? (doneTasks / totalTasksCount) * 100 : 0;
 
+    // Ventana temporal activa (por defecto el mes/año del sistema si está filtrado como 'Todo')
+    const activeMonth = selectedMonth !== 'Todo' ? Number(selectedMonth) : (new Date().getMonth() + 1);
+    const activeYear = selectedYear !== 'Todo' ? Number(selectedYear) : new Date().getFullYear();
+
+    // Filtramos tareas únicamente por área y responsable para calcular las métricas de la ventana de tiempo
+    const areaUserFiltered = tasks.filter(task => {
+        if (selectedAreaId !== 'Todo' && task.area_id?.toString() !== selectedAreaId) return false;
+        if (selectedUserId !== 'Todo' && task.responsible_id?.toString() !== selectedUserId) return false;
+        return true;
+    });
+
+    // 1. Tareas nuevas en el periodo: fecha inicio (start_date) o creación (created_at) en el mes/año activo
+    const newTasksInPeriod = areaUserFiltered.filter(t => {
+        const dateStr = t.start_date || t.created_at;
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        return (d.getMonth() + 1) === activeMonth && d.getFullYear() === activeYear;
+    }).length;
+
+    // 2. Tareas programadas para el periodo: fecha fin programada (scheduled_end_date) en el mes/año activo
+    const scheduledTasksInPeriod = areaUserFiltered.filter(t => {
+        if (!t.scheduled_end_date) return false;
+        const d = new Date(t.scheduled_end_date);
+        return (d.getMonth() + 1) === activeMonth && d.getFullYear() === activeYear;
+    }).length;
+
+    // 3. Tareas completadas en el periodo: estado Completada y fecha entrega real (actual_end_date o updated_at) en el mes/año activo
+    const completedTasksInPeriod = areaUserFiltered.filter(t => {
+        if (t.status !== 'Completada') return false;
+        const dateStr = t.actual_end_date || t.updated_at;
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        return (d.getMonth() + 1) === activeMonth && d.getFullYear() === activeYear;
+    }).length;
+
+    // 4. Tareas vencidas: pendientes con scheduled_end_date en el pasado (menor que hoy)
+    const overdueTasksCount = areaUserFiltered.filter(t => {
+        if (t.status === 'Completada') return false;
+        if (!t.scheduled_end_date) return false;
+        const scheduledDate = new Date(t.scheduled_end_date);
+        const today = new Date();
+        scheduledDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedYear !== 'Todo') {
+            const taskYear = scheduledDate.getFullYear();
+            if (taskYear > Number(selectedYear)) return false;
+            if (selectedMonth !== 'Todo') {
+                const taskMonth = scheduledDate.getMonth() + 1;
+                if (taskYear === Number(selectedYear) && taskMonth > Number(selectedMonth)) return false;
+            }
+        }
+        return scheduledDate < today;
+    }).length;
+
     // 1. Agrupamiento por Área (para Tabla Izquierda e Indicadores Gauges)
     const areaDistribution = filteredTasks.reduce((acc, task) => {
         const areaName = task.area?.name || 'Global';
@@ -335,6 +392,125 @@ export default function TaskDashboardPage() {
                     >
                         <RotateCcw size={16} />
                     </button>
+                </div>
+            </div>
+
+            {/* KPI METRIC CARDS ROW - Premium design */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                {/* 1. Estado General de Tareas */}
+                <div className="bg-white rounded-[24px] p-6 border border-slate-200 shadow-xs relative overflow-hidden group hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+                    <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-slate-50 rounded-full blur-2xl group-hover:bg-slate-100/70 transition-all duration-500" />
+                    <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Estado de Tareas</span>
+                                <div className="h-8 w-8 bg-[#004C6C]/10 text-[#004C6C] rounded-lg flex items-center justify-center">
+                                    <ClipboardList size={16} />
+                                </div>
+                            </div>
+                            <h3 className="text-2xl font-black text-[#004C6C] mt-2 tracking-tight leading-none">
+                                {totalTasksCount} <span className="text-xs font-bold text-slate-500">Tareas</span>
+                            </h3>
+                        </div>
+                        <div className="space-y-1 text-[10px] font-bold text-slate-500">
+                            <div className="flex justify-between items-center">
+                                <span>Por Hacer / Espera:</span>
+                                <span className="font-black text-slate-700">{todoTasks + waitingTasks}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span>En Progreso:</span>
+                                <span className="font-black text-sky-600">{inProgressTasks}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span>Completadas:</span>
+                                <span className="font-black text-emerald-600">{doneTasks}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. Tareas Nuevas */}
+                <div className="bg-white rounded-[24px] p-6 border border-slate-200 shadow-xs relative overflow-hidden group hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+                    <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-sky-50 rounded-full blur-2xl group-hover:bg-sky-100/50 transition-all duration-500" />
+                    <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nuevas en Periodo</span>
+                                <div className="h-8 w-8 bg-sky-50 text-sky-500 rounded-lg flex items-center justify-center">
+                                    <PlusCircle size={16} />
+                                </div>
+                            </div>
+                            <h3 className="text-2xl font-black text-sky-500 mt-2 tracking-tight leading-none">
+                                {newTasksInPeriod}
+                            </h3>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold leading-tight">
+                            Tareas creadas/iniciadas en el mes de <strong className="text-slate-600 font-black">{selectedMonth !== 'Todo' ? meses[Number(selectedMonth) - 1] : meses[new Date().getMonth()]}</strong>.
+                        </p>
+                    </div>
+                </div>
+
+                {/* 3. Tareas Programadas */}
+                <div className="bg-white rounded-[24px] p-6 border border-slate-200 shadow-xs relative overflow-hidden group hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+                    <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-amber-50 rounded-full blur-2xl group-hover:bg-amber-100/50 transition-all duration-500" />
+                    <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Programadas</span>
+                                <div className="h-8 w-8 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center">
+                                    <Calendar size={16} />
+                                </div>
+                            </div>
+                            <h3 className="text-2xl font-black text-amber-600 mt-2 tracking-tight leading-none">
+                                {scheduledTasksInPeriod}
+                            </h3>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold leading-tight">
+                            Compromisos con fecha de entrega agendada para este periodo.
+                        </p>
+                    </div>
+                </div>
+
+                {/* 4. Tareas Completadas */}
+                <div className="bg-white rounded-[24px] p-6 border border-slate-200 shadow-xs relative overflow-hidden group hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+                    <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-emerald-50 rounded-full blur-2xl group-hover:bg-emerald-100/50 transition-all duration-500" />
+                    <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Completadas en Mes</span>
+                                <div className="h-8 w-8 bg-emerald-50 text-emerald-500 rounded-lg flex items-center justify-center">
+                                    <CheckCircle size={16} />
+                                </div>
+                            </div>
+                            <h3 className="text-2xl font-black text-emerald-600 mt-2 tracking-tight leading-none">
+                                {completedTasksInPeriod}
+                            </h3>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold leading-tight">
+                            Tareas finalizadas con éxito dentro de la ventana temporal activa.
+                        </p>
+                    </div>
+                </div>
+
+                {/* 5. Tareas Vencidas */}
+                <div className="bg-white rounded-[24px] p-6 border border-slate-200 shadow-xs relative overflow-hidden group hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+                    <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-rose-50 rounded-full blur-2xl group-hover:bg-rose-100/50 transition-all duration-500" />
+                    <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tareas Vencidas</span>
+                                <div className="h-8 w-8 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center">
+                                    <AlertTriangle size={16} />
+                                </div>
+                            </div>
+                            <h3 className="text-2xl font-black text-rose-600 mt-2 tracking-tight leading-none">
+                                {overdueTasksCount}
+                            </h3>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold leading-tight">
+                            Tareas sin completar con fecha límite expirada {selectedYear !== 'Todo' ? 'en/antes de periodo' : 'al día de hoy'}.
+                        </p>
+                    </div>
                 </div>
             </div>
 

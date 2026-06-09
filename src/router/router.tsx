@@ -29,19 +29,19 @@ export const router = createBrowserRouter([
     ),
     children: [
       {
-        path: 'dashboard',
+        path: 'kpi/dashboard',
         element: <DashboardPage />,
       },
       {
-        path: 'plantillas',
+        path: 'kpi/plantillas',
         element: <PlantillasPage />,
       },
       {
-        path: 'evaluacion',
+        path: 'kpi/evaluacion',
         element: <NuevaEvaluacionPage />,
       },
       {
-        path: 'historial',
+        path: 'kpi/historial',
         element: <HistorialPage />,
       },
       {
