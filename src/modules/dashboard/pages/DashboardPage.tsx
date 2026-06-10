@@ -7,7 +7,6 @@ import {
   TrendingUp,
   ChevronRight,
   ArrowLeft,
-  BarChart3,
   Building2,
   Trophy,
   FileText,
@@ -209,8 +208,8 @@ export default function DashboardPage() {
     return `${posUpper} - ${shortName}` || user.name.toUpperCase();
   };
 
-  // Construct comparison data for Commercial area
-  const rawComparisonData = (groupedData['Comercial'] || []).map(({ user }) => {
+  // Construct comparison data dynamically for the selected area
+  const rawComparisonData = (groupedData[selectedArea || ''] || []).map(({ user }) => {
     const userEvals = allEvaluations.filter(e => e.user_id === user.id);
     
     const findScore = (month: number, year: number) => {
@@ -226,7 +225,9 @@ export default function DashboardPage() {
       "Noviembre": findScore(11, 2025),
       "Diciembre-Enero": findScore(12, 2025) ?? findScore(1, 2026),
       "Febrero": findScore(2, 2026),
-      "Marzo": findScore(3, 2026)
+      "Marzo": findScore(3, 2026),
+      "Abril": findScore(4, 2026),
+      "Mayo": findScore(5, 2026)
     };
   });
 
@@ -245,11 +246,67 @@ export default function DashboardPage() {
     { key: 'Diciembre-Enero', label: 'Dic-Ene', color: '#9c27b0' },
     { key: 'Febrero', label: 'Feb', color: '#55a630' },
     { key: 'Marzo', label: 'Mar', color: '#0b2c3d' },
+    { key: 'Abril', label: 'Abr', color: '#7209b7' },
+    { key: 'Mayo', label: 'May', color: '#f72585' },
   ];
 
-  const comparisonData = rawComparisonData.sort((a, b) => {
-    return cargoOrder.indexOf(a.cargo) - cargoOrder.indexOf(b.cargo);
-  });
+  const comparisonData = selectedArea === 'Comercial'
+    ? rawComparisonData.sort((a, b) => {
+        return cargoOrder.indexOf(a.cargo) - cargoOrder.indexOf(b.cargo);
+      })
+    : rawComparisonData.sort((a, b) => {
+        return a.cargo.localeCompare(b.cargo);
+      });
+
+  // Dynamic monthly evolution averages for the selected area
+  const getEvolutionData = () => {
+    const areaEvaluations = allEvaluations.filter(e => {
+      const userObj = users.find(u => u.id === e.user_id);
+      const areaName = userObj ? (typeof userObj.area === 'object' ? userObj.area?.name : userObj.area) : null;
+      return areaName === selectedArea;
+    });
+
+    const monthNamesShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    
+    // Group evaluations by year and month
+    const grouped: Record<string, { sum: number; count: number; year: number; month: number }> = {};
+    
+    areaEvaluations.forEach(e => {
+      const key = `${e.year}-${String(e.month).padStart(2, '0')}`;
+      if (!grouped[key]) {
+        grouped[key] = { sum: 0, count: 0, year: e.year, month: e.month };
+      }
+      grouped[key].sum += Number(e.total_score || 0);
+      grouped[key].count += 1;
+    });
+    
+    // Sort chronologically
+    const sortedKeys = Object.keys(grouped).sort();
+    
+    if (sortedKeys.length === 0) {
+      return [
+        { name: 'Ago', score: 0 },
+        { name: 'Sep', score: 0 },
+        { name: 'Oct', score: 0 },
+        { name: 'Nov', score: 0 },
+        { name: 'Dic', score: 0 },
+        { name: 'Ene', score: 0 },
+        { name: 'Feb', score: 0 },
+        { name: 'Mar', score: 0 }
+      ];
+    }
+    
+    return sortedKeys.map(key => {
+      const item = grouped[key];
+      const avg = item.sum / item.count;
+      return {
+        name: `${monthNamesShort[item.month - 1]}-${String(item.year).substring(2)}`,
+        score: Number(avg.toFixed(1))
+      };
+    });
+  };
+
+  const evolutionData = getEvolutionData();
 
   // Find users dynamically by matching position and name
   const userSaraObj = users.find(u => {
@@ -309,6 +366,44 @@ export default function DashboardPage() {
     "Suma de INCIDENCIA": Number(d.incid.toFixed(1)),
     "Suma de CALIFICACIÓN": Number(d.calif.toFixed(1))
   }));
+
+  // Dynamic KPI Breakdown for other areas
+  const getDynamicKpiBreakdown = () => {
+    const results = monthEvaluations
+      .filter(e => {
+        const userObj = users.find(u => u.id === e.user_id);
+        const areaName = userObj ? (typeof userObj.area === 'object' ? userObj.area?.name : userObj.area) : null;
+        return areaName === selectedArea;
+      })
+      .flatMap(e => e.results || []);
+      
+    if (results.length === 0) return [];
+    
+    // Group by kpi_name
+    const grouped: Record<string, { name: string; weightSum: number; scoreSum: number; count: number }> = {};
+    results.forEach(r => {
+      const name = r.kpi_name || 'Sin Nombre';
+      if (!grouped[name]) {
+        grouped[name] = { name, weightSum: 0, scoreSum: 0, count: 0 };
+      }
+      grouped[name].weightSum += Number(r.kpi_weight || 0);
+      grouped[name].scoreSum += Number(r.score || 0);
+      grouped[name].count += 1;
+    });
+    
+    return Object.values(grouped).map(item => ({
+      displayLabel: item.name.length > 25 ? item.name.substring(0, 22) + '...' : item.name,
+      role: selectedArea || '',
+      category: item.name,
+      "Suma de INCIDENCIA": Number((item.weightSum / item.count).toFixed(1)),
+      "Suma de CALIFICACIÓN": Number((item.scoreSum / item.count).toFixed(1))
+    }));
+  };
+
+  const dynamicKpiBreakdown = getDynamicKpiBreakdown();
+  
+  // Decide which breakdown to show
+  const activeKpiBreakdownData = selectedArea === 'Comercial' ? kpiBreakdownData : dynamicKpiBreakdown;
 
 
   const handleAreaClick = (areaName: string) => {
@@ -503,19 +598,27 @@ export default function DashboardPage() {
             exit={{ opacity: 0, x: -20 }}
             className="space-y-8"
           >
-            {selectedArea === 'Comercial' ? (
+            {selectedArea ? (
               <div className="space-y-8">
                 {/* Visual Employee Columns (The Excel Core) - Full Width */}
                 <div className="overflow-x-auto pb-4 w-full">
                   <div className="flex gap-6 min-w-max">
                     {groupedData[selectedArea]?.map(({ user, evaluation }, idx) => {
-                      // Mock breakdown for visualization (in real app, would come from evaluation indicators)
-                      const stages = [
-                        { id: 'A', name: 'Estrategia y Planificación', incid: 30, calif: evaluation ? Number(evaluation.total_score) * 0.8 : 0 },
-                        { id: 'B', name: 'Liderazgo y Gestión', incid: 30, calif: evaluation ? Number(evaluation.total_score) * 0.9 : 0 },
-                        { id: 'C', name: 'Gestión Operativa', incid: 30, calif: evaluation ? Number(evaluation.total_score) * 0.95 : 0 },
-                        { id: 'D', name: 'Gestión Documental', incid: 10, calif: evaluation ? Number(evaluation.total_score) * 1 : 0 },
-                      ];
+                      // Use real KPIs from database if available, otherwise use fallback stages
+                      const hasRealResults = evaluation && evaluation.results && evaluation.results.length > 0;
+                      const stages = hasRealResults
+                        ? evaluation.results.map((res: any, idx: number) => ({
+                            id: String.fromCharCode(65 + idx), // A, B, C, D...
+                            name: res.kpi_name,
+                            incid: Number(res.kpi_weight),
+                            calif: Number(res.score)
+                          }))
+                        : [
+                            { id: 'A', name: 'Estrategia y Planificación', incid: 30, calif: evaluation ? Number(evaluation.total_score) * 0.8 : 0 },
+                            { id: 'B', name: 'Liderazgo y Gestión', incid: 30, calif: evaluation ? Number(evaluation.total_score) * 0.9 : 0 },
+                            { id: 'C', name: 'Gestión Operativa', incid: 30, calif: evaluation ? Number(evaluation.total_score) * 0.95 : 0 },
+                            { id: 'D', name: 'Gestión Documental', incid: 10, calif: evaluation ? Number(evaluation.total_score) * 1 : 0 },
+                          ];
 
                       return (
                         <motion.div
@@ -566,11 +669,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={[
-                        { name: 'Ene', score: 82 },
-                        { name: 'Feb', score: 85 },
-                        { name: 'Mar', score: averageScore || 88 },
-                      ]}>
+                      <LineChart data={evolutionData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} domain={[0, 100]} />
@@ -680,83 +779,73 @@ export default function DashboardPage() {
                 </div>
 
                 {/* KPI Breakdown Line Chart - Full Width */}
-                <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h4 className="text-lg font-black text-[#004C6C] tracking-tight">Desglose de KPIs: Incidencia vs Calificación</h4>
-                      <p className="text-slate-400 font-bold uppercase tracking-wider text-[10px] mt-1">Comparativa de peso estratégico vs calificación obtenida por el equipo comercial</p>
-                    </div>
-                    {/* Legend badges */}
-                    <div className="flex items-center gap-4 text-xs font-bold">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-md bg-[#004C6C]"></span>
-                        <span className="text-slate-600">Suma de INCIDENCIA</span>
+                {activeKpiBreakdownData && activeKpiBreakdownData.length > 0 && (
+                  <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <h4 className="text-lg font-black text-[#004C6C] tracking-tight">Desglose de KPIs: Incidencia vs Calificación</h4>
+                        <p className="text-slate-400 font-bold uppercase tracking-wider text-[10px] mt-1">Comparativa de peso estratégico vs calificación obtenida por el equipo de {selectedArea}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-md bg-[#e65f2b]"></span>
-                        <span className="text-slate-600">Suma de CALIFICACIÓN</span>
+                      {/* Legend badges */}
+                      <div className="flex items-center gap-4 text-xs font-bold">
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-md bg-[#004C6C]"></span>
+                          <span className="text-slate-600">Suma de INCIDENCIA</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-md bg-[#e65f2b]"></span>
+                          <span className="text-slate-600">Suma de CALIFICACIÓN</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="h-[350px] w-full mt-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart 
-                        data={kpiBreakdownData} 
-                        margin={{ top: 10, right: 30, left: 0, bottom: 40 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis 
-                          dataKey="displayLabel" 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{ fontSize: 8, fontWeight: 'bold', fill: '#64748b' }}
-                          height={60}
-                          interval={0}
-                          angle={-25}
-                          textAnchor="end"
-                        />
-                        <YAxis 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }}
-                          domain={[0, 100]}
-                        />
-                        <Tooltip content={<CustomKPITooltip />} />
-                        <Line 
-                          type="monotone" 
-                          dataKey="Suma de INCIDENCIA" 
-                          stroke="#004C6C" 
-                          strokeWidth={3}
-                          dot={{ r: 5, fill: '#004C6C', strokeWidth: 2, stroke: '#fff' }}
-                          activeDot={{ r: 7 }}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="Suma de CALIFICACIÓN" 
-                          stroke="#e65f2b" 
-                          strokeWidth={3}
-                          dot={{ r: 5, fill: '#e65f2b', strokeWidth: 2, stroke: '#fff' }}
-                          activeDot={{ r: 7 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    <div className="h-[350px] w-full mt-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart 
+                          data={activeKpiBreakdownData} 
+                          margin={{ top: 10, right: 30, left: 0, bottom: 40 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis 
+                            dataKey="displayLabel" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fontSize: 8, fontWeight: 'bold', fill: '#64748b' }}
+                            height={60}
+                            interval={0}
+                            angle={-25}
+                            textAnchor="end"
+                          />
+                          <YAxis 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }}
+                            domain={[0, 100]}
+                          />
+                          <Tooltip content={<CustomKPITooltip />} />
+                          <Line 
+                            type="monotone" 
+                            dataKey="Suma de INCIDENCIA" 
+                            stroke="#004C6C" 
+                            strokeWidth={3}
+                            dot={{ r: 5, fill: '#004C6C', strokeWidth: 2, stroke: '#fff' }}
+                            activeDot={{ r: 7 }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="Suma de CALIFICACIÓN" 
+                            stroke="#e65f2b" 
+                            strokeWidth={3}
+                            dot={{ r: 5, fill: '#e65f2b', strokeWidth: 2, stroke: '#fff' }}
+                            activeDot={{ r: 7 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
-            ) : (
-              <div className="bg-white p-12 rounded-[32px] border border-dashed border-slate-300 text-center">
-                <BarChart3 className="mx-auto text-slate-200 mb-4" size={48} />
-                <h3 className="text-xl font-black text-slate-400">Detalle en desarrollo</h3>
-                <p className="text-slate-400 text-sm mt-2">La vista especializada para esta área estará disponible pronto.</p>
-                <button
-                  onClick={handleBack}
-                  className="mt-6 px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase tracking-widest transition-colors"
-                >
-                  Regresar
-                </button>
-              </div>
-            )}
+            ) : null}
           </motion.div>
         )}
       </AnimatePresence>
