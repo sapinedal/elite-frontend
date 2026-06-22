@@ -144,7 +144,7 @@ export const TaskTable: React.FC<TaskTableProps> = ({
     {
       header: 'Seguimiento',
       accessor: (task: Task) => {
-        const obsCount = task.observations?.length || 0;
+        const obsCount = task.observations_count ?? task.observations?.length ?? 0;
         return (
           <button
             onClick={(e) => {

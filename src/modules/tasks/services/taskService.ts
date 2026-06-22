@@ -1,11 +1,11 @@
 import api from '../../../lib/axios';
-import type { Task, TaskObservation } from '../types';
+import type { Task, TaskObservation, PaginatedTasksResponse } from '../types';
 
 export const taskService = {
   /**
    * Obtiene la lista de tareas con filtros opcionales de estado, prioridad, área, responsable o búsqueda.
    */
-  getTasks: async (filters: Record<string, any> = {}): Promise<Task[]> => {
+  getTasks: async (filters: Record<string, unknown> = {}): Promise<Task[] | PaginatedTasksResponse> => {
     const { data } = await api.get('/v1/tasks', { params: filters });
     return data;
   },

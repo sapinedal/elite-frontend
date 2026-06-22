@@ -14,6 +14,7 @@ interface TaskModalProps {
   users: User[];
   areas: Area[];
   isEditor: boolean; // Controla si tiene permiso 'bitacora.editar'
+  isLoading?: boolean;
 }
 
 export const TaskModal: React.FC<TaskModalProps> = ({
@@ -23,7 +24,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   task,
   users,
   areas,
-  isEditor
+  isEditor,
+  isLoading
 }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -133,7 +135,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           )}
 
           {/* Formulario */}
-          <form onSubmit={handleSubmit} className="p-10 space-y-8 overflow-y-auto flex-1">
+          <form onSubmit={handleSubmit} className="p-10 space-y-8 overflow-y-auto flex-1 relative">
+
+            {isLoading && (
+              <div className="absolute inset-0 z-50 bg-white/70 backdrop-blur-xs flex items-center justify-center animate-fade-in rounded-[40px]">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-10 w-10 border-4 border-slate-200 border-t-[#004C6C] rounded-full animate-spin"></div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Cargando detalles recientes...</p>
+                </div>
+              </div>
+            )}
 
             {localError && (
               <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-xs font-bold text-red-600 text-center">

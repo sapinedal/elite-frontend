@@ -7,6 +7,7 @@ interface AuditLogModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: Task | null;
+  isLoading?: boolean;
 }
 
 // Mapa para traducir las claves internas a términos amigables en español
@@ -21,7 +22,7 @@ const fieldNameMap: Record<string, string> = {
   actual_end_date: 'Fecha de Finalización Real'
 };
 
-export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose, task }) => {
+export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose, task, isLoading }) => {
   if (!task) return null;
 
   const logs = task.audit_logs || [];
@@ -61,7 +62,12 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose, t
 
           {/* Timeline de Auditorías */}
           <div className="flex-1 p-8 space-y-6 overflow-y-auto min-h-[300px]">
-            {logs.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center h-full py-10 text-center space-y-4">
+                <div className="h-10 w-10 border-4 border-slate-200 border-t-[#004C6C] rounded-full animate-spin"></div>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Cargando historial...</p>
+              </div>
+            ) : logs.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full py-10 text-center space-y-3">
                 <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-300">
                   <History size={28} />

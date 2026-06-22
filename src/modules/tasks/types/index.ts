@@ -37,6 +37,7 @@ export interface Task {
   area?: { id: number; name: string };
   observations?: TaskObservation[];
   audit_logs?: TaskAuditLog[];
+  observations_count?: number;
 }
 
 /**
@@ -68,4 +69,34 @@ export interface TaskAuditLog {
   
   // Relación con el usuario autor del cambio
   user?: User;
+}
+
+export interface PaginatedResponse<T> {
+  current_page: number;
+  data: T[];
+  first_page_url: string;
+  from: number;
+  last_page: number;
+  last_page_url: string;
+  links: Array<{ url: string | null; label: string; active: boolean }>;
+  next_page_url: string | null;
+  path: string;
+  per_page: number;
+  prev_page_url: string | null;
+  to: number;
+  total: number;
+}
+
+export interface TaskStats {
+  total: number;
+  todo: number;
+  in_progress: number;
+  completed: number;
+  waiting: number;
+  critical: number;
+}
+
+export interface PaginatedTasksResponse {
+  pagination: PaginatedResponse<Task>;
+  stats: TaskStats;
 }

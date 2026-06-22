@@ -21,6 +21,7 @@ import { AuditLogModal } from '../components/AuditLogModal';
 import { useAuth } from '../../../context/AuthContext';
 import type { Task, TaskStatus } from '../types';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
+import { Pagination } from '../../../components/ui/Pagination';
 
 export default function TasksPage() {
   const { user } = useAuth();
@@ -37,7 +38,15 @@ export default function TasksPage() {
     loading,
     error,
     filters,
+    currentPage,
+    perPage,
+    totalItems,
+    totalPages,
+    stats,
+    setCurrentPage,
+    setPerPage,
     setFilter,
+    applyFilters,
     clearFilters,
     createTask,
     updateTask,
@@ -47,6 +56,7 @@ export default function TasksPage() {
   } = useTasks();
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isObsModalOpen, setIsObsModalOpen] = useState(false);
@@ -55,36 +65,66 @@ export default function TasksPage() {
   // Control colapsable del Panel Izquierdo (Sidebar de Filtros)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // Estado para la tarjeta activa del filtro local
-  const [activeCardFilter, setActiveCardFilter] = useState<'all' | 'todo' | 'in_progress' | 'completed' | 'critical'>('all');
+  // Determinamos el filtro de tarjeta activo basándonos en los filtros reales del hook
+  const activeCardFilter = 
+    filters.priority === 'P0' ? 'critical' :
+    filters.status === 'Por hacer' ? 'todo' :
+    filters.status === 'En progreso' ? 'in_progress' :
+    filters.status === 'Completada' ? 'completed' : 'all';
+
+  const handleCardClick = (card: 'all' | 'todo' | 'in_progress' | 'completed' | 'critical') => {
+    if (card === 'all') {
+      applyFilters({ status: '', priority: '' });
+    } else if (card === 'todo') {
+      applyFilters({ status: 'Por hacer', priority: '' });
+    } else if (card === 'in_progress') {
+      applyFilters({ status: 'En progreso', priority: '' });
+    } else if (card === 'completed') {
+      applyFilters({ status: 'Completada', priority: '' });
+    } else if (card === 'critical') {
+      applyFilters({ status: '', priority: 'P0' });
+    }
+  };
 
   const handleOpenObservations = async (task: Task) => {
+    setSelectedTask(task);
+    setIsObsModalOpen(true);
+    setIsLoadingDetails(true);
     try {
       const freshTask = await getTaskDetails(task.id);
       setSelectedTask(freshTask);
-      setIsObsModalOpen(true);
-    } catch (err) {
+    } catch {
       alert('Error al cargar comentarios recientes de la tarea.');
+    } finally {
+      setIsLoadingDetails(false);
     }
   };
 
   const handleOpenAuditLogs = async (task: Task) => {
+    setSelectedTask(task);
+    setIsAuditModalOpen(true);
+    setIsLoadingDetails(true);
     try {
       const freshTask = await getTaskDetails(task.id);
       setSelectedTask(freshTask);
-      setIsAuditModalOpen(true);
-    } catch (err) {
+    } catch {
       alert('Error al cargar el historial de auditoría.');
+    } finally {
+      setIsLoadingDetails(false);
     }
   };
 
   const handleEditTask = async (task: Task) => {
+    setSelectedTask(task);
+    setIsTaskModalOpen(true);
+    setIsLoadingDetails(true);
     try {
       const freshTask = await getTaskDetails(task.id);
       setSelectedTask(freshTask);
-      setIsTaskModalOpen(true);
-    } catch (err) {
+    } catch {
       alert('Error al cargar la tarea para edición.');
+    } finally {
+      setIsLoadingDetails(false);
     }
   };
 
@@ -105,8 +145,9 @@ export default function TasksPage() {
     if (window.confirm('¿Estás 100% seguro de que deseas eliminar este compromiso de la bitácora? Esta acción se registrará y borrará de forma física todos los logs históricos.')) {
       try {
         await deleteTask(id);
-      } catch (err: any) {
-        alert(err.message || 'Error al eliminar la tarea.');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Error al eliminar la tarea.';
+        alert(msg);
       }
     }
   };
@@ -115,26 +156,20 @@ export default function TasksPage() {
   const handleUpdateTaskStatus = async (taskId: number, newStatus: TaskStatus) => {
     try {
       await updateTask(taskId, { status: newStatus });
-    } catch (err: any) {
-      alert(err.message || 'Error al actualizar el estado de la tarea.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al actualizar el estado de la tarea.';
+      alert(msg);
     }
   };
 
-  // Cálculo de estadísticas sobre el listado total (afectado por filtros de Área, Responsable y Búsqueda del Backend)
-  const totalTasks = tasks.length;
-  const todoTasks = tasks.filter(t => t.status === 'Por hacer').length;
-  const inProgressTasks = tasks.filter(t => t.status === 'En progreso').length;
-  const completedTasks = tasks.filter(t => t.status === 'Completada').length;
-  const criticalTasks = tasks.filter(t => t.priority === 'P0').length;
+  // Usamos las estadísticas reales calculadas en el backend
+  const totalTasks = stats.total;
+  const todoTasks = stats.todo;
+  const inProgressTasks = stats.in_progress;
+  const completedTasks = stats.completed;
+  const criticalTasks = stats.critical;
 
-  // Rebanado local dinámico por tarjeta seleccionada (sobre la lista ya filtrada por el Sidebar)
-  const filteredTasks = tasks.filter(task => {
-    if (activeCardFilter === 'todo') return task.status === 'Por hacer';
-    if (activeCardFilter === 'in_progress') return task.status === 'En progreso';
-    if (activeCardFilter === 'completed') return task.status === 'Completada';
-    if (activeCardFilter === 'critical') return task.priority === 'P0';
-    return true;
-  });
+  const filteredTasks = tasks;
 
   return (
     <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row min-h-[calc(100vh-140px)] gap-6 md:gap-8 py-4 md:py-8 px-4 relative">
@@ -223,7 +258,6 @@ export default function TasksPage() {
             <button
               onClick={() => {
                 clearFilters();
-                setActiveCardFilter('all');
               }}
               className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-slate-50 text-slate-500 rounded-xl font-bold text-xs hover:bg-slate-100 hover:text-slate-700 transition-all border border-slate-100 shadow-xs cursor-pointer"
             >
@@ -271,7 +305,7 @@ export default function TasksPage() {
 
           {/* 1. Tareas Totales */}
           <div
-            onClick={() => setActiveCardFilter('all')}
+            onClick={() => handleCardClick('all')}
             className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'all'
               ? 'border-[#004C6C] ring-2 ring-[#004C6C]/10 bg-blue-50/5'
               : 'border-slate-100 hover:border-[#004C6C]/30'
@@ -280,7 +314,11 @@ export default function TasksPage() {
             <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-blue-50 rounded-full blur-2xl group-hover:bg-blue-100/50 transition-all" />
             <div className="relative z-10">
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">Totales</p>
-              <p className="text-2xl font-black text-[#004C6C] tracking-tight">{totalTasks}</p>
+              {loading ? (
+                <div className="h-8 w-12 bg-slate-100 rounded-lg animate-pulse my-0.5" />
+              ) : (
+                <p className="text-2xl font-black text-[#004C6C] tracking-tight">{totalTasks}</p>
+              )}
             </div>
             <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'all' ? 'bg-[#004C6C] text-white' : 'bg-blue-50 text-[#004C6C] group-hover:rotate-6'
               }`}>
@@ -290,7 +328,7 @@ export default function TasksPage() {
 
           {/* 2. Por Hacer */}
           <div
-            onClick={() => setActiveCardFilter('todo')}
+            onClick={() => handleCardClick('todo')}
             className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'todo'
               ? 'border-[#EE9D4C] ring-2 ring-[#EE9D4C]/10 bg-orange-50/5'
               : 'border-slate-100 hover:border-[#EE9D4C]/30'
@@ -299,7 +337,11 @@ export default function TasksPage() {
             <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-orange-50 rounded-full blur-2xl group-hover:bg-orange-100/50 transition-all" />
             <div className="relative z-10">
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">Por Hacer</p>
-              <p className="text-2xl font-black text-[#EE9D4C] tracking-tight">{todoTasks}</p>
+              {loading ? (
+                <div className="h-8 w-12 bg-slate-100 rounded-lg animate-pulse my-0.5" />
+              ) : (
+                <p className="text-2xl font-black text-[#EE9D4C] tracking-tight">{todoTasks}</p>
+              )}
             </div>
             <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'todo' ? 'bg-[#EE9D4C] text-white' : 'bg-orange-50 text-[#EE9D4C] group-hover:rotate-6'
               }`}>
@@ -309,7 +351,7 @@ export default function TasksPage() {
 
           {/* 3. En Progreso */}
           <div
-            onClick={() => setActiveCardFilter('in_progress')}
+            onClick={() => handleCardClick('in_progress')}
             className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'in_progress'
               ? 'border-sky-500 ring-2 ring-sky-500/10 bg-sky-50/5'
               : 'border-slate-100 hover:border-sky-500/30'
@@ -318,7 +360,11 @@ export default function TasksPage() {
             <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-sky-50 rounded-full blur-2xl group-hover:bg-sky-100/50 transition-all" />
             <div className="relative z-10">
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">En Progreso</p>
-              <p className="text-2xl font-black text-sky-500 tracking-tight">{inProgressTasks}</p>
+              {loading ? (
+                <div className="h-8 w-12 bg-slate-100 rounded-lg animate-pulse my-0.5" />
+              ) : (
+                <p className="text-2xl font-black text-sky-500 tracking-tight">{inProgressTasks}</p>
+              )}
             </div>
             <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'in_progress' ? 'bg-sky-500 text-white' : 'bg-sky-50 text-sky-500 group-hover:rotate-6'
               }`}>
@@ -328,7 +374,7 @@ export default function TasksPage() {
 
           {/* 4. Completas */}
           <div
-            onClick={() => setActiveCardFilter('completed')}
+            onClick={() => handleCardClick('completed')}
             className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'completed'
               ? 'border-emerald-500 ring-2 ring-emerald-500/10 bg-emerald-50/5'
               : 'border-slate-100 hover:border-emerald-500/30'
@@ -337,7 +383,11 @@ export default function TasksPage() {
             <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-emerald-50 rounded-full blur-2xl group-hover:bg-emerald-100/50 transition-all" />
             <div className="relative z-10">
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">Completas</p>
-              <p className="text-2xl font-black text-emerald-600 tracking-tight">{completedTasks}</p>
+              {loading ? (
+                <div className="h-8 w-12 bg-slate-100 rounded-lg animate-pulse my-0.5" />
+              ) : (
+                <p className="text-2xl font-black text-emerald-600 tracking-tight">{completedTasks}</p>
+              )}
             </div>
             <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'completed' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-600 group-hover:rotate-6'
               }`}>
@@ -347,7 +397,7 @@ export default function TasksPage() {
 
           {/* 5. Críticas */}
           <div
-            onClick={() => setActiveCardFilter('critical')}
+            onClick={() => handleCardClick('critical')}
             className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'critical'
               ? 'border-rose-500 ring-2 ring-rose-500/10 bg-rose-50/5'
               : 'border-slate-100 hover:border-rose-500/30'
@@ -356,7 +406,11 @@ export default function TasksPage() {
             <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-rose-50 rounded-full blur-2xl group-hover:bg-rose-100/50 transition-all" />
             <div className="relative z-10">
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">Críticas</p>
-              <p className="text-2xl font-black text-rose-600 tracking-tight">{criticalTasks}</p>
+              {loading ? (
+                <div className="h-8 w-12 bg-slate-100 rounded-lg animate-pulse my-0.5" />
+              ) : (
+                <p className="text-2xl font-black text-rose-600 tracking-tight">{criticalTasks}</p>
+              )}
             </div>
             <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'critical' ? 'bg-rose-500 text-white' : 'bg-rose-50 text-rose-600 group-hover:rotate-6'
               }`}>
@@ -389,6 +443,18 @@ export default function TasksPage() {
           />
         </div>
 
+        {/* PAGINACIÓN */}
+        {totalItems > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={totalItems}
+            perPage={perPage}
+            onPerPageChange={setPerPage}
+          />
+        )}
+
         {/* FEEDBACK DEL FILTRO ACTIVO - Ubicado elegantemente al final de la grilla */}
         <div className="flex justify-between items-center px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl animate-fade-in">
           <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
@@ -405,7 +471,7 @@ export default function TasksPage() {
 
           {activeCardFilter !== 'all' && (
             <button
-              onClick={() => setActiveCardFilter('all')}
+              onClick={() => handleCardClick('all')}
               className="flex items-center gap-1.5 text-[9px] font-black text-[#004C6C] uppercase tracking-widest hover:underline cursor-pointer transition-all animate-fade-in"
             >
               <RotateCcw size={10} />
@@ -417,7 +483,7 @@ export default function TasksPage() {
       </div>
 
       {/* MODALES DE SOPORTE */}
-
+ 
       {/* 1. Modal Creación / Edición */}
       <TaskModal
         isOpen={isTaskModalOpen}
@@ -427,21 +493,24 @@ export default function TasksPage() {
         users={users}
         areas={areas}
         isEditor={isEditor}
+        isLoading={isLoadingDetails}
       />
-
+ 
       {/* 2. Modal Notas Daily Standup */}
       <DailyObservationsModal
         isOpen={isObsModalOpen}
         onClose={() => setIsObsModalOpen(false)}
         task={selectedTask}
         onAddObservation={addObservation}
+        isLoading={isLoadingDetails}
       />
-
+ 
       {/* 3. Modal Historial Auditoría */}
       <AuditLogModal
         isOpen={isAuditModalOpen}
         onClose={() => setIsAuditModalOpen(false)}
         task={selectedTask}
+        isLoading={isLoadingDetails}
       />
 
     </div>

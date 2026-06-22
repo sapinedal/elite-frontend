@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { taskService } from '../services/taskService';
 import { userService } from '../../users/services/userService';
 import { configuracionService } from '../../configuracion/services/configuracionService';
-import type { Task, TaskPriority, TaskStatus } from '../types';
+import type { Task, TaskPriority, TaskStatus, PaginatedTasksResponse } from '../types';
 import type { User } from '../../users/types';
 import type { Area } from '../../configuracion/services/configuracionService';
 
@@ -14,6 +14,20 @@ export function useTasks() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Estados de Paginación y Estadísticas de Bitácora
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(15);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [stats, setStats] = useState({
+    total: 0,
+    todo: 0,
+    in_progress: 0,
+    completed: 0,
+    waiting: 0,
+    critical: 0,
+  });
+
   // Filtros activos
   const [filters, setFilters] = useState({
     status: '' as TaskStatus | '',
@@ -23,28 +37,47 @@ export function useTasks() {
     search: '',
   });
 
-  // Carga las tareas aplicando filtros
+  // Carga las tareas aplicando filtros y paginación
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       // Limpiamos los filtros vacíos para no enviarlos como params vacíos
-      const activeFilters: Record<string, any> = {};
+      const activeFilters: Record<string, unknown> = {
+        paginate: 'true',
+        page: currentPage,
+        per_page: perPage,
+      };
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== '') {
           activeFilters[key] = value;
         }
       });
 
-      const data = await taskService.getTasks(activeFilters);
-      setTasks(data);
-    } catch (err: any) {
+      const response: Task[] | PaginatedTasksResponse = await taskService.getTasks(activeFilters);
+      
+      if (response && 'pagination' in response) {
+        setTasks(response.pagination.data);
+        setTotalItems(response.pagination.total);
+        setTotalPages(response.pagination.last_page);
+        if (response.stats) {
+          setStats(response.stats);
+        }
+      } else {
+        // Fallback en caso de que devuelva el listado plano
+        const tasksList = response as Task[];
+        setTasks(Array.isArray(tasksList) ? tasksList : []);
+        setTotalItems(Array.isArray(tasksList) ? tasksList.length : 0);
+        setTotalPages(1);
+      }
+    } catch (err: unknown) {
       console.error(err);
-      setError(err?.response?.data?.message || 'Error al cargar las tareas de la bitácora.');
+      const errorMessage = err instanceof Error ? err.message : 'Error al cargar las tareas de la bitácora.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, currentPage, perPage]);
 
   // Carga catálogos auxiliares (usuarios y áreas) para los filtros y asignaciones
   const fetchMetadata = useCallback(async () => {
@@ -60,7 +93,7 @@ export function useTasks() {
     }
   }, []);
 
-  // Recarga al cambiar filtros
+  // Recarga al cambiar filtros o paginación
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
@@ -70,9 +103,19 @@ export function useTasks() {
     fetchMetadata();
   }, [fetchMetadata]);
 
+  // Reiniciar a la página 1 cuando cambien los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
   // Modifica un filtro particular
   const setFilter = useCallback((key: keyof typeof filters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+  }, []);
+
+  // Modifica múltiples filtros simultáneamente
+  const applyFilters = useCallback((newFilters: Partial<typeof filters>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
   }, []);
 
   // Limpia todos los filtros
@@ -172,7 +215,15 @@ export function useTasks() {
     loading,
     error,
     filters,
+    currentPage,
+    perPage,
+    totalItems,
+    totalPages,
+    stats,
+    setCurrentPage,
+    setPerPage,
     setFilter,
+    applyFilters,
     clearFilters,
     fetchTasks,
     createTask,

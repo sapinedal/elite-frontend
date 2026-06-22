@@ -149,7 +149,7 @@ export default function TaskDashboardPage() {
                     configuracionService.getAreas(),
                     userService.getAllUsers()
                 ]);
-                setTasks(allTasks);
+                setTasks(allTasks as Task[]);
                 setAreas(allAreas);
                 setUsers(allUsers);
             } catch (error) {

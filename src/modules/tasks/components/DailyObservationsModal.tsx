@@ -8,13 +8,15 @@ interface DailyObservationsModalProps {
   onClose: () => void;
   task: Task | null;
   onAddObservation: (taskId: number, text: string) => Promise<any>;
+  isLoading?: boolean;
 }
 
 export const DailyObservationsModal: React.FC<DailyObservationsModalProps> = ({
   isOpen,
   onClose,
   task,
-  onAddObservation
+  onAddObservation,
+  isLoading
 }) => {
   const [newObs, setNewObs] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -75,7 +77,12 @@ export const DailyObservationsModal: React.FC<DailyObservationsModalProps> = ({
 
           {/* Observations Timeline */}
           <div className="flex-1 p-8 space-y-6 overflow-y-auto min-h-[250px]">
-            {observations.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center h-full py-10 text-center space-y-4">
+                <div className="h-10 w-10 border-4 border-slate-200 border-t-[#EE9D4C] rounded-full animate-spin"></div>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Cargando anotaciones...</p>
+              </div>
+            ) : observations.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full py-10 text-center space-y-3">
                 <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-300">
                   <MessageSquare size={28} />
