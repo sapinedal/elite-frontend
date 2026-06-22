@@ -10,6 +10,9 @@ import TasksPage from '../modules/tasks/pages/TasksPage';
 import TaskDashboardPage from '../modules/tasks/pages/TaskDashoardPage';
 import MainLayout from '../layouts/MainLayout';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
+import ParametrizacionPage from '../modules/ftra/pages/ParametrizacionPage';
+import RegistroPage from '../modules/ftra/pages/RegistroPage';
+import SeguimientoPage from '../modules/ftra/pages/SeguimientoPage';
 
 export const router = createBrowserRouter([
   {
@@ -59,6 +62,18 @@ export const router = createBrowserRouter([
       {
         path: 'task/bitacora',
         element: <TasksPage />,
+      },
+      {
+        path: 'ftra/registro',
+        element: <RegistroPage />,
+      },
+      {
+        path: 'ftra/seguimiento',
+        element: <SeguimientoPage />,
+      },
+      {
+        path: 'ftra/parametrizacion',
+        element: <ParametrizacionPage />,
       }
     ],
   },

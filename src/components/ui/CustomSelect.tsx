@@ -14,6 +14,7 @@ interface CustomSelectProps {
   label?: string;
   disabled?: boolean;
   className?: string;
+  pyClass?: string;
 }
 
 export const CustomSelect: React.FC<CustomSelectProps> = ({
@@ -23,7 +24,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   placeholder = 'Seleccionar...',
   label,
   disabled,
-  className
+  className,
+  pyClass
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,7 +42,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const defaultButtonStyles = `w-full bg-slate-50/50 border border-slate-200 rounded-2xl px-5 py-2.5 text-sm font-semibold text-left flex items-center justify-between transition-all hover:bg-white hover:border-[#004C6C]/30 ${isOpen ? 'ring-4 ring-blue-50 border-[#004C6C] bg-white' : ''} disabled:opacity-50 disabled:bg-slate-100/50 disabled:border-slate-100 disabled:cursor-not-allowed`;
+  const defaultButtonStyles = `w-full bg-slate-50/50 border border-slate-200 rounded-2xl px-5 ${pyClass || 'py-2.5'} text-sm font-semibold text-left flex items-center justify-between transition-all hover:bg-white hover:border-[#004C6C]/30 ${isOpen ? 'ring-4 ring-blue-50 border-[#004C6C] bg-white' : ''} disabled:opacity-50 disabled:bg-slate-100/50 disabled:border-slate-100 disabled:cursor-not-allowed`;
 
   return (
     <div className={`space-y-2 relative ${isOpen ? 'z-50' : ''}`} ref={containerRef}>

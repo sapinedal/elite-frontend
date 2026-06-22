@@ -14,6 +14,7 @@ import {
     Shield,
     Key,
     Building2,
+    Construction,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo_inver.svg';
@@ -82,6 +83,31 @@ const eliteMenuItems: SidebarItem[] = [
                 label: 'Parametrización',
                 href: '/app/kpi/plantillas',
                 icon: <ClipboardList className="w-4 h-4" />,
+            }
+        ]
+    },
+    {
+        id: 'ftra',
+        label: 'FTRA',
+        icon: <Construction className="w-5 h-5" />,
+        children: [
+            {
+                id: 'registro',
+                label: 'Registro',
+                icon: <LayoutDashboard className="w-5 h-5" />,
+                href: '/app/ftra/registro',
+            },
+            {
+                id: 'seguimiento',
+                label: 'Seguimiento',
+                icon: <ClipboardList className="w-4 h-4" />,
+                href: '/app/ftra/seguimiento',
+            },
+            {
+                id: 'parametrización',
+                label: 'Parametrización',
+                icon: <Settings className="w-4 h-4" />,
+                href: '/app/ftra/parametrizacion',
             }
         ]
     },
