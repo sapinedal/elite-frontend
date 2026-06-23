@@ -243,7 +243,8 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
               </div>
 
               {/* Firmas Digitales */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-slate-100 pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
+                {/* 1. Contratista */}
                 <div className="space-y-2">
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Firma del Contratista</span>
                   {record.contractor_signature ? (
@@ -257,6 +258,7 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
                   )}
                 </div>
                 
+                {/* 2. Residente */}
                 <div className="space-y-2">
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Firma del Residente</span>
                   {record.resident_signature ? (
@@ -270,6 +272,21 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
                   )}
                 </div>
 
+                {/* 3. Supervisión Técnica */}
+                <div className="space-y-2">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Firma de Supervisión Técnica</span>
+                  {record.supervisor_signature ? (
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-center h-32 shadow-sm">
+                      <img src={record.supervisor_signature} alt="Firma Supervisión Técnica" className="max-h-full max-w-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-center h-32 shadow-sm text-slate-300 font-bold italic text-xs">
+                      Pendiente firma de Supervisión
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Director de Obra */}
                 <div className="space-y-2">
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Firma del Director de Obra</span>
                   {record.director_signature ? (

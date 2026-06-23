@@ -144,21 +144,14 @@ export const FtraRecordTable: React.FC<FtraRecordTableProps> = ({
           {/* Botón de Continuidad / Siguiente Fase */}
           {onUpdateStatus && (record.status === 'Registrada' || record.status === 'Seguimiento') && (
             <button
-              onClick={async () => {
+              onClick={() => {
                 if (record.status === 'Registrada') {
                   navigate(`/app/ftra/revision/${record.id}`);
                 } else {
-                  const nextStatus = 'Aprobada';
-                  if (window.confirm(`¿Está seguro de avanzar este registro a la fase de "${nextStatus}"?`)) {
-                    try {
-                      await onUpdateStatus(record.id, nextStatus);
-                    } catch (err) {
-                      // Manejo del error
-                    }
-                  }
+                  navigate(`/app/ftra/aprobacion/${record.id}`);
                 }
               }}
-              title={record.status === 'Registrada' ? 'Avanzar a Seguimiento (Firma Director)' : 'Aprobar Registro'}
+              title={record.status === 'Registrada' ? 'Avanzar a Seguimiento (Firma Supervisor)' : 'Avanzar a Aprobación (Firma Director)'}
               className="p-3 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-2xl transition-all cursor-pointer"
             >
               {record.status === 'Registrada' ? <Play size={16} /> : <CheckCircle2 size={16} />}

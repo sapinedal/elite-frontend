@@ -6,7 +6,7 @@ import { SignaturePad } from '../../../components/ui/SignaturePad';
 import { Portal } from '../../../components/ui/Portal';
 import type { FtraRecord } from '../types';
 
-export default function RevisionPage() {
+export default function AprobacionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -15,7 +15,7 @@ export default function RevisionPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [supervisorSignature, setSupervisorSignature] = useState<string | null>(null);
+  const [directorSignature, setDirectorSignature] = useState<string | null>(null);
   const [activePhoto, setActivePhoto] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function RevisionPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!record || !supervisorSignature) return;
+    if (!record || !directorSignature) return;
 
     setSaving(true);
     setError(null);
@@ -51,18 +51,18 @@ export default function RevisionPage() {
 
     try {
       const fd = new FormData();
-      fd.append('supervisor_signature', supervisorSignature);
-      fd.append('status', 'Seguimiento');
+      fd.append('director_signature', directorSignature);
+      fd.append('status', 'Aprobada');
 
       await ftraRecordService.updateRecord(record.id, fd);
-      setSuccess('Firma del Supervisor registrada. El registro ha avanzado a Seguimiento.');
+      setSuccess('Firma del Director registrada. El registro ha sido Aprobado.');
 
       setTimeout(() => {
         navigate('/app/ftra/seguimiento');
       }, 1500);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Error al registrar la firma del Supervisor.');
+      setError(err.message || 'Error al registrar la firma del Director.');
     } finally {
       setSaving(false);
     }
@@ -149,9 +149,9 @@ export default function RevisionPage() {
               <FileText size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-[#004C6C] tracking-tight">Revisión de Auditoría FTRA</h2>
+              <h2 className="text-xl font-black text-[#004C6C] tracking-tight">Aprobación de Auditoría FTRA</h2>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                Consulte los detalles iniciales del registro
+                Consulte los detalles del registro antes de aprobar
               </p>
             </div>
           </div>
@@ -308,7 +308,7 @@ export default function RevisionPage() {
           </div>
 
           {/* Firmas Digitales Existentes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-slate-100 pt-6">
             <div className="space-y-2">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Firma del Contratista</span>
               {record.contractor_signature ? (
@@ -316,7 +316,7 @@ export default function RevisionPage() {
                   <img src={record.contractor_signature} alt="Firma Contratista" className="max-h-full max-w-full object-contain" />
                 </div>
               ) : (
-                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-center h-32 shadow-sm text-slate-300 font-bold italic text-xs">
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-center h-32 shadow-sm text-slate-300 font-bold italic text-xs text-center">
                   Sin firma de Contratista
                 </div>
               )}
@@ -329,8 +329,21 @@ export default function RevisionPage() {
                   <img src={record.resident_signature} alt="Firma Residente" className="max-h-full max-w-full object-contain" />
                 </div>
               ) : (
-                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-center h-32 shadow-sm text-slate-300 font-bold italic text-xs">
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-center h-32 shadow-sm text-slate-300 font-bold italic text-xs text-center">
                   Sin firma de Residente
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Firma del Supervisor Técnico</span>
+              {record.supervisor_signature ? (
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-center h-32 shadow-sm">
+                  <img src={record.supervisor_signature} alt="Firma Supervisor" className="max-h-full max-w-full object-contain" />
+                </div>
+              ) : (
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-center h-32 shadow-sm text-slate-300 font-bold italic text-xs text-center">
+                  Sin firma de Supervisor
                 </div>
               )}
             </div>
@@ -338,7 +351,7 @@ export default function RevisionPage() {
 
         </div>
 
-        {/* Columna Derecha: Firma de Supervisión Técnica (4 Columnas) */}
+        {/* Columna Derecha: Firma del Director (4 Columnas) */}
         <div className="lg:col-span-4 bg-white rounded-[40px] shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-slate-100 p-8 space-y-6">
           
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
@@ -346,13 +359,13 @@ export default function RevisionPage() {
               <CheckCircle2 size={20} />
             </div>
             <div>
-              <h3 className="text-md font-black text-[#004C6C] tracking-tight">Fase Supervisión Técnica</h3>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Seguridad y Firma de Revisión</p>
+              <h3 className="text-md font-black text-[#004C6C] tracking-tight">Fase Director de Obra</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Seguridad y Firma de Aprobación</p>
             </div>
           </div>
 
           <p className="text-xs font-bold text-slate-500 leading-relaxed bg-slate-50 border border-slate-100 p-5 rounded-2xl">
-            Como **Supervisor Técnico**, verifique la veracidad y calidad de los datos del control FTRA. Proceda a firmar digitalmente abajo para registrar su autorización oficial y avanzar el registro al estado de **Seguimiento**.
+            Como **Director de Obra**, verifique la veracidad y calidad de los datos y el aval del Supervisor Técnico. Proceda a firmar digitalmente abajo para registrar su aprobación oficial y marcar este registro como **Aprobada**.
           </p>
 
           <form onSubmit={handleSave} className="space-y-6">
@@ -360,10 +373,10 @@ export default function RevisionPage() {
             {/* Signature Pad */}
             <div>
               <SignaturePad
-                label="Firma de Supervisión Técnica *"
+                label="Firma del Director de Obra *"
                 placeholder="Dibuje su firma aquí"
-                value={supervisorSignature}
-                onChange={val => setSupervisorSignature(val)}
+                value={directorSignature}
+                onChange={val => setDirectorSignature(val)}
                 height={180}
               />
             </div>
@@ -372,11 +385,11 @@ export default function RevisionPage() {
             <div className="space-y-3 pt-2">
               <button
                 type="submit"
-                disabled={saving || !supervisorSignature || !!success}
+                disabled={saving || !directorSignature || !!success}
                 className="w-full flex items-center justify-center gap-3 px-6 py-4.5 bg-[#004C6C] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#003a53] shadow-lg shadow-blue-900/10 transition-all disabled:opacity-50 cursor-pointer"
               >
                 <Save size={18} />
-                {saving ? 'Guardando...' : 'Almacenar y Avanzar'}
+                {saving ? 'Guardando...' : 'Aprobar Registro'}
               </button>
 
               <button

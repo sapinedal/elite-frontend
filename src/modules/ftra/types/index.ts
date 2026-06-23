@@ -55,6 +55,7 @@ export interface FtraRecord {
   apartamento?: string;
   observations?: string;
   director_signature?: string;
+  supervisor_signature?: string;
   is_completed: boolean;
   status: FtraRecordStatus;
   registered_by_id: number;
