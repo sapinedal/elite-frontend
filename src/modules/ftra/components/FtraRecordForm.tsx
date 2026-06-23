@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { ClipboardCheck, FileText, X, Upload, Save, Eye, AlertCircle } from 'lucide-react';
-import type { FtraFormat, FtraContractor } from '../types';
+import type { FtraFormat, FtraContractor, Residente } from '../types';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Autocomplete } from '../../../components/ui/Autocomplete';
 import { SignaturePad } from '../../../components/ui/SignaturePad';
@@ -8,6 +8,7 @@ import { SignaturePad } from '../../../components/ui/SignaturePad';
 interface FtraRecordFormProps {
   formats: FtraFormat[];
   contractors: FtraContractor[];
+  residentes: Residente[];
   onSubmit: (formData: FormData) => Promise<any>;
   isLoading: boolean;
 }
@@ -15,25 +16,30 @@ interface FtraRecordFormProps {
 export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
   formats,
   contractors,
+  residentes,
   onSubmit,
   isLoading,
 }) => {
   const [contractorId, setContractorId] = useState('');
   const [formatId, setFormatId] = useState('');
+  const [responsableId, setResponsableId] = useState('');
+  const [piso, setPiso] = useState('');
+  const [apartamento, setApartamento] = useState('');
+  const [resultadoInspeccion, setResultadoInspeccion] = useState('Recibido a satisfacción');
+  const [ordenAseo, setOrdenAseo] = useState('Aprobado');
   const [observations, setObservations] = useState('');
-  const [isCompleted, setIsCompleted] = useState('false');
-  
+
   // Firmas digitales
   const [contractorSignature, setContractorSignature] = useState<string | null>(null);
   const [residentSignature, setResidentSignature] = useState<string | null>(null);
   const [signatureKey, setSignatureKey] = useState(0);
-  
+
   // Lista de archivos seleccionados localmente para cargar
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Obtiene los datos del formato seleccionado para mostrar su preview
@@ -74,8 +80,12 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
   const handleClear = () => {
     setContractorId('');
     setFormatId('');
+    setResponsableId('');
+    setPiso('');
+    setApartamento('');
+    setResultadoInspeccion('Recibido a satisfacción');
+    setOrdenAseo('Aprobado');
     setObservations('');
-    setIsCompleted('false');
     setContractorSignature(null);
     setResidentSignature(null);
     setSignatureKey(prev => prev + 1);
@@ -91,12 +101,28 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
     setLocalError(null);
     setSuccessMessage(null);
 
+    if (!piso.trim()) {
+      setLocalError('Por favor ingrese el Piso.');
+      return;
+    }
+    if (!apartamento.trim()) {
+      setLocalError('Por favor ingrese el Apartamento.');
+      return;
+    }
     if (!contractorId) {
       setLocalError('Por favor selecciona un proveedor o contratista.');
       return;
     }
     if (!formatId) {
       setLocalError('Por favor selecciona un formato de seguimiento.');
+      return;
+    }
+    if (!responsableId) {
+      setLocalError('Por favor selecciona el Responsable de la revisión (Residente).');
+      return;
+    }
+    if (resultadoInspeccion === 'Recibido con observación' && !observations.trim()) {
+      setLocalError('El campo de observaciones es obligatorio cuando el resultado de la inspección es "Recibido con observación".');
       return;
     }
     if (!contractorSignature) {
@@ -110,13 +136,18 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
 
     try {
       const fd = new FormData();
+      fd.append('piso', piso.trim());
+      fd.append('apartamento', apartamento.trim());
       fd.append('contractor_id', contractorId);
       fd.append('format_id', formatId);
+      fd.append('responsable_id', responsableId);
+      fd.append('resultado_inspeccion', resultadoInspeccion);
+      fd.append('orden_aseo', ordenAseo);
       fd.append('observations', observations.trim());
-      fd.append('is_completed', isCompleted === 'true' ? '1' : '0');
+      fd.append('is_completed', resultadoInspeccion !== 'Rechazado' ? '1' : '0');
       fd.append('contractor_signature', contractorSignature);
       fd.append('resident_signature', residentSignature);
-      
+
       // Agregar múltiples fotos
       selectedPhotos.forEach((file) => {
         fd.append('photos[]', file);
@@ -150,7 +181,6 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
         {/* Selector de Contratista */}
         <div>
           <Autocomplete
@@ -174,6 +204,99 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
             onChange={val => setFormatId(val)}
           />
         </div>
+      </div>
+
+      {/* Ubicación: Piso y Apartamento */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-scale-in">
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+            Piso *
+          </label>
+          <input
+            type="text"
+            required
+            disabled={isLoading}
+            placeholder="Ej: Piso 4 o Sótano 1"
+            value={piso}
+            onChange={e => setPiso(e.target.value)}
+            className="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none transition-all shadow-sm placeholder:text-slate-300"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+            Apartamento *
+          </label>
+          <input
+            type="text"
+            required
+            disabled={isLoading}
+            placeholder="Ej: Apto 402 o Local 101"
+            value={apartamento}
+            onChange={e => setApartamento(e.target.value)}
+            className="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none transition-all shadow-sm placeholder:text-slate-300"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        {/* Selector de Responsable */}
+        <div>
+          <Autocomplete
+            label="Responsable de la revisión (Residente) *"
+            placeholder="Buscar o seleccionar responsable..."
+            options={residentes.map(r => ({ value: r.id.toString(), label: r.name, sublabel: r.role }))}
+            value={responsableId || null}
+            onChange={val => setResponsableId(val || '')}
+          />
+        </div>
+
+        {/* Resultado de la Inspección */}
+        <div>
+          <CustomSelect
+            label="Resultado de la Inspección *"
+            placeholder="Selecciona el resultado"
+            disabled={isLoading}
+            pyClass="py-4"
+            options={[
+              { value: 'Rechazado', label: 'Rechazado' },
+              { value: 'Recibido con observación', label: 'Recibido con observación' },
+              { value: 'Recibido a satisfacción', label: 'Recibido a satisfacción' }
+            ]}
+            value={resultadoInspeccion}
+            onChange={val => setResultadoInspeccion(val)}
+          />
+          {resultadoInspeccion === 'Recibido con observación' && (
+            <p className="text-[9px] text-amber-600 font-bold tracking-normal mt-2 ml-1 animate-fade-in flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block"></span>
+              * El campo de observaciones es obligatorio para esta opción.
+            </p>
+          )}
+        </div>
+
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        {/* Estado Orden y Aseo */}
+        <div>
+          <CustomSelect
+            label="Estado Orden y Aseo *"
+            placeholder="Selecciona el estado"
+            disabled={isLoading}
+            pyClass="py-4"
+            options={[
+              { value: 'Aprobado', label: 'Aprobado' },
+              { value: 'Rechazado', label: 'Rechazado' }
+            ]}
+            value={ordenAseo}
+            onChange={val => setOrdenAseo(val)}
+          />
+        </div>
+
+        {/* Espacio vacío para balancear el grid */}
+        <div></div>
 
       </div>
 
@@ -222,70 +345,46 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
         />
       </div>
 
-      {/* Toggle de Completado y Carga de Fotos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        {/* Toggle de completado */}
-        <div>
-          <CustomSelect
-            label="¿Evaluación Completa / Cumple? *"
-            placeholder="Selecciona una opción"
-            disabled={isLoading}
-            pyClass="py-4"
-            options={[
-              { value: 'true', label: 'Sí - Cumple / Completa' },
-              { value: 'false', label: 'No - No Cumple / Incompleta' }
-            ]}
-            value={isCompleted}
-            onChange={val => setIsCompleted(val)}
-          />
-          <p className="text-[9px] text-slate-400 font-bold tracking-normal mt-2 ml-1 leading-relaxed">
-            Marca **Sí** si el contratista cumple a cabalidad con los parámetros definidos en el formato PDF de la FTRA.
-          </p>
-        </div>
+      {/* Carga de Fotografías */}
+      <div className="space-y-2 border-t border-slate-100 pt-6">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+          Evidencia Fotográfica (Adjuntar una o varias imágenes)
+        </label>
 
-        {/* Carga de Fotografías */}
-        <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-            Evidencia Fotográfica (Adjuntar una o varias imágenes)
-          </label>
-          
-          <div className="flex flex-wrap gap-3 items-center">
-            {/* Botón de carga */}
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="h-20 w-20 bg-white border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-[#004C6C]/50 transition-all text-slate-400 gap-1 shrink-0"
-              title="Adjuntar Foto"
-            >
-              <Upload size={18} />
-              <span className="text-[9px] font-black uppercase tracking-wider">Subir</span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handlePhotoSelect}
-                className="hidden"
-              />
-            </div>
-
-            {/* Miniaturas de Previsualización */}
-            {photoPreviews.map((previewUrl, index) => (
-              <div key={index} className="relative h-20 w-20 rounded-2xl overflow-hidden border border-slate-100 group shrink-0 animate-scale-in">
-                <img src={previewUrl} alt={`preview-${index}`} className="h-full w-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removePhoto(index)}
-                  className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-all duration-200 cursor-pointer"
-                  title="Remover Foto"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            ))}
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* Botón de carga */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="h-20 w-20 bg-white border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-[#004C6C]/50 transition-all text-slate-400 gap-1 shrink-0"
+            title="Adjuntar Foto"
+          >
+            <Upload size={18} />
+            <span className="text-[9px] font-black uppercase tracking-wider">Subir</span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
           </div>
-        </div>
 
+          {/* Miniaturas de Previsualización */}
+          {photoPreviews.map((previewUrl, index) => (
+            <div key={index} className="relative h-20 w-20 rounded-2xl overflow-hidden border border-slate-100 group shrink-0 animate-scale-in">
+              <img src={previewUrl} alt={`preview-${index}`} className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removePhoto(index)}
+                className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-all duration-200 cursor-pointer"
+                title="Remover Foto"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Firmas Digitales */}

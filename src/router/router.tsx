@@ -13,6 +13,7 @@ import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import ParametrizacionPage from '../modules/ftra/pages/ParametrizacionPage';
 import RegistroPage from '../modules/ftra/pages/RegistroPage';
 import SeguimientoPage from '../modules/ftra/pages/SeguimientoPage';
+import RevisionPage from '../modules/ftra/pages/RevisionPage';
 
 export const router = createBrowserRouter([
   {
@@ -70,6 +71,10 @@ export const router = createBrowserRouter([
       {
         path: 'ftra/seguimiento',
         element: <SeguimientoPage />,
+      },
+      {
+        path: 'ftra/revision/:id',
+        element: <RevisionPage />,
       },
       {
         path: 'ftra/parametrizacion',

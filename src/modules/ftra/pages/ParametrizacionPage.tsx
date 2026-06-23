@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { FileText, Type, Search, SlidersHorizontal, RotateCcw, PlusCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Type, UserCheck, Search, SlidersHorizontal, RotateCcw, PlusCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useFormats } from '../hooks/useFormats';
 import { useContractors } from '../hooks/useContractors';
+import { useResidentes } from '../hooks/useResidentes';
 import { FormatTable } from '../components/FormatTable';
 import { FormatModal } from '../components/FormatModal';
 import { ContractorTable } from '../components/ContractorTable';
 import { ContractorModal } from '../components/ContractorModal';
+import { ResidenteTable } from '../components/ResidenteTable';
+import { ResidenteModal } from '../components/ResidenteModal';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
-import type { FtraFormat, FtraContractor } from '../types';
+import type { FtraFormat, FtraContractor, Residente } from '../types';
 
-type ActiveTab = 'formats' | 'contractors';
+type ActiveTab = 'formats' | 'contractors' | 'residentes';
 
 export default function ParametrizacionPage() {
   const { user } = useAuth();
@@ -24,6 +27,7 @@ export default function ParametrizacionPage() {
   // Hooks de datos
   const formatsData = useFormats();
   const contractorsData = useContractors();
+  const residentesData = useResidentes();
 
   // Modales
   const [selectedFormat, setSelectedFormat] = useState<FtraFormat | null>(null);
@@ -31,6 +35,9 @@ export default function ParametrizacionPage() {
 
   const [selectedContractor, setSelectedContractor] = useState<FtraContractor | null>(null);
   const [isContractorModalOpen, setIsContractorModalOpen] = useState(false);
+
+  const [selectedResidente, setSelectedResidente] = useState<Residente | null>(null);
+  const [isResidenteModalOpen, setIsResidenteModalOpen] = useState(false);
 
   // Handlers para Formatos
   const handleAddNewFormat = () => {
@@ -90,6 +97,35 @@ export default function ParametrizacionPage() {
     }
   };
 
+  // Handlers para Residentes
+  const handleAddNewResidente = () => {
+    setSelectedResidente(null);
+    setIsResidenteModalOpen(true);
+  };
+
+  const handleEditResidente = (residente: Residente) => {
+    setSelectedResidente(residente);
+    setIsResidenteModalOpen(true);
+  };
+
+  const handleSaveResidente = async (data: Partial<Residente>) => {
+    if (selectedResidente) {
+      await residentesData.updateResidente(selectedResidente.id, data);
+    } else {
+      await residentesData.createResidente(data);
+    }
+  };
+
+  const handleDeleteResidente = async (id: number) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este residente/responsable?')) {
+      try {
+        await residentesData.deleteResidente(id);
+      } catch (err: any) {
+        alert(err.message || 'Error al eliminar el residente.');
+      }
+    }
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto flex flex-col min-h-[calc(100vh-140px)] gap-6 md:gap-8 py-4 md:py-8 px-4 relative">
       
@@ -117,6 +153,17 @@ export default function ParametrizacionPage() {
           >
             <Type size={14} />
             Proveedores / Contratistas
+          </button>
+          <button
+            onClick={() => setActiveTab('residentes')}
+            className={`px-8 py-3 rounded-full font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'residentes'
+                ? 'bg-[#004C6C] text-white shadow-md'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <UserCheck size={14} />
+            Residentes / Responsables
           </button>
         </div>
       </div>
@@ -172,12 +219,20 @@ export default function ParametrizacionPage() {
                 <input
                   type="text"
                   placeholder="Escribe palabra clave..."
-                  value={activeTab === 'formats' ? formatsData.filters.search : contractorsData.filters.search}
+                  value={
+                    activeTab === 'formats'
+                      ? formatsData.filters.search
+                      : activeTab === 'contractors'
+                      ? contractorsData.filters.search
+                      : residentesData.filters.search
+                  }
                   onChange={e => {
                     if (activeTab === 'formats') {
                       formatsData.setFilter('search', e.target.value);
-                    } else {
+                    } else if (activeTab === 'contractors') {
                       contractorsData.setFilter('search', e.target.value);
+                    } else {
+                      residentesData.setFilter('search', e.target.value);
                     }
                   }}
                   className="w-full bg-slate-50/50 border border-slate-100 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-bold text-slate-700 focus:bg-white focus:border-[#004C6C] outline-none transition-all"
@@ -193,12 +248,20 @@ export default function ParametrizacionPage() {
                   { value: 'true', label: 'Activo' },
                   { value: 'false', label: 'Inactivo' }
                 ]}
-                value={activeTab === 'formats' ? formatsData.filters.is_active : contractorsData.filters.is_active}
+                value={
+                  activeTab === 'formats'
+                    ? formatsData.filters.is_active
+                    : activeTab === 'contractors'
+                    ? contractorsData.filters.is_active
+                    : residentesData.filters.is_active
+                }
                 onChange={val => {
                   if (activeTab === 'formats') {
                     formatsData.setFilter('is_active', val);
-                  } else {
+                  } else if (activeTab === 'contractors') {
                     contractorsData.setFilter('is_active', val);
+                  } else {
+                    residentesData.setFilter('is_active', val);
                   }
                 }}
               />
@@ -209,8 +272,10 @@ export default function ParametrizacionPage() {
                 onClick={() => {
                   if (activeTab === 'formats') {
                     formatsData.clearFilters();
-                  } else {
+                  } else if (activeTab === 'contractors') {
                     contractorsData.clearFilters();
+                  } else {
+                    residentesData.clearFilters();
                   }
                 }}
                 className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-slate-50 text-slate-500 rounded-xl font-bold text-xs hover:bg-slate-100 hover:text-slate-700 transition-all border border-slate-100 shadow-xs cursor-pointer"
@@ -229,22 +294,38 @@ export default function ParametrizacionPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <h1 className="text-3xl font-black text-[#004C6C] tracking-tight">
-                {activeTab === 'formats' ? 'Formatos de Documento' : 'Proveedores y Contratistas'}
+                {activeTab === 'formats'
+                  ? 'Formatos de Documento'
+                  : activeTab === 'contractors'
+                  ? 'Proveedores y Contratistas'
+                  : 'Residentes / Responsables'}
               </h1>
               <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">
                 {activeTab === 'formats' 
                   ? 'Administración y carga de formatos PDF oficiales de FTRA' 
-                  : 'Parametrización de contratistas y proveedores autorizados'}
+                  : activeTab === 'contractors'
+                  ? 'Parametrización de contratistas y proveedores autorizados'
+                  : 'Administración de ingenieros residentes, directores y supervisores'}
               </p>
             </div>
             {isEditor && (
               <div className="flex flex-wrap items-center gap-3 shrink-0">
                 <button
-                  onClick={activeTab === 'formats' ? handleAddNewFormat : handleAddNewContractor}
+                  onClick={
+                    activeTab === 'formats'
+                      ? handleAddNewFormat
+                      : activeTab === 'contractors'
+                      ? handleAddNewContractor
+                      : handleAddNewResidente
+                  }
                   className="flex items-center justify-center gap-3 px-6 py-3.5 bg-[#004C6C] text-white rounded-[20px] font-black text-xs uppercase tracking-widest hover:bg-[#003a53] shadow-lg shadow-blue-900/10 transition-all hover:scale-[1.02] active:scale-95 group shrink-0 cursor-pointer"
                 >
                   <PlusCircle size={18} className="transition-transform group-hover:rotate-90 duration-300" />
-                  {activeTab === 'formats' ? 'Nuevo Formato' : 'Nuevo Contratista'}
+                  {activeTab === 'formats'
+                    ? 'Nuevo Formato'
+                    : activeTab === 'contractors'
+                    ? 'Nuevo Contratista'
+                    : 'Nuevo Residente'}
                 </button>
               </div>
             )}
@@ -263,6 +344,12 @@ export default function ParametrizacionPage() {
               <span>{contractorsData.error}</span>
             </div>
           )}
+          {activeTab === 'residentes' && residentesData.error && (
+            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-xs font-bold text-red-600 text-center flex items-center gap-2 justify-center">
+              <AlertCircle size={16} />
+              <span>{residentesData.error}</span>
+            </div>
+          )}
 
           {/* TABLA DE RESULTADOS */}
           <div className="flex-1 overflow-x-auto">
@@ -274,13 +361,21 @@ export default function ParametrizacionPage() {
                 onEditFormat={handleEditFormat}
                 onDeleteFormat={handleDeleteFormat}
               />
-            ) : (
+            ) : activeTab === 'contractors' ? (
               <ContractorTable
                 contractors={contractorsData.contractors}
                 isLoading={contractorsData.loading}
                 isEditor={isEditor}
                 onEditContractor={handleEditContractor}
                 onDeleteContractor={handleDeleteContractor}
+              />
+            ) : (
+              <ResidenteTable
+                residentes={residentesData.residentes}
+                isLoading={residentesData.loading}
+                isEditor={isEditor}
+                onEditResidente={handleEditResidente}
+                onDeleteResidente={handleDeleteResidente}
               />
             )}
           </div>
@@ -308,6 +403,17 @@ export default function ParametrizacionPage() {
             />
           )}
 
+          {activeTab === 'residentes' && residentesData.totalItems > 0 && (
+            <Pagination
+              currentPage={residentesData.currentPage}
+              totalPages={residentesData.totalPages}
+              onPageChange={residentesData.setCurrentPage}
+              totalItems={residentesData.totalItems}
+              perPage={residentesData.perPage}
+              onPerPageChange={residentesData.setPerPage}
+            />
+          )}
+
           {/* FEEDBACK DEL REGISTRO ACTIVO */}
           <div className="flex justify-between items-center px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl">
             <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
@@ -315,9 +421,13 @@ export default function ParametrizacionPage() {
                 <>
                   Visualizando <strong className="text-[#004C6C] font-black">{formatsData.formats.length}</strong> de <strong className="text-slate-700 font-black">{formatsData.totalItems}</strong> formatos en total
                 </>
-              ) : (
+              ) : activeTab === 'contractors' ? (
                 <>
                   Visualizando <strong className="text-[#004C6C] font-black">{contractorsData.contractors.length}</strong> de <strong className="text-slate-700 font-black">{contractorsData.totalItems}</strong> proveedores autorizados
+                </>
+              ) : (
+                <>
+                  Visualizando <strong className="text-[#004C6C] font-black">{residentesData.residentes.length}</strong> de <strong className="text-slate-700 font-black">{residentesData.totalItems}</strong> residentes y responsables
                 </>
               )}
             </span>
@@ -340,6 +450,13 @@ export default function ParametrizacionPage() {
         onClose={() => setIsContractorModalOpen(false)}
         onSave={handleSaveContractor}
         contractor={selectedContractor}
+      />
+
+      <ResidenteModal
+        isOpen={isResidenteModalOpen}
+        onClose={() => setIsResidenteModalOpen(false)}
+        onSave={handleSaveResidente}
+        residente={selectedResidente}
       />
 
     </div>

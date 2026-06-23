@@ -86,6 +86,17 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
                     )}
                   </div>
 
+                  <div className="grid grid-cols-2 gap-4 py-2 border-y border-slate-100/85">
+                    <div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Piso</span>
+                      <p className="text-sm font-black text-slate-800">{record.piso || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Apartamento</span>
+                      <p className="text-sm font-black text-slate-800">{record.apartamento || 'N/A'}</p>
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-6 pt-2 text-xs text-slate-500 font-bold">
                     <span className="flex items-center gap-2">
                       <Calendar size={14} className="text-slate-400" />
@@ -96,6 +107,19 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
                       Por: {record.registered_by?.name || 'Sistema'}
                     </span>
                   </div>
+
+                  {record.responsable && (
+                    <div className="pt-3 border-t border-slate-100/85">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Responsable de revisión</span>
+                      <p className="text-sm font-black text-[#004C6C] leading-tight">
+                        {record.responsable.name}
+                      </p>
+                      <div className="flex items-center gap-4 mt-1 text-[10px] text-slate-500 font-bold">
+                        <span>Rol: <strong className="text-slate-700 uppercase">{record.responsable.role}</strong></span>
+                        <span>Correo: <strong className="text-slate-700">{record.responsable.email}</strong></span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Formato y Enlace PDF */}
@@ -123,19 +147,50 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
               </div>
 
               {/* Cumplimiento y Estado del Flujo */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-y border-slate-100 py-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 border-y border-slate-100 py-6">
                 <div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Dictamen de Cumplimiento</span>
-                  <span
-                    className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest leading-none inline-flex items-center gap-2 ${
-                      record.is_completed
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                        : 'bg-rose-50 text-rose-700 border border-rose-100'
-                    }`}
-                  >
-                    {record.is_completed ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
-                    {record.is_completed ? 'Sí cumple' : 'No cumple'}
-                  </span>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Resultado de la Inspección</span>
+                  {(() => {
+                    let styles = 'bg-slate-100 text-slate-600 border border-slate-200';
+                    let Icon = AlertTriangle;
+                    if (record.resultado_inspeccion === 'Recibido a satisfacción') {
+                      styles = 'bg-emerald-50 text-emerald-700 border border-emerald-100';
+                      Icon = CheckCircle2;
+                    } else if (record.resultado_inspeccion === 'Recibido con observación') {
+                      styles = 'bg-amber-50 text-amber-700 border border-amber-100';
+                      Icon = AlertTriangle;
+                    } else if (record.resultado_inspeccion === 'Rechazado') {
+                      styles = 'bg-rose-50 text-rose-700 border border-rose-100';
+                      Icon = X;
+                    }
+                    return (
+                      <span
+                        className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest leading-none inline-flex items-center gap-2 ${styles}`}
+                      >
+                        <Icon size={14} />
+                        {record.resultado_inspeccion || 'Recibido a satisfacción'}
+                      </span>
+                    );
+                  })()}
+                </div>
+
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Orden y Aseo</span>
+                  {(() => {
+                    const isApproved = record.orden_aseo === 'Aprobado';
+                    return (
+                      <span
+                        className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest leading-none inline-flex items-center gap-2 ${
+                          isApproved
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                            : 'bg-rose-50 text-rose-700 border border-rose-100'
+                        }`}
+                      >
+                        {isApproved ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+                        {isApproved ? 'Aprobado' : 'Rechazado'}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <div>
@@ -188,7 +243,7 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
               </div>
 
               {/* Firmas Digitales */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-slate-100 pt-6">
                 <div className="space-y-2">
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Firma del Contratista</span>
                   {record.contractor_signature ? (
@@ -211,6 +266,19 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
                   ) : (
                     <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-center h-32 shadow-sm text-slate-300 font-bold italic text-xs">
                       Sin firma de Residente
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Firma del Director de Obra</span>
+                  {record.director_signature ? (
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-center h-32 shadow-sm">
+                      <img src={record.director_signature} alt="Firma Director" className="max-h-full max-w-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-center h-32 shadow-sm text-slate-300 font-bold italic text-xs">
+                      Pendiente firma de Director
                     </div>
                   )}
                 </div>

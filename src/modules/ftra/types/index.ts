@@ -22,6 +22,16 @@ export interface FtraContractor {
   updated_at: string;
 }
 
+export interface Residente {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface FtraRecordPhoto {
   id: number;
   ftra_record_id: number;
@@ -37,7 +47,14 @@ export interface FtraRecord {
   contractor?: FtraContractor;
   format_id: number;
   format?: FtraFormat;
+  responsable_id?: number;
+  responsable?: Residente;
+  resultado_inspeccion: 'Rechazado' | 'Recibido con observación' | 'Recibido a satisfacción';
+  orden_aseo: 'Aprobado' | 'Rechazado';
+  piso?: string;
+  apartamento?: string;
   observations?: string;
+  director_signature?: string;
   is_completed: boolean;
   status: FtraRecordStatus;
   registered_by_id: number;
@@ -59,6 +76,14 @@ export interface PaginatedFormatsResponse {
 
 export interface PaginatedContractorsResponse {
   data: FtraContractor[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
+export interface PaginatedResidentesResponse {
+  data: Residente[];
   current_page: number;
   last_page: number;
   per_page: number;

@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { ftraRecordService } from '../services/ftraRecordService';
 import { formatService } from '../services/formatService';
 import { contractorService } from '../services/contractorService';
-import type { FtraRecord, FtraFormat, FtraContractor, FtraRecordStatus } from '../types';
+import { residenteService } from '../services/residenteService';
+import type { FtraRecord, FtraFormat, FtraContractor, Residente, FtraRecordStatus } from '../types';
 
 export function useFtraRecords() {
   const [records, setRecords] = useState<FtraRecord[]>([]);
   const [formats, setFormats] = useState<FtraFormat[]>([]);
   const [contractors, setContractors] = useState<FtraContractor[]>([]);
+  const [residentes, setResidentes] = useState<Residente[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,14 +56,16 @@ export function useFtraRecords() {
   // Carga catálogos de formatos y contratistas activos para formularios
   const fetchCatalogs = useCallback(async () => {
     try {
-      const [formatsResponse, contractorsResponse] = await Promise.all([
+      const [formatsResponse, contractorsResponse, residentesResponse] = await Promise.all([
         formatService.getFormats({ per_page: 100, is_active: 'true' }),
         contractorService.getContractors({ per_page: 100, is_active: 'true' }),
+        residenteService.getResidentes({ per_page: 100, is_active: 'true' }),
       ]);
       setFormats(formatsResponse.data);
       setContractors(contractorsResponse.data);
+      setResidentes(residentesResponse.data);
     } catch (err) {
-      console.error('Error al cargar catálogos de formatos/contratistas:', err);
+      console.error('Error al cargar catálogos de formatos/contratistas/residentes:', err);
     }
   }, []);
 
@@ -158,6 +162,7 @@ export function useFtraRecords() {
     records,
     formats,
     contractors,
+    residentes,
     loading,
     error,
     filters,

@@ -1,12 +1,17 @@
+import { useNavigate } from 'react-router-dom';
 import { useFtraRecords } from '../hooks/useFtraRecords';
 import { FtraRecordForm } from '../components/FtraRecordForm';
 import { ClipboardList } from 'lucide-react';
 
 export default function RegistroPage() {
-  const { formats, contractors, createRecord, loading } = useFtraRecords();
+  const { formats, contractors, residentes, createRecord, loading } = useFtraRecords();
+  const navigate = useNavigate();
 
   const handleSubmit = async (formData: FormData) => {
     await createRecord(formData);
+    setTimeout(() => {
+      navigate('/app/ftra/seguimiento');
+    }, 1500);
   };
 
   return (
@@ -33,6 +38,7 @@ export default function RegistroPage() {
           <FtraRecordForm
             formats={formats}
             contractors={contractors}
+            residentes={residentes}
             onSubmit={handleSubmit}
             isLoading={loading}
           />

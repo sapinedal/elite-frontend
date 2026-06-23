@@ -181,6 +181,7 @@ export default function SeguimientoPage() {
               records={records}
               isLoading={loading}
               onOpenDetails={handleOpenDetails}
+              onUpdateStatus={handleUpdateStatus}
             />
           </div>
 
