@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, CheckCircle2, AlertTriangle, Calendar, Play } from 'lucide-react';
+import { Eye, CheckCircle2, Calendar, Play } from 'lucide-react';
 import type { FtraRecord, FtraRecordStatus } from '../types';
 import { DataTable } from '../../../components/ui/DataTable';
 
@@ -116,11 +116,10 @@ export const FtraRecordTable: React.FC<FtraRecordTableProps> = ({
         const isApproved = record.orden_aseo === 'Aprobado';
         return (
           <span
-            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest leading-none flex items-center gap-1.5 w-fit ${
-              isApproved
+            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest leading-none flex items-center gap-1.5 w-fit ${isApproved
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                 : 'bg-rose-50 text-rose-700 border border-rose-100'
-            }`}
+              }`}
           >
             {isApproved ? 'Aprobado' : 'Rechazado'}
           </span>
@@ -131,9 +130,8 @@ export const FtraRecordTable: React.FC<FtraRecordTableProps> = ({
       header: 'Estado',
       accessor: (record: FtraRecord) => (
         <span
-          className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest leading-none ${
-            statusStyles[record.status]
-          }`}
+          className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest leading-none ${statusStyles[record.status]
+            }`}
         >
           {record.status}
         </span>
