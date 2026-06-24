@@ -16,6 +16,7 @@ export default function PlantillasPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState<{ open: boolean, index: number | null }>({ open: false, index: null });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // UX State
   const [activeView, setActiveView] = useState<'list' | 'kpi-edit' | 'indicator-edit'>('list');
@@ -189,7 +190,11 @@ export default function PlantillasPage() {
     }
   };
 
-  const groupedUsers = users.reduce((acc, user) => {
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const groupedUsers = filteredUsers.reduce((acc, user) => {
     const areaName = typeof user.area === 'object' ? user.area?.name : user.area;
     const key = areaName || 'Sin Área';
     if (!acc[key]) acc[key] = [];
@@ -254,6 +259,8 @@ export default function PlantillasPage() {
             <input
               type="text"
               placeholder="Buscar colaborador..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
               className="w-full bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-300 focus:ring-4 focus:ring-blue-50 transition-all"
             />
           </div>
