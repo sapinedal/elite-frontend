@@ -1,6 +1,6 @@
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const MODEL = 'gemini-2.5-flash';
-const BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
+const MODEL = 'gemini-3.5-flash';
+const BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 export const geminiService = {
   async generateAnalysis(prompt: string): Promise<string> {
@@ -9,6 +9,7 @@ export const geminiService = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-goog-api-key": API_KEY,
         },
         body: JSON.stringify({
           contents: [
