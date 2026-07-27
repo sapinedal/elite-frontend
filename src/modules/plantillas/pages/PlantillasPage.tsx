@@ -906,41 +906,147 @@ export default function PlantillasPage() {
 
                       {/* Sección de Tabla de Detalle */}
                       <div className="space-y-6 pt-10 border-t border-slate-50">
-                        <div className="flex items-center justify-between px-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><List size={18} /></div>
-                            <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Tabla de Soporte (Detalle)</h4>
+                            <div>
+                              <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Tabla de Soporte (Detalle)</h4>
+                              <p className="text-[10px] text-slate-400 font-medium">Define una estructura de tabla para el desglose numérico o de fechas del indicador</p>
+                            </div>
                           </div>
-                          {!localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle ? (
-                            <button
-                              onClick={() => {
-                                handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
-                                  tablaDetalle: { headers: ['COLUMNA 1'], rows: [['']] }
-                                });
-                              }}
-                              className="text-[9px] font-black text-blue-600 hover:underline"
-                            >
-                              + Activar Tabla
-                            </button>
-                          ) : (
+                          {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle && (
                             <button
                               onClick={() => {
                                 handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
                                   tablaDetalle: null
                                 });
                               }}
-                              className="text-[9px] font-black text-red-400 hover:underline"
+                              className="text-[9px] font-black text-red-400 hover:text-red-600 hover:underline uppercase tracking-wider shrink-0"
                             >
                               Desactivar Tabla
                             </button>
                           )}
                         </div>
 
-                        {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle && (
+                        {!localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle ? (
+                          <div className="bg-slate-50 p-6 rounded-[32px] border border-dashed border-slate-200 space-y-4">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecciona una plantilla rápida para activar la tabla:</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                              <button
+                                onClick={() => {
+                                  handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                    tablaDetalle: {
+                                      headers: ['DESCRIPCIÓN / CASO', 'FECHA INICIAL', 'FECHA CIERRE', 'DÍAS TRANSCURRIDOS', 'OBSERVACIONES'],
+                                      rows: [['', '', '', '', '']]
+                                    }
+                                  });
+                                  showNotification('Tabla configurada para Cálculo de Días', 'success');
+                                }}
+                                className="p-4 bg-white border border-blue-100 hover:border-blue-500 hover:shadow-md rounded-2xl flex flex-col text-left transition-all group"
+                              >
+                                <span className="text-xs font-black text-[#004C6C] group-hover:text-blue-600">📅 Cálculo de Días</span>
+                                <span className="text-[9px] font-semibold text-slate-400 mt-1">Caso, Fechas y Días calculados</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                    tablaDetalle: {
+                                      headers: ['DESCRIPCIÓN', 'VALOR', 'OBSERVACIÓN'],
+                                      rows: [['', '', '']]
+                                    }
+                                  });
+                                  showNotification('Tabla configurada con Desglose Estándar', 'info');
+                                }}
+                                className="p-4 bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md rounded-2xl flex flex-col text-left transition-all group"
+                              >
+                                <span className="text-xs font-black text-slate-700 group-hover:text-[#004C6C]">📊 Desglose Estándar</span>
+                                <span className="text-[9px] font-semibold text-slate-400 mt-1">Descripción, Valor y Observación</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                    tablaDetalle: {
+                                      headers: ['CONCEPTO', 'CANTIDAD', 'MONTO TOTAL', 'OBSERVACIÓN'],
+                                      rows: [['', '', '', '']]
+                                    }
+                                  });
+                                  showNotification('Tabla configurada para Montos y Cantidades', 'info');
+                                }}
+                                className="p-4 bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md rounded-2xl flex flex-col text-left transition-all group"
+                              >
+                                <span className="text-xs font-black text-slate-700 group-hover:text-[#004C6C]">💰 Montos / Cantidades</span>
+                                <span className="text-[9px] font-semibold text-slate-400 mt-1">Concepto, Cantidad y Montos</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                    tablaDetalle: { headers: ['COLUMNA 1'], rows: [['']] }
+                                  });
+                                }}
+                                className="p-4 bg-slate-100 hover:bg-slate-200 rounded-2xl flex flex-col text-left transition-all border border-slate-200"
+                              >
+                                <span className="text-xs font-black text-slate-600">⚙️ Personalizada</span>
+                                <span className="text-[9px] font-semibold text-slate-400 mt-1">Crear columnas desde cero</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
                           <div className="bg-slate-50 p-8 rounded-[40px] space-y-6">
+                            {/* Selector rápido de presets en tabla ya activa */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200/60">
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cambiar plantilla rápida:</span>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  onClick={() => {
+                                    handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                      tablaDetalle: {
+                                        headers: ['DESCRIPCIÓN / CASO', 'FECHA INICIAL', 'FECHA CIERRE', 'DÍAS TRANSCURRIDOS', 'OBSERVACIONES'],
+                                        rows: [['', '', '', '', '']]
+                                      }
+                                    });
+                                    showNotification('Preset de Cálculo de Días aplicado', 'success');
+                                  }}
+                                  className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl text-[9px] font-black hover:bg-blue-100 transition-colors"
+                                >
+                                  📅 Preset Cálculo de Días
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                      tablaDetalle: {
+                                        headers: ['DESCRIPCIÓN', 'VALOR', 'OBSERVACIÓN'],
+                                        rows: [['', '', '']]
+                                      }
+                                    });
+                                    showNotification('Preset Desglose Estándar aplicado', 'info');
+                                  }}
+                                  className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[9px] font-black hover:bg-slate-100 transition-colors"
+                                >
+                                  📊 Preset Estándar
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                      tablaDetalle: {
+                                        headers: ['CONCEPTO', 'CANTIDAD', 'MONTO TOTAL', 'OBSERVACIÓN'],
+                                        rows: [['', '', '', '']]
+                                      }
+                                    });
+                                    showNotification('Preset Montos aplicado', 'info');
+                                  }}
+                                  className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[9px] font-black hover:bg-slate-100 transition-colors"
+                                >
+                                  💰 Preset Montos
+                                </button>
+                              </div>
+                            </div>
+
                             <div className="space-y-4">
                               <div className="flex items-center justify-between">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Encabezados</label>
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Encabezados (Columnas)</label>
                                 <button
                                   onClick={() => {
                                     const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;
@@ -969,7 +1075,7 @@ export default function PlantillasPage() {
                                           tablaDetalle: { ...current, headers: newHeaders }
                                         });
                                       }}
-                                      className="bg-transparent border-none text-[10px] font-black text-slate-600 uppercase outline-none w-24"
+                                      className="bg-transparent border-none text-[10px] font-black text-slate-600 uppercase outline-none w-28"
                                     />
                                     <button
                                       onClick={() => {
@@ -1028,9 +1134,30 @@ export default function PlantillasPage() {
                                               value={cell}
                                               onChange={(e) => {
                                                 const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;
-                                                const newRows = [...current.rows];
+                                                let newRows = [...current.rows];
                                                 newRows[rIdx] = [...newRows[rIdx]];
                                                 newRows[rIdx][cIdx] = e.target.value;
+
+                                                // Auto-cálculo de días si existen columnas de fecha inicial, fecha cierre y días
+                                                const headersLower = current.headers.map(h => h.toLowerCase());
+                                                const startCol = headersLower.findIndex(h => h.includes('inicial') || h.includes('inicio') || h.includes('desde'));
+                                                const endCol = headersLower.findIndex(h => h.includes('cierre') || h.includes('final') || h.includes('hasta'));
+                                                const daysCol = headersLower.findIndex(h => h.includes('día') || h.includes('dia'));
+
+                                                if (startCol !== -1 && endCol !== -1 && daysCol !== -1 && (cIdx === startCol || cIdx === endCol)) {
+                                                  const startDateStr = newRows[rIdx][startCol];
+                                                  const endDateStr = newRows[rIdx][endCol];
+                                                  if (startDateStr && endDateStr) {
+                                                    const start = new Date(startDateStr);
+                                                    const end = new Date(endDateStr);
+                                                    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                                                      const diffTime = end.getTime() - start.getTime();
+                                                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                                      newRows[rIdx][daysCol] = (diffDays >= 0 ? diffDays : 0).toString();
+                                                    }
+                                                  }
+                                                }
+
                                                 handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
                                                   tablaDetalle: { ...current, rows: newRows }
                                                 });

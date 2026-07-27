@@ -12,18 +12,22 @@ interface KPIDetailTableProps {
 }
 
 export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, defaultHeaders }) => {
-
   const [isRemoveModalOpen, setIsRemoveModalOpen] = React.useState(false);
   const isEnabled = !!data && Array.isArray(data.headers) && Array.isArray(data.rows);
 
-  const handleInitialize = () => {
-    const headers = defaultHeaders || ['Descripción', 'Valor', 'Observación'];
+  const handleInitialize = (preset?: 'dias' | 'estandar') => {
+    let headers = defaultHeaders || ['Descripción', 'Valor', 'Observación'];
+    if (preset === 'dias') {
+      headers = ['DESCRIPCIÓN / CASO', 'FECHA INICIAL', 'FECHA CIERRE', 'DÍAS TRANSCURRIDOS', 'OBSERVACIONES'];
+    } else if (preset === 'estandar') {
+      headers = ['DESCRIPCIÓN', 'VALOR', 'OBSERVACIÓN'];
+    }
+
     onChange({
       headers: headers,
       rows: [new Array(headers.length).fill('')]
     });
   };
-
 
   const handleRemove = () => {
     setIsRemoveModalOpen(true);
@@ -42,9 +46,32 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
 
   const handleUpdateCell = (rowIdx: number, colIdx: number, value: string) => {
     if (!data) return;
-    const newRows = data.rows.map((row, rIdx) => 
-      rIdx === rowIdx ? row.map((cell, cIdx) => cIdx === colIdx ? value : cell) : row
+    let newRows = data.rows.map((row, rIdx) =>
+      rIdx === rowIdx ? row.map((cell, cIdx) => (cIdx === colIdx ? value : cell)) : row
     );
+
+    // Auto-cálculo de días si existen columnas de fecha inicial, fecha cierre y días
+    const headersLower = data.headers.map(h => h.toLowerCase());
+    const startCol = headersLower.findIndex(h => h.includes('inicial') || h.includes('inicio') || h.includes('desde'));
+    const endCol = headersLower.findIndex(h => h.includes('cierre') || h.includes('final') || h.includes('hasta'));
+    const daysCol = headersLower.findIndex(h => h.includes('día') || h.includes('dia'));
+
+    if (startCol !== -1 && endCol !== -1 && daysCol !== -1 && (colIdx === startCol || colIdx === endCol)) {
+      const row = [...newRows[rowIdx]];
+      const startDateStr = row[startCol];
+      const endDateStr = row[endCol];
+      if (startDateStr && endDateStr) {
+        const start = new Date(startDateStr);
+        const end = new Date(endDateStr);
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+          const diffTime = end.getTime() - start.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          row[daysCol] = (diffDays >= 0 ? diffDays : 0).toString();
+          newRows[rowIdx] = row;
+        }
+      }
+    }
+
     onChange({ ...data, rows: newRows });
   };
 
@@ -70,13 +97,11 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
 
   const handleDeleteRow = (rowIdx: number) => {
     if (!data || data.rows.length <= 1) {
-        // Si es la última fila, solo la limpiamos o permitimos borrarla si se queda vacía? 
-        // El requerimiento dice eliminar filas. Si borra todas las filas, tal vez dejar una vacía es mejor.
-        if (data && data.rows.length === 1) {
-            const clearedRow = new Array(data.headers.length).fill('');
-            onChange({ ...data, rows: [clearedRow] });
-            return;
-        }
+      if (data && data.rows.length === 1) {
+        const clearedRow = new Array(data.headers.length).fill('');
+        onChange({ ...data, rows: [clearedRow] });
+        return;
+      }
     }
     if (!data) return;
     const newRows = data.rows.filter((_, i) => i !== rowIdx);
@@ -85,15 +110,22 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
 
   if (!isEnabled) {
     return (
-      <button
-        onClick={handleInitialize}
-        className="flex items-center gap-2.5 text-xs font-extrabold text-slate-400 hover:text-[#004C6C] transition-all py-2 px-1 group"
-      >
-        <div className="p-1.5 bg-slate-50 group-hover:bg-blue-50 rounded-lg transition-colors">
-          <Table size={14} className="group-hover:scale-110 transition-transform" />
-        </div>
-        <span className="tracking-widest uppercase">Agregar tabla de detalle</span>
-      </button>
+      <div className="flex flex-wrap items-center gap-2 py-2">
+        <button
+          onClick={() => handleInitialize('dias')}
+          className="flex items-center gap-2 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 py-2 px-3 rounded-xl transition-all"
+        >
+          <span>📅 Agregar Tabla para Cálculo de Días</span>
+        </button>
+
+        <button
+          onClick={() => handleInitialize('estandar')}
+          className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 py-2 px-3 rounded-xl transition-all"
+        >
+          <Table size={14} />
+          <span>Agregar Tabla Estándar</span>
+        </button>
+      </div>
     );
   }
 
@@ -139,11 +171,11 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
                 {row.map((cell, colIdx) => {
                   const header = data.headers[colIdx].toLowerCase();
                   const isDateField = header.includes('fecha') || header.includes('cierre');
-                  
+
                   return (
                     <td key={colIdx} className="p-0 border-b border-r border-slate-100">
                       <input
-                        type={isDateField ? "date" : "text"}
+                        type={isDateField ? 'date' : 'text'}
                         value={cell}
                         onChange={(e) => handleUpdateCell(rowIdx, colIdx, e.target.value)}
                         className="w-full p-4 text-sm font-medium text-slate-600 bg-transparent outline-none focus:bg-white focus:ring-inset focus:ring-1 focus:ring-blue-50 transition-all"
@@ -196,4 +228,3 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
     </div>
   );
 };
-
