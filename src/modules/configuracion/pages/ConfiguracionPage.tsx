@@ -5,20 +5,45 @@ import {
   Plus, 
   Edit2, 
   Trash2, 
-  ChevronRight,
-  Info
+  FolderGit2,
+  CheckCircle2,
+  XCircle,
+  X,
+  DollarSign
 } from 'lucide-react';
 import { configuracionService, type Area } from '../services/configuracionService';
+import { projectService, type ProjectData } from '../services/projectService';
+import { Tabs } from '../../../components/ui/Tabs';
+import { useProject } from '../../../context/ProjectContext';
 
 export default function ConfiguracionPage() {
+  const [activeTab, setActiveTab] = useState<'projects' | 'areas'>('projects');
+  
+  // States for Projects
+  const [projects, setProjects] = useState<ProjectData[]>([]);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectData | null>(null);
+
+  // States for Areas & Positions
   const [areas, setAreas] = useState<Area[]>([]);
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Modals state
+  // Modals state for Areas
   const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
   const [isPositionModalOpen, setIsPositionModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ type: 'area' | 'position', data: any } | null>(null);
+
+  const { setProjectById } = useProject();
+
+  const fetchProjects = async () => {
+    try {
+      const data = await projectService.getProjects();
+      setProjects(data);
+    } catch (error) {
+      console.error('Error al cargar proyectos:', error);
+    }
+  };
 
   const fetchAreas = async () => {
     setIsLoading(true);
@@ -37,9 +62,63 @@ export default function ConfiguracionPage() {
   };
 
   useEffect(() => {
+    fetchProjects();
     fetchAreas();
   }, []);
 
+  // --- Handlers for Projects ---
+  const handleSaveProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const code = formData.get('code') as string;
+    const name = formData.get('name') as string;
+    const subtitle = formData.get('subtitle') as string;
+    const description = formData.get('description') as string;
+    const total_budget = Number(formData.get('total_budget'));
+    const is_active = formData.get('is_active') === 'on';
+
+    try {
+      if (editingProject && editingProject.id) {
+        await projectService.updateProject(editingProject.id, {
+          code,
+          name,
+          subtitle,
+          description,
+          total_budget,
+          is_active
+        });
+      } else {
+        await projectService.createProject({
+          code,
+          name,
+          subtitle,
+          description,
+          total_budget,
+          is_active
+        });
+      }
+      setIsProjectModalOpen(false);
+      setEditingProject(null);
+      fetchProjects();
+      // Refrescar selector global
+      setProjectById(code);
+    } catch (error) {
+      console.error('Error al guardar proyecto:', error);
+    }
+  };
+
+  const handleDeleteProject = async (id: number | string) => {
+    if (confirm('¿Está seguro de eliminar este proyecto?')) {
+      try {
+        await projectService.deleteProject(id);
+        fetchProjects();
+      } catch (error) {
+        console.error('Error al eliminar proyecto:', error);
+      }
+    }
+  };
+
+  // --- Handlers for Areas ---
   const handleSaveArea = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
@@ -60,16 +139,29 @@ export default function ConfiguracionPage() {
     }
   };
 
+  const handleDeleteArea = async (id: number) => {
+    if (confirm('¿Está seguro de eliminar esta área? Se eliminarán también sus cargos.')) {
+      try {
+        await configuracionService.deleteArea(id);
+        if (selectedArea?.id === id) setSelectedArea(null);
+        fetchAreas();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  };
+
   const handleSavePosition = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedArea) return;
+    if (!selectedArea && !editingItem) return;
+
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const name = formData.get('name') as string;
 
     try {
       if (editingItem?.type === 'position') {
         await configuracionService.updatePosition(editingItem.data.id, { name });
-      } else {
+      } else if (selectedArea) {
         await configuracionService.createPosition({ name, area_id: selectedArea.id });
       }
       setIsPositionModalOpen(false);
@@ -80,227 +172,462 @@ export default function ConfiguracionPage() {
     }
   };
 
-  const handleDeleteArea = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta área? Se eliminarán todos sus cargos asociados.')) return;
-    try {
-      await configuracionService.deleteArea(id);
-      if (selectedArea?.id === id) setSelectedArea(null);
-      fetchAreas();
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
   const handleDeletePosition = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este cargo?')) return;
-    try {
-      await configuracionService.deletePosition(id);
-      fetchAreas();
-    } catch (error) {
-      console.error(error);
+    if (confirm('¿Está seguro de eliminar este cargo?')) {
+      try {
+        await configuracionService.deletePosition(id);
+        fetchAreas();
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-8 space-y-10 animate-fade-in">
-      <div className="space-y-1">
-        <h1 className="text-4xl font-black text-[#004C6C] tracking-tight">Parametrización Organizacional</h1>
-        <p className="text-slate-400 font-bold uppercase tracking-[0.2em]">Define las áreas y cargos de la compañía</p>
+    <div className="max-w-[1600px] mx-auto flex flex-col gap-6 md:gap-8 py-4 md:py-6 px-4">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#004C6C] via-[#005981] to-[#003850] p-6 md:p-8 rounded-[32px] text-white shadow-xl">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight">Administración & Configuración</h1>
+          <p className="text-xs font-bold text-blue-200 uppercase tracking-widest">
+            Gestión Centralizada de Proyectos, Áreas Operativas y Estructura Organizacional
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        
-        {/* Areas Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-black text-slate-800 flex items-center gap-3">
-              <Building2 className="text-[#004C6C]" size={24} /> Áreas
-            </h2>
-            <button 
-              onClick={() => { setEditingItem(null); setIsAreaModalOpen(true); }}
-              className="p-2 bg-blue-50 text-[#004C6C] rounded-xl hover:bg-[#004C6C] hover:text-white transition-all shadow-sm"
+      {/* Main Tabs (Proyectos / Áreas) - Centradas con el componente reutilizable de UI */}
+      <Tabs
+        activeTab={activeTab}
+        onChange={(id) => setActiveTab(id as 'projects' | 'areas')}
+        centered={true}
+        items={[
+          {
+            id: 'projects',
+            label: 'Gestión de Proyectos',
+            icon: <FolderGit2 className="w-4 h-4" />,
+            count: projects.length,
+          },
+          {
+            id: 'areas',
+            label: 'Áreas y Cargos',
+            icon: <Building2 className="w-4 h-4" />,
+          },
+        ]}
+      />
+
+      {/* TAB 1: GESTIÓN DE PROYECTOS (CRUD) */}
+      {activeTab === 'projects' && (
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-lg font-black text-[#004C6C]">Catálogo Maestro de Proyectos</h2>
+              <p className="text-xs text-slate-400 font-bold">Crea, edita y gestiona los proyectos visibles en la plataforma ELITE</p>
+            </div>
+
+            <button
+              onClick={() => {
+                setEditingProject(null);
+                setIsProjectModalOpen(true);
+              }}
+              className="px-4 py-2.5 bg-[#004C6C] hover:bg-[#EE9D4C] text-white font-bold text-xs rounded-2xl transition-colors flex items-center gap-2 shadow-sm"
             >
-              <Plus size={20} />
+              <Plus className="w-4 h-4" />
+              Nuevo Proyecto
             </button>
           </div>
 
-          <div className="space-y-4">
-            {isLoading ? (
-              [1,2,3].map(i => <div key={i} className="h-20 bg-white rounded-3xl animate-pulse border border-slate-100" />)
-            ) : areas.map(area => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map((project) => (
               <div 
-                key={area.id}
-                onClick={() => setSelectedArea(area)}
-                className={`
-                  p-6 rounded-[32px] border transition-all duration-300 cursor-pointer group flex items-center justify-between
-                  ${selectedArea?.id === area.id 
-                    ? 'bg-[#004C6C] border-[#004C6C] text-white shadow-xl shadow-blue-900/20' 
-                    : 'bg-white border-slate-100 text-slate-600 hover:border-blue-200 hover:shadow-lg'
-                  }
-                `}
+                key={project.id} 
+                className="bg-slate-50 border border-slate-200 rounded-3xl p-6 flex flex-col justify-between gap-4 hover:border-[#004C6C] transition-all hover:shadow-md"
               >
-                <div className="flex items-center gap-5">
-                  <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-colors ${selectedArea?.id === area.id ? 'bg-white/20' : 'bg-slate-50 text-[#004C6C]'}`}>
-                    <Building2 size={24} />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="px-3 py-1 bg-blue-100 text-[#004C6C] font-black text-xs rounded-xl uppercase">
+                      Código: {project.code}
+                    </span>
+                    {project.is_active !== false ? (
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                        <CheckCircle2 size={12} className="text-emerald-600" />
+                        Activo
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-200 px-2.5 py-1 rounded-full">
+                        <XCircle size={12} />
+                        Inactivo
+                      </span>
+                    )}
                   </div>
+
                   <div>
-                    <p className="font-black tracking-tight text-lg">{area.name}</p>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest ${selectedArea?.id === area.id ? 'text-white/60' : 'text-slate-400'}`}>
-                      {area.positions?.length || 0} Cargos Definidos
-                    </p>
+                    <h3 className="text-lg font-black text-slate-900">{project.name}</h3>
+                    {project.subtitle && (
+                      <p className="text-xs font-bold text-[#EE9D4C] mt-0.5">{project.subtitle}</p>
+                    )}
                   </div>
+
+                  {project.description && (
+                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">{project.description}</p>
+                  )}
+
+                  {project.total_budget && project.total_budget > 0 && (
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-200 text-xs font-bold text-slate-700">
+                      <DollarSign size={14} className="text-emerald-600" />
+                      Presupuesto: ${project.total_budget.toLocaleString('es-CO')} COP
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                   <button 
-                    onClick={(e) => { e.stopPropagation(); setEditingItem({ type: 'area', data: area }); setIsAreaModalOpen(true); }}
-                    className={`p-2 rounded-lg transition-colors ${selectedArea?.id === area.id ? 'hover:bg-white/10 text-white/60 hover:text-white' : 'hover:bg-slate-50 text-slate-300 hover:text-[#EE9D4C]'}`}
-                   >
-                     <Edit2 size={16} />
-                   </button>
-                   <button 
-                    onClick={(e) => { e.stopPropagation(); handleDeleteArea(area.id); }}
-                    className={`p-2 rounded-lg transition-colors ${selectedArea?.id === area.id ? 'hover:bg-white/10 text-white/60 hover:text-white' : 'hover:bg-slate-50 text-slate-300 hover:text-red-500'}`}
-                   >
-                     <Trash2 size={16} />
-                   </button>
-                   <ChevronRight size={20} className={`transition-transform duration-300 ${selectedArea?.id === area.id ? 'translate-x-1' : 'opacity-20'}`} />
+
+                <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-200">
+                  <button
+                    onClick={() => {
+                      setEditingProject(project);
+                      setIsProjectModalOpen(true);
+                    }}
+                    className="p-2 text-slate-600 hover:text-[#004C6C] hover:bg-white rounded-xl border border-slate-200 transition-colors"
+                    title="Editar proyecto"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => project.id && handleDeleteProject(project.id)}
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-xl border border-slate-200 transition-colors"
+                    title="Eliminar proyecto"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </div>
+      )}
 
-        {/* Positions Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-black text-slate-800 flex items-center gap-3">
-              <Briefcase className="text-[#EE9D4C]" size={24} /> Cargos
-            </h2>
-            {selectedArea && (
-              <button 
-                onClick={() => { setEditingItem(null); setIsPositionModalOpen(true); }}
-                className="p-2 bg-orange-50 text-[#EE9D4C] rounded-xl hover:bg-[#EE9D4C] hover:text-white transition-all shadow-sm"
+      {/* TAB 2: ÁREAS Y CARGOS */}
+      {activeTab === 'areas' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
+          {/* Panel Izquierdo: Lista de Áreas */}
+          <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-100 p-6 space-y-6 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <h2 className="text-lg font-black text-[#004C6C]">Áreas de la Empresa</h2>
+                <p className="text-xs text-slate-400 font-bold">Seleccione un área para gestionar sus cargos</p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingItem(null);
+                  setIsAreaModalOpen(true);
+                }}
+                className="p-2.5 bg-blue-50 text-[#004C6C] hover:bg-[#004C6C] hover:text-white rounded-2xl transition-colors"
+                title="Nueva Área"
               >
-                <Plus size={20} />
+                <Plus size={18} />
               </button>
+            </div>
+
+            {isLoading ? (
+              <div className="py-12 text-center text-xs font-bold text-slate-400">Cargando áreas...</div>
+            ) : (
+              <div className="space-y-3">
+                {areas.map((area) => (
+                  <div
+                    key={area.id}
+                    onClick={() => setSelectedArea(area)}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                      selectedArea?.id === area.id
+                        ? 'bg-[#004C6C] text-white border-[#004C6C] shadow-md'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                    }`}
+                  >
+                    <div>
+                      <p className="font-black text-sm">{area.name}</p>
+                      <p className={`text-xs ${selectedArea?.id === area.id ? 'text-blue-200' : 'text-slate-500'}`}>
+                        {area.positions?.length || 0} cargos asociados
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingItem({ type: 'area', data: area });
+                          setIsAreaModalOpen(true);
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          selectedArea?.id === area.id ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-500'
+                        }`}
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteArea(area.id);
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          selectedArea?.id === area.id ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-500'
+                        }`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 
-          {!selectedArea ? (
-            <div className="bg-slate-50 rounded-[40px] border-2 border-dashed border-slate-200 p-20 text-center flex flex-col items-center gap-4">
-               <div className="h-16 w-16 bg-white rounded-3xl shadow-sm flex items-center justify-center text-slate-300">
-                  <Building2 size={32} />
-               </div>
-               <p className="text-slate-400 font-bold max-w-[200px]">Selecciona un área para ver y gestionar sus cargos</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-blue-50/50 p-6 rounded-[32px] border border-blue-100 flex items-center gap-4 mb-8">
-                 <Info size={20} className="text-[#004C6C]" />
-                 <p className="text-xs font-bold text-[#004C6C] leading-relaxed uppercase tracking-widest">
-                    Gestionando cargos para: <span className="font-black underline">{selectedArea.name}</span>
-                 </p>
-              </div>
-
-              {selectedArea.positions?.map(pos => (
-                <div 
-                  key={pos.id}
-                  className="bg-white p-6 rounded-[32px] border border-slate-100 hover:border-orange-200 transition-all group flex items-center justify-between shadow-sm hover:shadow-md"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-orange-50 text-[#EE9D4C] flex items-center justify-center group-hover:bg-[#EE9D4C] group-hover:text-white transition-all">
-                      <Briefcase size={20} />
-                    </div>
-                    <span className="font-black text-slate-700 tracking-tight">{pos.name}</span>
+          {/* Panel Derecho: Lista de Cargos */}
+          <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-100 p-6 space-y-6 shadow-sm">
+            {selectedArea ? (
+              <>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <h2 className="text-lg font-black text-[#004C6C]">Cargos de {selectedArea.name}</h2>
+                    <p className="text-xs text-slate-400 font-bold">Gestión de puestos y responsabilidades</p>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button 
-                      onClick={() => { setEditingItem({ type: 'position', data: pos }); setIsPositionModalOpen(true); }}
-                      className="p-2 text-slate-300 hover:text-[#EE9D4C] hover:bg-orange-50 rounded-xl transition-all"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button 
-                      onClick={() => handleDeletePosition(pos.id)}
-                      className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                  <button
+                    onClick={() => {
+                      setEditingItem(null);
+                      setIsPositionModalOpen(true);
+                    }}
+                    className="px-4 py-2 bg-[#004C6C] text-white font-bold text-xs rounded-2xl hover:bg-[#EE9D4C] transition-colors flex items-center gap-2 shadow-sm"
+                  >
+                    <Plus size={16} />
+                    Nuevo Cargo
+                  </button>
+                </div>
+
+                {selectedArea.positions?.length === 0 ? (
+                  <div className="py-12 text-center text-xs font-bold text-slate-400">
+                    No hay cargos registrados en esta área.
                   </div>
-                </div>
-              ))}
-              
-              {selectedArea.positions?.length === 0 && (
-                <div className="text-center py-10">
-                   <p className="text-slate-400 font-bold italic">No hay cargos registrados para esta área.</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Modals */}
-      {(isAreaModalOpen || isPositionModalOpen) && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden animate-scale-in">
-            <div className="p-10 space-y-8">
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className={`h-20 w-20 rounded-[32px] flex items-center justify-center shadow-inner ${isAreaModalOpen ? 'bg-blue-50 text-[#004C6C]' : 'bg-orange-50 text-[#EE9D4C]'}`}>
-                   {isAreaModalOpen ? <Building2 size={32} /> : <Briefcase size={32} />}
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black text-[#004C6C] tracking-tight">
-                    {editingItem ? 'Editar' : 'Nuevo'} {isAreaModalOpen ? 'Área' : 'Cargo'}
-                  </h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                    {isAreaModalOpen ? 'Define una división organizacional' : `Añade un cargo a ${selectedArea?.name}`}
-                  </p>
-                </div>
-              </div>
-
-              <form onSubmit={isAreaModalOpen ? handleSaveArea : handleSavePosition} className="space-y-6">
-                <div className="space-y-2">
-                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre</label>
-                   <input 
-                     required
-                     name="name"
-                     defaultValue={editingItem?.data?.name || ''}
-                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 focus:bg-white focus:border-[#004C6C] outline-none transition-all"
-                     placeholder={isAreaModalOpen ? "Ej: Comercial" : "Ej: Analista Senior"}
-                   />
-                </div>
-                
-                {isAreaModalOpen && (
-                  <div className="space-y-2">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descripción</label>
-                     <textarea 
-                       name="description"
-                       defaultValue={editingItem?.data?.description || ''}
-                       className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 focus:bg-white focus:border-[#004C6C] outline-none transition-all min-h-[100px]"
-                       placeholder="Opcional..."
-                     />
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedArea.positions?.map((pos) => (
+                      <div
+                        key={pos.id}
+                        className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Briefcase size={16} className="text-[#004C6C]" />
+                          <span className="text-xs font-black text-slate-800">{pos.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              setEditingItem({ type: 'position', data: pos });
+                              setIsPositionModalOpen(true);
+                            }}
+                            className="p-1 text-slate-400 hover:text-[#004C6C]"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePosition(pos.id)}
+                            className="p-1 text-slate-400 hover:text-red-600"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
+              </>
+            ) : (
+              <div className="py-24 text-center text-slate-400 space-y-2">
+                <Building2 size={40} className="mx-auto text-slate-300" />
+                <p className="text-sm font-bold">Seleccione un área de la izquierda para ver sus cargos.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
-                <div className="flex flex-col gap-3 pt-4">
-                  <button 
-                    type="submit"
-                    className={`flex items-center justify-center gap-3 w-full py-5 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all ${isAreaModalOpen ? 'bg-[#004C6C] hover:bg-[#003a53]' : 'bg-[#EE9D4C] hover:bg-[#d68a3d]'}`}
-                  >
-                    <Plus size={18} />
-                    {editingItem ? 'Guardar Cambios' : `Crear ${isAreaModalOpen ? 'Área' : 'Cargo'}`}
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => { setIsAreaModalOpen(false); setIsPositionModalOpen(false); setEditingItem(null); }}
-                    className="w-full py-4 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-slate-600 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
+      {/* Modal para Crear / Editar Proyecto */}
+      {isProjectModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl animate-fade-in border border-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <h3 className="text-lg font-black text-[#004C6C]">
+                {editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto'}
+              </h3>
+              <button onClick={() => setIsProjectModalOpen(false)} className="text-slate-400 hover:text-slate-700">
+                <X size={20} />
+              </button>
             </div>
+
+            <form onSubmit={handleSaveProject} className="space-y-4">
+              <div>
+                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Código Único (slug)</label>
+                <input
+                  type="text"
+                  name="code"
+                  defaultValue={editingProject?.code || ''}
+                  required
+                  placeholder="ej: vis, serena, jerico"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Nombre del Proyecto</label>
+                <input
+                  type="text"
+                  name="name"
+                  defaultValue={editingProject?.name || ''}
+                  required
+                  placeholder="ej: Ciudadela San Miguel"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Subtítulo / Tipo</label>
+                <input
+                  type="text"
+                  name="subtitle"
+                  defaultValue={editingProject?.subtitle || ''}
+                  placeholder="ej: VIS - 2,200 aptos (Torre 2)"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Presupuesto Total (COP)</label>
+                <input
+                  type="number"
+                  name="total_budget"
+                  defaultValue={editingProject?.total_budget || 0}
+                  placeholder="ej: 22454184688"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Descripción</label>
+                <textarea
+                  name="description"
+                  defaultValue={editingProject?.description || ''}
+                  rows={3}
+                  placeholder="Descripción ejecutiva del proyecto..."
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="is_active"
+                  name="is_active"
+                  defaultChecked={editingProject ? editingProject.is_active !== false : true}
+                  className="rounded text-[#004C6C] focus:ring-0"
+                />
+                <label htmlFor="is_active" className="text-xs font-bold text-slate-700">Proyecto Activo en Plataforma</label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsProjectModalOpen(false)}
+                  className="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold text-xs rounded-2xl hover:bg-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-[#004C6C] hover:bg-[#EE9D4C] text-white font-bold text-xs rounded-2xl transition-colors shadow-sm"
+                >
+                  {editingProject ? 'Guardar Cambios' : 'Crear Proyecto'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Crear / Editar Área */}
+      {isAreaModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl animate-fade-in border border-slate-100">
+            <h3 className="text-lg font-black text-[#004C6C]">
+              {editingItem?.type === 'area' ? 'Editar Área' : 'Nueva Área'}
+            </h3>
+            <form onSubmit={handleSaveArea} className="space-y-4">
+              <div>
+                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Nombre de Área</label>
+                <input
+                  type="text"
+                  name="name"
+                  defaultValue={editingItem?.type === 'area' ? editingItem.data.name : ''}
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Descripción</label>
+                <textarea
+                  name="description"
+                  defaultValue={editingItem?.type === 'area' ? editingItem.data.description : ''}
+                  rows={3}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAreaModalOpen(false)}
+                  className="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold text-xs rounded-2xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-[#004C6C] text-white font-bold text-xs rounded-2xl hover:bg-[#EE9D4C]"
+                >
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Crear / Editar Cargo */}
+      {isPositionModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl animate-fade-in border border-slate-100">
+            <h3 className="text-lg font-black text-[#004C6C]">
+              {editingItem?.type === 'position' ? 'Editar Cargo' : 'Nuevo Cargo'}
+            </h3>
+            <form onSubmit={handleSavePosition} className="space-y-4">
+              <div>
+                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Nombre del Cargo</label>
+                <input
+                  type="text"
+                  name="name"
+                  defaultValue={editingItem?.type === 'position' ? editingItem.data.name : ''}
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsPositionModalOpen(false)}
+                  className="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold text-xs rounded-2xl"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-[#004C6C] text-white font-bold text-xs rounded-2xl hover:bg-[#EE9D4C]"
+                >
+                  Guardar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

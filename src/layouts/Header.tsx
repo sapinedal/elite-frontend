@@ -1,5 +1,6 @@
 import { useAuth } from '../context/AuthContext';
-import { Menu, LogOut } from 'lucide-react';
+import { useProject } from '../context/ProjectContext';
+import { Menu, LogOut, Building2 } from 'lucide-react';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -7,10 +8,11 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth();
+  const { activeProject, setProjectById, projects } = useProject();
 
   return (
     <header className="h-[64px] bg-white border-b border-slate-100 sticky top-0 z-20 flex items-center justify-between px-4 md:px-8 shadow-sm">
-      {/* Lado Izquierdo: Botón Menú (Solo móvil) */}
+      {/* Lado Izquierdo: Botón Menú y Selector de Proyecto */}
       <div className="flex items-center gap-4">
         <button
           onClick={onMenuClick}
@@ -18,9 +20,26 @@ export default function Header({ onMenuClick }: HeaderProps) {
         >
           <Menu size={24} />
         </button>
-        <span className="hidden md:block text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
-          ELITE
-        </span>
+        <div className="hidden md:flex items-center gap-3">
+          <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
+            ELITE
+          </span>
+          <div className="h-4 w-px bg-slate-200" />
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl">
+            <Building2 size={15} className="text-[#004C6C]" />
+            <select
+              value={activeProject.id}
+              onChange={(e) => setProjectById(e.target.value)}
+              className="bg-transparent text-xs font-bold text-[#004C6C] outline-none cursor-pointer"
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Lado Derecho: Perfil y Logout */}

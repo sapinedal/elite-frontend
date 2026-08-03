@@ -15,6 +15,8 @@ import {
     Key,
     Building2,
     Construction,
+    Scale,
+    FileText,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo_inver.svg';
@@ -36,6 +38,19 @@ interface SidebarProps {
 }
 
 const eliteMenuItems: SidebarItem[] = [
+    {
+        id: 'obra',
+        label: 'Control de Obra',
+        icon: <Building2 className="w-5 h-5" />,
+        children: [
+            {
+                id: 'interventoria',
+                label: 'Interventoría & Resumen',
+                icon: <LayoutDashboard className="w-4 h-4" />,
+                href: '/app/obra/interventoria',
+            }
+        ]
+    },
     {
         id: 'task',
         label: 'Tareas',
@@ -108,6 +123,19 @@ const eliteMenuItems: SidebarItem[] = [
                 label: 'Parametrización',
                 icon: <Settings className="w-4 h-4" />,
                 href: '/app/ftra/parametrizacion',
+            }
+        ]
+    },
+    {
+        id: 'juridica',
+        label: 'Área Jurídica',
+        icon: <Scale className="w-5 h-5" />,
+        children: [
+            {
+                id: 'contratos',
+                label: 'Contratos & Pólizas',
+                icon: <FileText className="w-4 h-4" />,
+                href: '/app/juridica/contratos',
             }
         ]
     },

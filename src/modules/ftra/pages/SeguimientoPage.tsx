@@ -3,6 +3,7 @@ import { Search, SlidersHorizontal, RotateCcw, AlertCircle, ChevronLeft, Chevron
 import { useFtraRecords } from '../hooks/useFtraRecords';
 import { FtraRecordTable } from '../components/FtraRecordTable';
 import { FtraRecordDetailModal } from '../components/FtraRecordDetailModal';
+import { AptoSemaphorizationGrid } from '../components/AptoSemaphorizationGrid';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
 import type { FtraRecord } from '../types';
@@ -174,6 +175,9 @@ export default function SeguimientoPage() {
               <span>{error}</span>
             </div>
           )}
+
+          {/* Semaforización de 200 Apartamentos Torre 2 */}
+          <AptoSemaphorizationGrid />
 
           {/* Tabla */}
           <div className="flex-1 overflow-x-auto">
