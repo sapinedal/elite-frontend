@@ -151,6 +151,12 @@ const eliteMenuItems: SidebarItem[] = [
                 icon: <User className="w-4 h-4" />,
             },
             {
+                id: 'proyectos',
+                label: 'Proyectos',
+                href: '/app/proyectos',
+                icon: <Building2 className="w-4 h-4" />,
+            },
+            {
                 id: 'areas-cargos',
                 label: 'Áreas y Cargos',
                 href: '/app/configuracion',

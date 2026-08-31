@@ -16,7 +16,7 @@ import SeguimientoPage from '../modules/ftra/pages/SeguimientoPage';
 import RevisionPage from '../modules/ftra/pages/RevisionPage';
 import AprobacionPage from '../modules/ftra/pages/AprobacionPage';
 import ContratosPage from '../modules/juridica/pages/ContratosPage';
-
+import ProyectosPage from '../modules/admin/pages/ProyectosPage';
 import InterventoriaPage from '../modules/obra/pages/InterventoriaPage';
 
 export const router = createBrowserRouter([
@@ -95,6 +95,10 @@ export const router = createBrowserRouter([
       {
         path: 'juridica/contratos',
         element: <ContratosPage />,
+      },
+      {
+        path: 'proyectos',
+        element: <ProyectosPage />,
       }
     ],
   },

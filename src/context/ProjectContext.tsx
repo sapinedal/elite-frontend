@@ -20,6 +20,7 @@ interface ProjectContextType {
   setProjectById: (id: string | number) => void;
   projects: ProjectOption[];
   isLoading: boolean;
+  refreshProjects: () => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -30,36 +31,39 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Cargar proyectos dinámicamente utilizando la instancia estandarizada de Axios
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await api.get('/v1/configuracion/projects');
+  const fetchProjects = async () => {
+    try {
+      const response = await api.get('/v1/configuracion/projects');
 
-        if (response.data && response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
-          const loadedProjects: ProjectOption[] = response.data.data.map((p: any) => ({
-            id: p.id,
-            code: p.code,
-            name: p.name,
-            subtitle: p.subtitle || p.description || ''
-          }));
-          setProjects(loadedProjects);
+      if (response.data && response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+        const loadedProjects: ProjectOption[] = response.data.data.map((p: any) => ({
+          id: p.id,
+          code: p.code,
+          name: p.name,
+          subtitle: p.subtitle || p.description || ''
+        }));
+        setProjects(loadedProjects);
 
-          // Restaurar la preferencia del usuario desde localStorage si existe
-          const savedCode = localStorage.getItem('activeProjectCode');
-          const matched = loadedProjects.find(p => p.code === savedCode || String(p.id) === savedCode);
-          if (matched) {
-            setActiveProject(matched);
-          } else {
-            setActiveProject(loadedProjects[0]);
-          }
+        // Restaurar la preferencia del usuario desde localStorage si existe
+        const savedCode = localStorage.getItem('activeProjectCode');
+        const matched = loadedProjects.find(p => p.code === savedCode || String(p.id) === savedCode);
+        if (matched) {
+          setActiveProject(matched);
+        } else {
+          setActiveProject((prev) => {
+            const exists = loadedProjects.find(p => p.id === prev.id || p.code === prev.code);
+            return exists || loadedProjects[0];
+          });
         }
-      } catch (err) {
-        console.warn('Usando proyectos por defecto para ProjectContext (contingencia/offline)', err);
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (err) {
+      console.warn('Usando proyectos por defecto para ProjectContext (contingencia/offline)', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchProjects();
   }, []);
 
@@ -72,7 +76,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   return (
-    <ProjectContext.Provider value={{ activeProject, setProjectById, projects, isLoading }}>
+    <ProjectContext.Provider value={{ activeProject, setProjectById, projects, isLoading, refreshProjects: fetchProjects }}>
       {children}
     </ProjectContext.Provider>
   );
