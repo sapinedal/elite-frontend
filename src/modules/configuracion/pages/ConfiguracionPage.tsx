@@ -1,49 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Building2, 
-  Briefcase, 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  FolderGit2,
-  CheckCircle2,
-  XCircle,
-  X,
-  DollarSign
+import {
+  Building2,
+  Briefcase,
+  Plus,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { configuracionService, type Area } from '../services/configuracionService';
-import { projectService, type ProjectData } from '../services/projectService';
-import { Tabs } from '../../../components/ui/Tabs';
-import { useProject } from '../../../context/ProjectContext';
 
 export default function ConfiguracionPage() {
-  const [activeTab, setActiveTab] = useState<'projects' | 'areas'>('projects');
-  
-  // States for Projects
-  const [projects, setProjects] = useState<ProjectData[]>([]);
-  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState<ProjectData | null>(null);
-
   // States for Areas & Positions
   const [areas, setAreas] = useState<Area[]>([]);
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Modals state for Areas
+
+  // Modals state for Areas & Positions
   const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
   const [isPositionModalOpen, setIsPositionModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ type: 'area' | 'position', data: any } | null>(null);
-
-  const { setProjectById } = useProject();
-
-  const fetchProjects = async () => {
-    try {
-      const data = await projectService.getProjects();
-      setProjects(data);
-    } catch (error) {
-      console.error('Error al cargar proyectos:', error);
-    }
-  };
 
   const fetchAreas = async () => {
     setIsLoading(true);
@@ -53,6 +27,8 @@ export default function ConfiguracionPage() {
       if (selectedArea) {
         const updated = data.find(a => a.id === selectedArea.id);
         setSelectedArea(updated || null);
+      } else if (data.length > 0) {
+        setSelectedArea(data[0]);
       }
     } catch (error) {
       console.error(error);
@@ -62,61 +38,8 @@ export default function ConfiguracionPage() {
   };
 
   useEffect(() => {
-    fetchProjects();
     fetchAreas();
   }, []);
-
-  // --- Handlers for Projects ---
-  const handleSaveProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const code = formData.get('code') as string;
-    const name = formData.get('name') as string;
-    const subtitle = formData.get('subtitle') as string;
-    const description = formData.get('description') as string;
-    const total_budget = Number(formData.get('total_budget'));
-    const is_active = formData.get('is_active') === 'on';
-
-    try {
-      if (editingProject && editingProject.id) {
-        await projectService.updateProject(editingProject.id, {
-          code,
-          name,
-          subtitle,
-          description,
-          total_budget,
-          is_active
-        });
-      } else {
-        await projectService.createProject({
-          code,
-          name,
-          subtitle,
-          description,
-          total_budget,
-          is_active
-        });
-      }
-      setIsProjectModalOpen(false);
-      setEditingProject(null);
-      fetchProjects();
-      // Refrescar selector global
-      setProjectById(code);
-    } catch (error) {
-      console.error('Error al guardar proyecto:', error);
-    }
-  };
-
-  const handleDeleteProject = async (id: number | string) => {
-    if (confirm('¿Está seguro de eliminar este proyecto?')) {
-      try {
-        await projectService.deleteProject(id);
-        fetchProjects();
-      } catch (error) {
-        console.error('Error al eliminar proyecto:', error);
-      }
-    }
-  };
 
   // --- Handlers for Areas ---
   const handleSaveArea = async (e: React.FormEvent) => {
@@ -151,6 +74,7 @@ export default function ConfiguracionPage() {
     }
   };
 
+  // --- Handlers for Positions ---
   const handleSavePosition = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedArea && !editingItem) return;
@@ -184,368 +108,152 @@ export default function ConfiguracionPage() {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto flex flex-col gap-6 md:gap-8 py-4 md:py-6 px-4">
+    <div className="max-w-[1600px] mx-auto flex flex-col gap-6 md:gap-8 py-4 md:py-6 px-4 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#004C6C] via-[#005981] to-[#003850] p-6 md:p-8 rounded-[32px] text-white shadow-xl">
         <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight">Administración & Configuración</h1>
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight">Áreas & Cargos</h1>
           <p className="text-xs font-bold text-blue-200 uppercase tracking-widest">
-            Gestión Centralizada de Proyectos, Áreas Operativas y Estructura Organizacional
+            Gestión de Áreas Operativas, Departamentos y Estructura Organizacional
           </p>
         </div>
       </div>
 
-      {/* Main Tabs (Proyectos / Áreas) - Centradas con el componente reutilizable de UI */}
-      <Tabs
-        activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as 'projects' | 'areas')}
-        centered={true}
-        items={[
-          {
-            id: 'projects',
-            label: 'Gestión de Proyectos',
-            icon: <FolderGit2 className="w-4 h-4" />,
-            count: projects.length,
-          },
-          {
-            id: 'areas',
-            label: 'Áreas y Cargos',
-            icon: <Building2 className="w-4 h-4" />,
-          },
-        ]}
-      />
-
-      {/* TAB 1: GESTIÓN DE PROYECTOS (CRUD) */}
-      {activeTab === 'projects' && (
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-6 animate-fade-in">
+      {/* ÁREAS Y CARGOS - GRID DE 2 COLUMNAS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Panel Izquierdo: Lista de Áreas */}
+        <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-100 p-6 space-y-6 shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
-              <h2 className="text-lg font-black text-[#004C6C]">Catálogo Maestro de Proyectos</h2>
-              <p className="text-xs text-slate-400 font-bold">Crea, edita y gestiona los proyectos visibles en la plataforma ELITE</p>
+              <h2 className="text-lg font-black text-[#004C6C]">Áreas de la Empresa</h2>
+              <p className="text-xs text-slate-400 font-bold">Seleccione un área para gestionar sus cargos</p>
             </div>
-
             <button
               onClick={() => {
-                setEditingProject(null);
-                setIsProjectModalOpen(true);
+                setEditingItem(null);
+                setIsAreaModalOpen(true);
               }}
-              className="px-4 py-2.5 bg-[#004C6C] hover:bg-[#EE9D4C] text-white font-bold text-xs rounded-2xl transition-colors flex items-center gap-2 shadow-sm"
+              className="p-2.5 bg-blue-50 text-[#004C6C] hover:bg-[#004C6C] hover:text-white rounded-2xl transition-colors cursor-pointer"
+              title="Nueva Área"
             >
-              <Plus className="w-4 h-4" />
-              Nuevo Proyecto
+              <Plus size={18} />
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <div 
-                key={project.id} 
-                className="bg-slate-50 border border-slate-200 rounded-3xl p-6 flex flex-col justify-between gap-4 hover:border-[#004C6C] transition-all hover:shadow-md"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="px-3 py-1 bg-blue-100 text-[#004C6C] font-black text-xs rounded-xl uppercase">
-                      Código: {project.code}
-                    </span>
-                    {project.is_active !== false ? (
-                      <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                        <CheckCircle2 size={12} className="text-emerald-600" />
-                        Activo
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-200 px-2.5 py-1 rounded-full">
-                        <XCircle size={12} />
-                        Inactivo
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900">{project.name}</h3>
-                    {project.subtitle && (
-                      <p className="text-xs font-bold text-[#EE9D4C] mt-0.5">{project.subtitle}</p>
-                    )}
-                  </div>
-
-                  {project.description && (
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">{project.description}</p>
-                  )}
-
-                  {project.total_budget && project.total_budget > 0 && (
-                    <div className="flex items-center gap-2 pt-2 border-t border-slate-200 text-xs font-bold text-slate-700">
-                      <DollarSign size={14} className="text-emerald-600" />
-                      Presupuesto: ${project.total_budget.toLocaleString('es-CO')} COP
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-200">
-                  <button
-                    onClick={() => {
-                      setEditingProject(project);
-                      setIsProjectModalOpen(true);
-                    }}
-                    className="p-2 text-slate-600 hover:text-[#004C6C] hover:bg-white rounded-xl border border-slate-200 transition-colors"
-                    title="Editar proyecto"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button
-                    onClick={() => project.id && handleDeleteProject(project.id)}
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-xl border border-slate-200 transition-colors"
-                    title="Eliminar proyecto"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: ÁREAS Y CARGOS */}
-      {activeTab === 'areas' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
-          {/* Panel Izquierdo: Lista de Áreas */}
-          <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-100 p-6 space-y-6 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h2 className="text-lg font-black text-[#004C6C]">Áreas de la Empresa</h2>
-                <p className="text-xs text-slate-400 font-bold">Seleccione un área para gestionar sus cargos</p>
-              </div>
-              <button
-                onClick={() => {
-                  setEditingItem(null);
-                  setIsAreaModalOpen(true);
-                }}
-                className="p-2.5 bg-blue-50 text-[#004C6C] hover:bg-[#004C6C] hover:text-white rounded-2xl transition-colors"
-                title="Nueva Área"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-
-            {isLoading ? (
-              <div className="py-12 text-center text-xs font-bold text-slate-400">Cargando áreas...</div>
-            ) : (
-              <div className="space-y-3">
-                {areas.map((area) => (
-                  <div
-                    key={area.id}
-                    onClick={() => setSelectedArea(area)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
-                      selectedArea?.id === area.id
-                        ? 'bg-[#004C6C] text-white border-[#004C6C] shadow-md'
-                        : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+          {isLoading ? (
+            <div className="py-12 text-center text-xs font-bold text-slate-400">Cargando áreas...</div>
+          ) : (
+            <div className="space-y-3">
+              {areas.map((area) => (
+                <div
+                  key={area.id}
+                  onClick={() => setSelectedArea(area)}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${selectedArea?.id === area.id
+                      ? 'bg-[#004C6C] text-white border-[#004C6C] shadow-md'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
                     }`}
-                  >
-                    <div>
-                      <p className="font-black text-sm">{area.name}</p>
-                      <p className={`text-xs ${selectedArea?.id === area.id ? 'text-blue-200' : 'text-slate-500'}`}>
-                        {area.positions?.length || 0} cargos asociados
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingItem({ type: 'area', data: area });
-                          setIsAreaModalOpen(true);
-                        }}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          selectedArea?.id === area.id ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-500'
-                        }`}
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteArea(area.id);
-                        }}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          selectedArea?.id === area.id ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-500'
-                        }`}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Panel Derecho: Lista de Cargos */}
-          <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-100 p-6 space-y-6 shadow-sm">
-            {selectedArea ? (
-              <>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                >
                   <div>
-                    <h2 className="text-lg font-black text-[#004C6C]">Cargos de {selectedArea.name}</h2>
-                    <p className="text-xs text-slate-400 font-bold">Gestión de puestos y responsabilidades</p>
+                    <p className="font-black text-sm">{area.name}</p>
+                    <p className={`text-xs ${selectedArea?.id === area.id ? 'text-blue-200' : 'text-slate-500'}`}>
+                      {area.positions?.length || 0} cargos asociados
+                    </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setEditingItem(null);
-                      setIsPositionModalOpen(true);
-                    }}
-                    className="px-4 py-2 bg-[#004C6C] text-white font-bold text-xs rounded-2xl hover:bg-[#EE9D4C] transition-colors flex items-center gap-2 shadow-sm"
-                  >
-                    <Plus size={16} />
-                    Nuevo Cargo
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingItem({ type: 'area', data: area });
+                        setIsAreaModalOpen(true);
+                      }}
+                      className={`p-1.5 rounded-lg transition-colors ${selectedArea?.id === area.id ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-500'
+                        }`}
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteArea(area.id);
+                      }}
+                      className={`p-1.5 rounded-lg transition-colors ${selectedArea?.id === area.id ? 'hover:bg-white/20 text-white' : 'hover:bg-slate-200 text-slate-500'
+                        }`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-
-                {selectedArea.positions?.length === 0 ? (
-                  <div className="py-12 text-center text-xs font-bold text-slate-400">
-                    No hay cargos registrados en esta área.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {selectedArea.positions?.map((pos) => (
-                      <div
-                        key={pos.id}
-                        className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Briefcase size={16} className="text-[#004C6C]" />
-                          <span className="text-xs font-black text-slate-800">{pos.name}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => {
-                              setEditingItem({ type: 'position', data: pos });
-                              setIsPositionModalOpen(true);
-                            }}
-                            className="p-1 text-slate-400 hover:text-[#004C6C]"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDeletePosition(pos.id)}
-                            className="p-1 text-slate-400 hover:text-red-600"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="py-24 text-center text-slate-400 space-y-2">
-                <Building2 size={40} className="mx-auto text-slate-300" />
-                <p className="text-sm font-bold">Seleccione un área de la izquierda para ver sus cargos.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Modal para Crear / Editar Proyecto */}
-      {isProjectModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl animate-fade-in border border-slate-100">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="text-lg font-black text-[#004C6C]">
-                {editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto'}
-              </h3>
-              <button onClick={() => setIsProjectModalOpen(false)} className="text-slate-400 hover:text-slate-700">
-                <X size={20} />
-              </button>
+              ))}
             </div>
-
-            <form onSubmit={handleSaveProject} className="space-y-4">
-              <div>
-                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Código Único (slug)</label>
-                <input
-                  type="text"
-                  name="code"
-                  defaultValue={editingProject?.code || ''}
-                  required
-                  placeholder="ej: vis, serena, jerico"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Nombre del Proyecto</label>
-                <input
-                  type="text"
-                  name="name"
-                  defaultValue={editingProject?.name || ''}
-                  required
-                  placeholder="ej: Ciudadela San Miguel"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Subtítulo / Tipo</label>
-                <input
-                  type="text"
-                  name="subtitle"
-                  defaultValue={editingProject?.subtitle || ''}
-                  placeholder="ej: VIS - 2,200 aptos (Torre 2)"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Presupuesto Total (COP)</label>
-                <input
-                  type="number"
-                  name="total_budget"
-                  defaultValue={editingProject?.total_budget || 0}
-                  placeholder="ej: 22454184688"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Descripción</label>
-                <textarea
-                  name="description"
-                  defaultValue={editingProject?.description || ''}
-                  rows={3}
-                  placeholder="Descripción ejecutiva del proyecto..."
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:border-[#004C6C]"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  name="is_active"
-                  defaultChecked={editingProject ? editingProject.is_active !== false : true}
-                  className="rounded text-[#004C6C] focus:ring-0"
-                />
-                <label htmlFor="is_active" className="text-xs font-bold text-slate-700">Proyecto Activo en Plataforma</label>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsProjectModalOpen(false)}
-                  className="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold text-xs rounded-2xl hover:bg-slate-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-[#004C6C] hover:bg-[#EE9D4C] text-white font-bold text-xs rounded-2xl transition-colors shadow-sm"
-                >
-                  {editingProject ? 'Guardar Cambios' : 'Crear Proyecto'}
-                </button>
-              </div>
-            </form>
-          </div>
+          )}
         </div>
-      )}
+
+        {/* Panel Derecho: Lista de Cargos */}
+        <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-100 p-6 space-y-6 shadow-sm">
+          {selectedArea ? (
+            <>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <h2 className="text-lg font-black text-[#004C6C]">Cargos de {selectedArea.name}</h2>
+                  <p className="text-xs text-slate-400 font-bold">Gestión de puestos y responsabilidades</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingItem(null);
+                    setIsPositionModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-[#004C6C] text-white font-bold text-xs rounded-2xl hover:bg-[#EE9D4C] transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
+                >
+                  <Plus size={16} />
+                  Nuevo Cargo
+                </button>
+              </div>
+
+              {selectedArea.positions?.length === 0 ? (
+                <div className="py-12 text-center text-xs font-bold text-slate-400">
+                  No hay cargos registrados en esta área.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {selectedArea.positions?.map((pos) => (
+                    <div
+                      key={pos.id}
+                      className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Briefcase size={16} className="text-[#004C6C]" />
+                        <span className="text-xs font-black text-slate-800">{pos.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingItem({ type: 'position', data: pos });
+                            setIsPositionModalOpen(true);
+                          }}
+                          className="p-1 text-slate-400 hover:text-[#004C6C]"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePosition(pos.id)}
+                          className="p-1 text-slate-400 hover:text-red-600"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="py-24 text-center text-slate-400 space-y-2">
+              <Building2 size={40} className="mx-auto text-slate-300" />
+              <p className="text-sm font-bold">Seleccione un área de la izquierda para ver sus cargos.</p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Modal para Crear / Editar Área */}
       {isAreaModalOpen && (

@@ -17,6 +17,7 @@ import {
     Construction,
     Scale,
     FileText,
+    FolderLock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo_inver.svg';
@@ -154,7 +155,13 @@ const eliteMenuItems: SidebarItem[] = [
                 id: 'proyectos',
                 label: 'Proyectos',
                 href: '/app/proyectos',
-                icon: <Building2 className="w-4 h-4" />,
+                icon: <FolderLock className="w-4 h-4" />,
+            },
+            {
+                id: 'contratos',
+                label: 'Contratos',
+                href: '/app/contratos',
+                icon: <FileText className="w-4 h-4" />,
             },
             {
                 id: 'areas-cargos',

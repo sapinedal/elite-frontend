@@ -97,6 +97,10 @@ export const router = createBrowserRouter([
         element: <ContratosPage />,
       },
       {
+        path: 'contratos',
+        element: <ContratosPage />,
+      },
+      {
         path: 'proyectos',
         element: <ProyectosPage />,
       }
