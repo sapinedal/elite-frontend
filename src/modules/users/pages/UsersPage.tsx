@@ -7,9 +7,12 @@ import {
   Briefcase, 
   Edit2, 
   Key, 
-  Trash2,
   Shield,
-  User as UserIcon
+  UserCheck,
+  UserX,
+  CheckCircle2,
+  XCircle,
+  Users as UsersIcon
 } from 'lucide-react';
 import { useUsers } from '../hooks/useUsers';
 import { userService } from '../services/userService';
@@ -19,13 +22,24 @@ import { PasswordChangeModal } from '../components/PasswordChangeModal';
 import type { User } from '../types';
 
 export default function UsersPage() {
-  const { users, isLoading, refetch } = useUsers();
+  const { users, isLoading, refetch } = useUsers(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
+  const activeUsersCount = users.filter(u => u.is_active !== false && !u.deleted_at).length;
+  const inactiveUsersCount = users.filter(u => u.is_active === false || !!u.deleted_at).length;
+
   const filteredUsers = users.filter(user => {
+    const isActive = user.is_active !== false && !user.deleted_at;
+    
+    // Status filter
+    if (statusFilter === 'active' && !isActive) return false;
+    if (statusFilter === 'inactive' && isActive) return false;
+
+    // Search filter
     const areaName = typeof user.area === 'object' ? user.area?.name : user.area;
     const positionName = typeof user.position === 'object' ? user.position?.name : user.position;
     
@@ -64,32 +78,46 @@ export default function UsersPage() {
     }
   };
 
-  const handleDeleteUser = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este usuario?')) return;
+  const handleToggleStatus = async (user: User) => {
+    const isActive = user.is_active !== false && !user.deleted_at;
+    const actionText = isActive ? 'inactivar' : 'activar';
+    if (!window.confirm(`¿Estás seguro de que deseas ${actionText} al usuario "${user.name}"?`)) return;
     try {
-      await userService.deleteUser(id);
+      await userService.toggleStatus(user.id);
       refetch();
     } catch (error) {
       console.error(error);
+      alert('Error al cambiar el estado del usuario');
     }
   };
 
   const columns = [
     {
       header: 'Colaborador',
-      accessor: (user: User) => (
-        <div className="flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-[#004C6C] font-black group-hover:bg-[#004C6C] group-hover:text-white transition-all duration-300">
-            {user.name.charAt(0)}
+      accessor: (user: User) => {
+        const isActive = user.is_active !== false && !user.deleted_at;
+        return (
+          <div className="flex items-center gap-4">
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black transition-all duration-300 ${
+              isActive 
+                ? 'bg-slate-50 text-[#004C6C] group-hover:bg-[#004C6C] group-hover:text-white' 
+                : 'bg-slate-100 text-slate-400'
+            }`}>
+              {user.name.charAt(0)}
+            </div>
+            <div className="flex flex-col">
+              <span className={`font-black transition-colors ${
+                isActive ? 'text-slate-800 group-hover:text-[#004C6C]' : 'text-slate-500 line-through opacity-75'
+              }`}>
+                {user.name}
+              </span>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                <Mail size={10} /> {user.email}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-slate-800 font-black group-hover:text-[#004C6C] transition-colors">{user.name}</span>
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1">
-              <Mail size={10} /> {user.email}
-            </span>
-          </div>
-        </div>
-      )
+        );
+      }
     },
     {
       header: 'Área / Cargo',
@@ -105,6 +133,27 @@ export default function UsersPage() {
       )
     },
     {
+      header: 'Estado',
+      accessor: (user: User) => {
+        const isActive = user.is_active !== false && !user.deleted_at;
+        return (
+          <div>
+            {isActive ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 text-[10px] font-black uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Activo
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 rounded-full border border-rose-200 text-[10px] font-black uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-rose-400" />
+                Inactivo
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
       header: 'Roles',
       accessor: (user: User) => (
         <div className="flex flex-wrap gap-2">
@@ -118,31 +167,38 @@ export default function UsersPage() {
     },
     {
       header: 'Acciones',
-      accessor: (user: User) => (
-        <div className="flex items-center gap-2 justify-end" onClick={e => e.stopPropagation()}>
-          <button 
-            onClick={() => { setSelectedUser(user); setIsPasswordModalOpen(true); }}
-            title="Cambiar Contraseña"
-            className="p-3 text-slate-300 hover:text-[#004C6C] hover:bg-blue-50 rounded-2xl transition-all"
-          >
-            <Key size={18} />
-          </button>
-          <button 
-            onClick={() => { setSelectedUser(user); setIsModalOpen(true); }}
-            title="Editar Usuario"
-            className="p-3 text-slate-300 hover:text-[#EE9D4C] hover:bg-orange-50 rounded-2xl transition-all"
-          >
-            <Edit2 size={18} />
-          </button>
-          <button 
-            onClick={() => handleDeleteUser(user.id)}
-            title="Eliminar Usuario"
-            className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
-          >
-            <Trash2 size={18} />
-          </button>
-        </div>
-      ),
+      accessor: (user: User) => {
+        const isActive = user.is_active !== false && !user.deleted_at;
+        return (
+          <div className="flex items-center gap-1.5 justify-end" onClick={e => e.stopPropagation()}>
+            <button 
+              onClick={() => handleToggleStatus(user)}
+              title={isActive ? "Inactivar Usuario" : "Activar Usuario"}
+              className={`p-2.5 rounded-2xl transition-all flex items-center gap-1 ${
+                isActive 
+                  ? 'text-slate-400 hover:text-amber-600 hover:bg-amber-50' 
+                  : 'text-emerald-600 bg-emerald-50/80 hover:bg-emerald-100'
+              }`}
+            >
+              {isActive ? <UserX size={18} /> : <UserCheck size={18} />}
+            </button>
+            <button 
+              onClick={() => { setSelectedUser(user); setIsPasswordModalOpen(true); }}
+              title="Cambiar Contraseña"
+              className="p-2.5 text-slate-400 hover:text-[#004C6C] hover:bg-blue-50 rounded-2xl transition-all"
+            >
+              <Key size={18} />
+            </button>
+            <button 
+              onClick={() => { setSelectedUser(user); setIsModalOpen(true); }}
+              title="Editar Usuario"
+              className="p-2.5 text-slate-400 hover:text-[#EE9D4C] hover:bg-orange-50 rounded-2xl transition-all"
+            >
+              <Edit2 size={18} />
+            </button>
+          </div>
+        );
+      },
       className: "text-right"
     }
   ];
@@ -155,7 +211,7 @@ export default function UsersPage() {
         <div className="space-y-1">
           <h1 className="text-4xl font-black text-[#004C6C] tracking-tight">Gestión de Usuarios</h1>
           <p className="text-slate-400 font-bold uppercase tracking-[0.2em]">
-            Administra colaboradores, roles y accesos
+            Administra colaboradores, estados, roles y accesos
           </p>
         </div>
         
@@ -168,37 +224,128 @@ export default function UsersPage() {
         </button>
       </div>
 
-      {/* Filters & Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
-        <div className="lg:col-span-3 group">
-          <div className="relative h-full">
-            <div className="absolute left-7 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#004C6C] transition-colors z-10">
-              <Search size={22} />
-            </div>
-            <input 
-              type="text"
-              placeholder="Buscar por nombre, correo o área..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-full bg-white border border-slate-200 rounded-[32px] pl-16 pr-8 py-5 text-slate-700 font-bold shadow-sm group-hover:shadow-md focus:shadow-xl focus:shadow-blue-900/5 focus:border-[#004C6C] transition-all outline-none text-base placeholder:text-slate-300"
-            />
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Total card */}
+        <div 
+          onClick={() => setStatusFilter('all')}
+          className={`p-6 rounded-[28px] border transition-all cursor-pointer flex items-center justify-between ${
+            statusFilter === 'all' 
+              ? 'bg-[#004C6C] text-white border-[#004C6C] shadow-xl shadow-blue-900/10 scale-[1.02]' 
+              : 'bg-white text-slate-800 border-slate-200 hover:border-[#004C6C]/40 hover:shadow-md'
+          }`}
+        >
+          <div>
+            <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${
+              statusFilter === 'all' ? 'text-white/60' : 'text-slate-400'
+            }`}>
+              Total Usuarios
+            </p>
+            <p className="text-3xl font-black tracking-tight">{users.length}</p>
+          </div>
+          <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
+            statusFilter === 'all' ? 'bg-white/10 text-white' : 'bg-slate-100 text-[#004C6C]'
+          }`}>
+            <UsersIcon size={24} />
           </div>
         </div>
-        
-        <div className="bg-[#004C6C] rounded-[32px] p-6 flex items-center justify-between shadow-xl shadow-blue-900/10 relative overflow-hidden group hover:scale-[1.02] transition-all cursor-default">
-          {/* Decorative background element */}
-          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all duration-500" />
-          
-          <div className="relative z-10">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] leading-none mb-2">Total Usuarios</p>
-            <div className="flex items-baseline gap-1.5">
-              <p className="text-4xl font-black text-white tracking-tighter">{users.length}</p>
-              <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Activos</span>
-            </div>
+
+        {/* Active card */}
+        <div 
+          onClick={() => setStatusFilter('active')}
+          className={`p-6 rounded-[28px] border transition-all cursor-pointer flex items-center justify-between ${
+            statusFilter === 'active' 
+              ? 'bg-emerald-600 text-white border-emerald-600 shadow-xl shadow-emerald-900/10 scale-[1.02]' 
+              : 'bg-white text-slate-800 border-slate-200 hover:border-emerald-500/40 hover:shadow-md'
+          }`}
+        >
+          <div>
+            <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${
+              statusFilter === 'active' ? 'text-white/70' : 'text-slate-400'
+            }`}>
+              Usuarios Activos
+            </p>
+            <p className="text-3xl font-black tracking-tight">{activeUsersCount}</p>
           </div>
-          <div className="h-16 w-16 bg-white/10 rounded-[24px] flex items-center justify-center text-white backdrop-blur-md border border-white/10 relative z-10 group-hover:rotate-6 transition-transform duration-500">
-            <UserIcon size={28} />
+          <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
+            statusFilter === 'active' ? 'bg-white/10 text-white' : 'bg-emerald-50 text-emerald-600'
+          }`}>
+            <CheckCircle2 size={24} />
           </div>
+        </div>
+
+        {/* Inactive card */}
+        <div 
+          onClick={() => setStatusFilter('inactive')}
+          className={`p-6 rounded-[28px] border transition-all cursor-pointer flex items-center justify-between ${
+            statusFilter === 'inactive' 
+              ? 'bg-rose-600 text-white border-rose-600 shadow-xl shadow-rose-900/10 scale-[1.02]' 
+              : 'bg-white text-slate-800 border-slate-200 hover:border-rose-500/40 hover:shadow-md'
+          }`}
+        >
+          <div>
+            <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${
+              statusFilter === 'inactive' ? 'text-white/70' : 'text-slate-400'
+            }`}>
+              Usuarios Inactivos
+            </p>
+            <p className="text-3xl font-black tracking-tight">{inactiveUsersCount}</p>
+          </div>
+          <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${
+            statusFilter === 'inactive' ? 'bg-white/10 text-white' : 'bg-rose-50 text-rose-600'
+          }`}>
+            <XCircle size={24} />
+          </div>
+        </div>
+      </div>
+
+      {/* Filters & Search */}
+      <div className="flex flex-col md:flex-row gap-4 items-stretch justify-between">
+        <div className="flex-1 relative group">
+          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#004C6C] transition-colors z-10">
+            <Search size={20} />
+          </div>
+          <input 
+            type="text"
+            placeholder="Buscar por nombre, correo o área..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-[24px] pl-14 pr-6 py-4 text-slate-700 font-bold shadow-sm group-hover:shadow-md focus:shadow-xl focus:shadow-blue-900/5 focus:border-[#004C6C] transition-all outline-none text-sm placeholder:text-slate-300"
+          />
+        </div>
+
+        {/* Segmented status filter */}
+        <div className="flex items-center bg-slate-100 p-1.5 rounded-[24px] gap-1 self-start md:self-auto">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
+              statusFilter === 'all'
+                ? 'bg-white text-[#004C6C] shadow-md shadow-slate-200'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Todos ({users.length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('active')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
+              statusFilter === 'active'
+                ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Activos ({activeUsersCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter('inactive')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
+              statusFilter === 'inactive'
+                ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Inactivos ({inactiveUsersCount})
+          </button>
         </div>
       </div>
 
@@ -228,3 +375,4 @@ export default function UsersPage() {
     </div>
   );
 }
+

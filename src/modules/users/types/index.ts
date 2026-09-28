@@ -11,6 +11,8 @@ export interface User {
   email: string;
   roles?: string[];
   kpis?: KPI[];
+  is_active?: boolean;
+  deleted_at?: string | null;
 }
 
 export interface KPI {
