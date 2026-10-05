@@ -365,23 +365,40 @@ export default function NuevaEvaluacionPage() {
         const lower = h.toLowerCase();
         return lower.includes('dias') || lower.includes('días');
       });
+      const cumplimientoColIdx = tableData.headers.findIndex((h: string) => {
+        const lower = h.toLowerCase();
+        return lower.includes('cumplimiento') || lower.includes('%') || lower.includes('conciliación') || lower.includes('conciliacion');
+      });
       const valorColIdx = tableData.headers.findIndex((h: string) => h.toLowerCase() === 'valor');
 
       if (diasColIdx !== -1) {
-        // Lógica de promedio para Tiempo de Cierre (Excel: =PROMEDIO(BB75:BB88))
-        const validRows = tableData.rows.filter((row: string[]) => row[diasColIdx] !== '' && !isNaN(parseFloat(row[diasColIdx])));
-        const sum = validRows.reduce((acc: number, row: string[]) => acc + parseFloat(row[diasColIdx]), 0);
+        // Lógica de promedio para Días
+        const validRows = tableData.rows.filter((row: string[]) => row[diasColIdx] !== '' && row[diasColIdx] !== '-' && !isNaN(parseFloat((row[diasColIdx] || '').replace(',', '.'))));
+        const sum = validRows.reduce((acc: number, row: string[]) => acc + parseFloat((row[diasColIdx] || '').replace(',', '.')), 0);
         const avg = validRows.length > 0 ? sum / validRows.length : 0;
-        indRes.calculated_value = avg;
+        indRes.calculated_value = Math.round(avg * 10) / 10;
 
         // Sincronizar con la variable 'Días' si existe en los parámetros
         const varName = Object.keys(indRes.variables).find(k => k.toLowerCase() === 'dias' || k.toLowerCase() === 'días');
         if (varName) {
-          indRes.variables[varName] = avg;
+          indRes.variables[varName] = indRes.calculated_value;
         }
+      } else if (cumplimientoColIdx !== -1) {
+        // Lógica de promedio para % Cumplimiento (Excel: =PROMEDIO(...))
+        const validRows = tableData.rows.filter((row: string[]) => {
+          const raw = (row[cumplimientoColIdx] || '').replace('%', '').replace(',', '.').trim();
+          return raw !== '' && raw !== '-' && !isNaN(parseFloat(raw));
+        });
+        const sum = validRows.reduce((acc: number, row: string[]) => {
+          const raw = (row[cumplimientoColIdx] || '').replace('%', '').replace(',', '.').trim();
+          return acc + parseFloat(raw);
+        }, 0);
+        const avg = validRows.length > 0 ? sum / validRows.length : 0;
+        indRes.calculated_value = Math.round(avg * 10) / 10;
       } else if (valorColIdx !== -1) {
         const sum = tableData.rows.reduce((acc: number, row: string[]) => {
-          const val = parseFloat(row[valorColIdx]);
+          const raw = (row[valorColIdx] || '').replace('%', '').replace(',', '.').trim();
+          const val = parseFloat(raw);
           return acc + (isNaN(val) ? 0 : val);
         }, 0);
         indRes.calculated_value = sum;
