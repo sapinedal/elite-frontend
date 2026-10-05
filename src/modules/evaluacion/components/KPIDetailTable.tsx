@@ -72,77 +72,28 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
       }
     }
 
-    // Auto-cálculo de % CUMPLIMIENTO / CUMPLIMIENTO / CONCILIACIÓN
-    const cumpCol = headersLower.findIndex(h =>
-      h.includes('cumplimiento') ||
-      h.includes('conciliación') ||
-      h.includes('conciliacion') ||
-      h === '%'
-    );
+    // Auto-cálculo de división para tablas tipo Vinculación (con columnas Aplica y Existente)
+    const aplicaCol = headersLower.findIndex(h => h.includes('aplica') || h.includes('requerid'));
+    const existenteCol = headersLower.findIndex(h => h.includes('existente') || h.includes('ejecutad'));
+    const cumpCol = headersLower.findIndex(h => h.includes('cumplimiento') || h === '%');
 
-    if (cumpCol !== -1 && colIdx !== cumpCol) {
+    if (aplicaCol !== -1 && existenteCol !== -1 && cumpCol !== -1 && colIdx !== cumpCol) {
       const row = [...newRows[rowIdx]];
+      const rawAplica = (row[aplicaCol] || '').replace('%', '').replace(',', '.').trim();
+      const rawExistente = (row[existenteCol] || '').replace('%', '').replace(',', '.').trim();
 
-      let colDen = -1;
-      let colNum = -1;
+      if (rawAplica !== '' && rawExistente !== '') {
+        const valAplica = parseFloat(rawAplica);
+        const valExistente = parseFloat(rawExistente);
 
-      // 1. Caso con 2 columnas de 'cantidad' o 'período'/'faltante'
-      const cantidadIndices: number[] = [];
-      headersLower.forEach((h, idx) => {
-        if (h === 'cantidad' || h.includes('cantidad') || h.includes('faltante') || h.includes('periodo') || h.includes('período')) {
-          cantidadIndices.push(idx);
-        }
-      });
-
-      if (cantidadIndices.length >= 2) {
-        colDen = cantidadIndices[0];
-        colNum = cantidadIndices[1];
-      } else {
-        // 2. Caso con Aplica / Existente / Inver / Trámites
-        const aplicaIdx = headersLower.findIndex(h => h.includes('aplica') || h.includes('meta') || h.includes('requerid') || h.includes('total') || h.includes('inver') || h.includes('pagos'));
-        const existIdx = headersLower.findIndex(h => h.includes('existente') || h.includes('ejecutad') || h.includes('realizad') || h.includes('soport') || h.includes('trámite') || h.includes('tramite') || h.includes('asentad'));
-
-        if (aplicaIdx !== -1 && existIdx !== -1) {
-          colDen = aplicaIdx;
-          colNum = existIdx;
-        } else {
-          // 3. Detección genérica de columnas con números en la fila
-          const numericCols: number[] = [];
-          row.forEach((cellVal, cIdx) => {
-            if (cIdx !== cumpCol && cIdx !== 0) {
-              const raw = (cellVal || '').trim();
-              if (raw && !raw.endsWith(':') && !isNaN(parseFloat(raw.replace(',', '.')))) {
-                numericCols.push(cIdx);
-              }
-            }
-          });
-          if (numericCols.length >= 2) {
-            colDen = numericCols[0];
-            colNum = numericCols[1];
-          }
-        }
-      }
-
-      if (colDen !== -1 && colNum !== -1) {
-        const rawDen = (row[colDen] || '').replace('%', '').replace(',', '.').trim();
-        const rawNum = (row[colNum] || '').replace('%', '').replace(',', '.').trim();
-
-        if (rawDen !== '' && rawNum !== '') {
-          const valDen = parseFloat(rawDen);
-          const valNum = parseFloat(rawNum);
-
-          if (!isNaN(valDen) && !isNaN(valNum)) {
-            if (valDen > 0) {
-              const pct = Math.round((valNum / valDen) * 100);
-              row[cumpCol] = `${pct}%`;
-              newRows[rowIdx] = row;
-            } else if (valDen === 0 && valNum === 0) {
-              row[cumpCol] = '100%';
-              newRows[rowIdx] = row;
-            } else if (valDen === 0 && valNum > 0) {
-              row[cumpCol] = '100%';
-              newRows[rowIdx] = row;
-            }
+        if (!isNaN(valAplica) && !isNaN(valExistente)) {
+          if (valAplica > 0) {
+            const pct = Math.round((valExistente / valAplica) * 100);
+            row[cumpCol] = `${pct}%`;
+            newRows[rowIdx] = row;
+          } else if (valAplica === 0 && valExistente === 0) {
+            row[cumpCol] = '100%';
+            newRows[rowIdx] = row;
           }
         }
       }
