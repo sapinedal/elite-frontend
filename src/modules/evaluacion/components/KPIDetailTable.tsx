@@ -72,6 +72,82 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
       }
     }
 
+    // Auto-cálculo de % CUMPLIMIENTO / CUMPLIMIENTO / CONCILIACIÓN
+    const cumpCol = headersLower.findIndex(h =>
+      h.includes('cumplimiento') ||
+      h.includes('conciliación') ||
+      h.includes('conciliacion') ||
+      h === '%'
+    );
+
+    if (cumpCol !== -1 && colIdx !== cumpCol) {
+      const row = [...newRows[rowIdx]];
+
+      let colDen = -1;
+      let colNum = -1;
+
+      // 1. Caso con 2 columnas de 'cantidad' o 'período'/'faltante'
+      const cantidadIndices: number[] = [];
+      headersLower.forEach((h, idx) => {
+        if (h === 'cantidad' || h.includes('cantidad') || h.includes('faltante') || h.includes('periodo') || h.includes('período')) {
+          cantidadIndices.push(idx);
+        }
+      });
+
+      if (cantidadIndices.length >= 2) {
+        colDen = cantidadIndices[0];
+        colNum = cantidadIndices[1];
+      } else {
+        // 2. Caso con Aplica / Existente / Inver / Trámites
+        const aplicaIdx = headersLower.findIndex(h => h.includes('aplica') || h.includes('meta') || h.includes('requerid') || h.includes('total') || h.includes('inver') || h.includes('pagos'));
+        const existIdx = headersLower.findIndex(h => h.includes('existente') || h.includes('ejecutad') || h.includes('realizad') || h.includes('soport') || h.includes('trámite') || h.includes('tramite') || h.includes('asentad'));
+
+        if (aplicaIdx !== -1 && existIdx !== -1) {
+          colDen = aplicaIdx;
+          colNum = existIdx;
+        } else {
+          // 3. Detección genérica de columnas con números en la fila
+          const numericCols: number[] = [];
+          row.forEach((cellVal, cIdx) => {
+            if (cIdx !== cumpCol && cIdx !== 0) {
+              const raw = (cellVal || '').trim();
+              if (raw && !raw.endsWith(':') && !isNaN(parseFloat(raw.replace(',', '.')))) {
+                numericCols.push(cIdx);
+              }
+            }
+          });
+          if (numericCols.length >= 2) {
+            colDen = numericCols[0];
+            colNum = numericCols[1];
+          }
+        }
+      }
+
+      if (colDen !== -1 && colNum !== -1) {
+        const rawDen = (row[colDen] || '').replace('%', '').replace(',', '.').trim();
+        const rawNum = (row[colNum] || '').replace('%', '').replace(',', '.').trim();
+
+        if (rawDen !== '' && rawNum !== '') {
+          const valDen = parseFloat(rawDen);
+          const valNum = parseFloat(rawNum);
+
+          if (!isNaN(valDen) && !isNaN(valNum)) {
+            if (valDen > 0) {
+              const pct = Math.round((valNum / valDen) * 100);
+              row[cumpCol] = `${pct}%`;
+              newRows[rowIdx] = row;
+            } else if (valDen === 0 && valNum === 0) {
+              row[cumpCol] = '100%';
+              newRows[rowIdx] = row;
+            } else if (valDen === 0 && valNum > 0) {
+              row[cumpCol] = '100%';
+              newRows[rowIdx] = row;
+            }
+          }
+        }
+      }
+    }
+
     onChange({ ...data, rows: newRows });
   };
 
