@@ -43,12 +43,14 @@ const eliteMenuItems: SidebarItem[] = [
         id: 'obra',
         label: 'Control de Obra',
         icon: <Building2 className="w-5 h-5" />,
+        permission: 'obra.ver',
         children: [
             {
                 id: 'interventoria',
                 label: 'Interventoría & Resumen',
                 icon: <LayoutDashboard className="w-4 h-4" />,
                 href: '/app/obra/interventoria',
+                permission: 'obra.ver',
             }
         ]
     },
@@ -56,18 +58,21 @@ const eliteMenuItems: SidebarItem[] = [
         id: 'task',
         label: 'Tareas',
         icon: <ClipboardList className="w-5 h-5" />,
+        permission: 'bitacora.ver',
         children: [
             {
                 id: 'dashboard',
                 label: 'Dashboard',
-                icon: <LayoutDashboard className="w-5 h-5" />,
+                icon: <LayoutDashboard className="w-4 h-4" />,
                 href: '/app/task/dashboard',
+                permission: 'bitacora.ver',
             },
             {
                 id: 'bitacora',
                 label: 'Kanban',
-                icon: <ClipboardList className="w-5 h-5" />,
+                icon: <ClipboardList className="w-4 h-4" />,
                 href: '/app/task/bitacora',
+                permission: 'bitacora.ver',
             }
         ]
     },
@@ -79,26 +84,30 @@ const eliteMenuItems: SidebarItem[] = [
             {
                 id: 'dashboard',
                 label: 'Dashboard',
-                icon: <LayoutDashboard className="w-5 h-5" />,
+                icon: <LayoutDashboard className="w-4 h-4" />,
                 href: '/app/kpi/dashboard',
+                permission: 'kpi.ver',
             },
             {
                 id: 'nueva-evaluacion',
                 label: 'Nueva Evaluación',
                 href: '/app/kpi/evaluacion',
                 icon: <PlusCircle className="w-4 h-4" />,
+                permission: 'kpi.evaluar',
             },
             {
                 id: 'historial',
                 label: 'Historial',
                 href: '/app/kpi/historial',
                 icon: <History className="w-4 h-4" />,
+                permission: 'kpi.historial',
             },
             {
                 id: 'parametrizacion',
                 label: 'Parametrización',
                 href: '/app/kpi/plantillas',
                 icon: <ClipboardList className="w-4 h-4" />,
+                permission: 'kpi.parametrizar',
             }
         ]
     },
@@ -110,20 +119,23 @@ const eliteMenuItems: SidebarItem[] = [
             {
                 id: 'registro',
                 label: 'Registro',
-                icon: <LayoutDashboard className="w-5 h-5" />,
+                icon: <LayoutDashboard className="w-4 h-4" />,
                 href: '/app/ftra/registro',
+                permission: 'ftra.crear',
             },
             {
                 id: 'seguimiento',
                 label: 'Seguimiento',
                 icon: <ClipboardList className="w-4 h-4" />,
                 href: '/app/ftra/seguimiento',
+                permission: 'ftra.ver',
             },
             {
                 id: 'parametrización',
                 label: 'Parametrización',
                 icon: <Settings className="w-4 h-4" />,
                 href: '/app/ftra/parametrizacion',
+                permission: 'ftra.parametrizar',
             }
         ]
     },
@@ -131,12 +143,14 @@ const eliteMenuItems: SidebarItem[] = [
         id: 'juridica',
         label: 'Área Jurídica',
         icon: <Scale className="w-5 h-5" />,
+        permission: 'juridica.ver',
         children: [
             {
                 id: 'contratos',
                 label: 'Contratos & Pólizas',
                 icon: <FileText className="w-4 h-4" />,
                 href: '/app/juridica/contratos',
+                permission: 'juridica.ver',
             }
         ]
     },
@@ -150,36 +164,42 @@ const eliteMenuItems: SidebarItem[] = [
                 label: 'Usuarios',
                 href: '/app/usuarios',
                 icon: <User className="w-4 h-4" />,
+                permission: 'usuarios.ver',
             },
             {
                 id: 'proyectos',
                 label: 'Proyectos',
                 href: '/app/proyectos',
                 icon: <FolderLock className="w-4 h-4" />,
+                permission: 'proyectos.ver',
             },
             {
                 id: 'contratos',
                 label: 'Contratos',
                 href: '/app/contratos',
                 icon: <FileText className="w-4 h-4" />,
+                permission: 'contratos.ver',
             },
             {
                 id: 'areas-cargos',
                 label: 'Áreas y Cargos',
                 href: '/app/configuracion',
                 icon: <Building2 className="w-4 h-4" />,
+                permission: 'configuracion.ver',
             },
             {
                 id: 'roles',
                 label: 'Roles',
                 href: '/app/roles',
                 icon: <Shield className="w-4 h-4" />,
+                permission: 'roles.ver',
             },
             {
                 id: 'permisos',
                 label: 'Permisos',
                 href: '/app/permisos',
                 icon: <Key className="w-4 h-4" />,
+                permission: 'permisos.ver',
             }
         ]
     }
@@ -194,11 +214,16 @@ const SidebarItemComponent: React.FC<{
     currentPath: string;
     userPermissions: string[];
 }> = ({ item, isExpanded, expandedItems, onToggle, onNavigate, currentPath, userPermissions }) => {
-    const hasChildren = item.children && item.children.length > 0;
+    const visibleChildren = item.children?.filter(child => !child.permission || userPermissions.includes(child.permission)) || [];
+    const hasChildren = visibleChildren.length > 0;
     const isItemExpanded = expandedItems.includes(item.id);
-    const isAnyChildActive = item.children?.some(child => child.href === currentPath) ?? false;
+    const isAnyChildActive = visibleChildren.some(child => child.href === currentPath);
     const isMainActive = item.href === currentPath || isAnyChildActive;
-    const hasPermission = !item.permission || userPermissions.includes(item.permission);
+
+    // Si tiene permiso asignado directamente al item, se valida
+    const hasParentPermission = !item.permission || userPermissions.includes(item.permission);
+    // Si tiene hijos declarados, debe tener al menos un hijo visible con permiso
+    const hasPermission = hasParentPermission && (!item.children || hasChildren);
 
     if (!hasPermission) return null;
 
@@ -252,7 +277,7 @@ const SidebarItemComponent: React.FC<{
         `}
             >
                 <div className="space-y-1 mt-1">
-                    {item.children?.filter(child => !child.permission || userPermissions.includes(child.permission)).map((child) => {
+                    {visibleChildren.map((child) => {
                         const isChildActive = child.href === currentPath;
                         return (
                             <div

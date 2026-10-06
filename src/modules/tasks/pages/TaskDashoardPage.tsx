@@ -336,9 +336,10 @@ export default function TaskDashboardPage() {
                 <div>
                     <CustomSelect
                         label="Área"
-                        placeholder="Todos"
+                        placeholder="Todas las áreas"
+                        searchPlaceholder="Buscar área..."
                         options={[
-                            { value: 'Todo', label: 'Todo' },
+                            { value: 'Todo', label: 'Todas las áreas' },
                             ...areas.map(a => ({ value: a.id.toString(), label: a.name }))
                         ]}
                         value={selectedAreaId}
@@ -349,10 +350,15 @@ export default function TaskDashboardPage() {
                 <div>
                     <CustomSelect
                         label="Responsable"
-                        placeholder="Todos"
+                        placeholder="Todos los responsables"
+                        searchPlaceholder="Buscar responsable..."
                         options={[
-                            { value: 'Todo', label: 'Todo' },
-                            ...users.map(u => ({ value: u.id.toString(), label: u.name }))
+                            { value: 'Todo', label: 'Todos los responsables' },
+                            ...users.map(u => ({
+                                value: u.id.toString(),
+                                label: u.name,
+                                sublabel: u.position?.name ? `${u.position.name} • ${u.email || ''}` : u.email
+                            }))
                         ]}
                         value={selectedUserId}
                         onChange={val => setSelectedUserId(val)}
@@ -362,9 +368,10 @@ export default function TaskDashboardPage() {
                 <div>
                     <CustomSelect
                         label="Mes"
-                        placeholder="Todos"
+                        placeholder="Todos los meses"
+                        searchPlaceholder="Buscar mes..."
                         options={[
-                            { value: 'Todo', label: 'Todos' },
+                            { value: 'Todo', label: 'Todos los meses' },
                             ...meses.map((m, i) => ({ value: (i + 1).toString(), label: m }))
                         ]}
                         value={selectedMonth}
@@ -376,9 +383,10 @@ export default function TaskDashboardPage() {
                     <div className="flex-1">
                         <CustomSelect
                             label="Año"
-                            placeholder="Todos"
+                            placeholder="Todos los años"
+                            searchPlaceholder="Buscar año..."
                             options={[
-                                { value: 'Todo', label: 'Todos' },
+                                { value: 'Todo', label: 'Todos los años' },
                                 ...years.map(y => ({ value: y, label: y }))
                             ]}
                             value={selectedYear}

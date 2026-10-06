@@ -254,9 +254,12 @@ export default function TasksPage() {
             <CustomSelect
               label="Área Responsable"
               placeholder="Todas las áreas"
+              searchPlaceholder="Buscar área..."
               options={areas.map(a => ({ value: a.id.toString(), label: a.name }))}
               value={filters.area_id}
               onChange={val => setFilter('area_id', val)}
+              clearable={!!filters.area_id}
+              onClear={() => setFilter('area_id', '')}
             />
           </div>
 
@@ -265,9 +268,16 @@ export default function TasksPage() {
             <CustomSelect
               label="Responsable Asignado"
               placeholder="Todos los responsables"
-              options={users.map(u => ({ value: u.id.toString(), label: u.name }))}
+              searchPlaceholder="Buscar responsable..."
+              options={users.map(u => ({
+                value: u.id.toString(),
+                label: u.name,
+                sublabel: u.position?.name ? `${u.position.name} • ${u.email || ''}` : u.email
+              }))}
               value={filters.responsible_id}
               onChange={val => setFilter('responsible_id', val)}
+              clearable={!!filters.responsible_id}
+              onClear={() => setFilter('responsible_id', '')}
             />
           </div>
 

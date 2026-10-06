@@ -154,16 +154,31 @@ export default function UsersPage() {
       }
     },
     {
-      header: 'Roles',
-      accessor: (user: User) => (
-        <div className="flex flex-wrap gap-2">
-          {(user.roles || ['colaborador']).map((role, idx) => (
-            <span key={idx} className="px-3 py-1 bg-blue-50 text-[#004C6C] rounded-full border border-blue-100 text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-              <Shield size={10} /> {role}
-            </span>
-          ))}
-        </div>
-      )
+      header: 'Roles & Permisos',
+      accessor: (user: User) => {
+        const rolesList = user.roles_list || 
+          (Array.isArray(user.roles) 
+            ? user.roles.map((r: any) => typeof r === 'string' ? r : r.name) 
+            : ['empleado']);
+        const directPermsCount = user.direct_permissions_list?.length || 0;
+
+        return (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
+              {rolesList.map((role, idx) => (
+                <span key={idx} className="px-2.5 py-0.5 bg-blue-50 text-[#004C6C] rounded-full border border-blue-100 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                  <Shield size={10} /> {role}
+                </span>
+              ))}
+            </div>
+            {directPermsCount > 0 && (
+              <span className="text-[9px] font-black text-[#EE9D4C] flex items-center gap-1 tracking-wider uppercase">
+                <Key size={10} /> +{directPermsCount} {directPermsCount === 1 ? 'permiso directo' : 'permisos directos'}
+              </span>
+            )}
+          </div>
+        );
+      }
     },
     {
       header: 'Acciones',
