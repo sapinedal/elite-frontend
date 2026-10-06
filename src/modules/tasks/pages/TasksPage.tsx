@@ -141,6 +141,23 @@ export default function TasksPage() {
     }
   };
 
+  const handleAddObservation = async (taskId: number, observationText: string) => {
+    const newObs = await addObservation(taskId, observationText);
+    setSelectedTask(prev => {
+      if (prev && prev.id === taskId) {
+        const currentObs = prev.observations || [];
+        const currentCount = typeof prev.observations_count === 'number' ? prev.observations_count : currentObs.length;
+        return {
+          ...prev,
+          observations_count: currentCount + 1,
+          observations: [newObs, ...currentObs]
+        };
+      }
+      return prev;
+    });
+    return newObs;
+  };
+
   const handleDeleteTask = async (id: number) => {
     if (window.confirm('¿Estás 100% seguro de que deseas eliminar este compromiso de la bitácora? Esta acción se registrará y borrará de forma física todos los logs históricos.')) {
       try {
@@ -501,7 +518,7 @@ export default function TasksPage() {
         isOpen={isObsModalOpen}
         onClose={() => setIsObsModalOpen(false)}
         task={selectedTask}
-        onAddObservation={addObservation}
+        onAddObservation={handleAddObservation}
         isLoading={isLoadingDetails}
       />
  
