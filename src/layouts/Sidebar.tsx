@@ -15,6 +15,7 @@ import {
     Key,
     Building2,
     Construction,
+    FolderArchive,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo_inver.svg';
@@ -108,6 +109,19 @@ const eliteMenuItems: SidebarItem[] = [
                 label: 'Parametrización',
                 icon: <Settings className="w-4 h-4" />,
                 href: '/app/ftra/parametrizacion',
+            }
+        ]
+    },
+    {
+        id: 'documental',
+        label: 'Gestión Documental',
+        icon: <FolderArchive className="w-5 h-5" />,
+        children: [
+            {
+                id: 'explorador',
+                label: 'Explorador S3',
+                icon: <FolderArchive className="w-4 h-4" />,
+                href: '/app/documental',
             }
         ]
     },

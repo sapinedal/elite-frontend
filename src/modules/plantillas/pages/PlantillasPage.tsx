@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useUsers, useUserKPIs } from '../../users/hooks/useUsers';
 import type { User, KPI, Indicator, IndicatorParameter } from '../../users/types';
-import { Plus, Trash2, Save, Users, Target, ShieldAlert, ArrowLeft, List, Settings2, Info, Calculator } from 'lucide-react';
+import { Plus, Trash2, Save, Users, Target, ShieldAlert, ArrowLeft, List, Settings2, Info, Calculator, GripVertical, ChevronUp, ChevronDown, ArrowRightLeft } from 'lucide-react';
 import { useNotification } from '../../../context/NotificationContext';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { Modal } from '../../../components/ui/Modal';
@@ -22,6 +22,8 @@ export default function PlantillasPage() {
   const [activeView, setActiveView] = useState<'list' | 'kpi-edit' | 'indicator-edit'>('list');
   const [activeKpiIdx, setActiveKpiIdx] = useState<number | null>(null);
   const [activeIndIdx, setActiveIndIdx] = useState<number | null>(null);
+  const [draggedIndIdx, setDraggedIndIdx] = useState<number | null>(null);
+  const [draggedKpiIdx, setDraggedKpiIdx] = useState<number | null>(null);
 
   // Update local KPIs when kpis from server change
   useEffect(() => {
@@ -114,6 +116,42 @@ export default function PlantillasPage() {
       setLocalKpis(updated);
       showNotification('Indicador eliminado', 'warning');
     }
+  };
+
+  const handleMoveIndicator = (kpiIndex: number, fromIndex: number, toIndex: number) => {
+    const updated = [...localKpis];
+    const kpi = updated[kpiIndex];
+    if (!kpi.indicators || toIndex < 0 || toIndex >= kpi.indicators.length) return;
+
+    const indicators = [...kpi.indicators];
+    const [movedItem] = indicators.splice(fromIndex, 1);
+    indicators.splice(toIndex, 0, movedItem);
+    kpi.indicators = indicators;
+
+    setLocalKpis(updated);
+  };
+
+  const handleMoveIndicatorToKpi = (sourceKpiIndex: number, indicatorIndex: number, targetKpiIndex: number) => {
+    if (sourceKpiIndex === targetKpiIndex) return;
+    const updated = [...localKpis];
+    const sourceKpi = updated[sourceKpiIndex];
+    const targetKpi = updated[targetKpiIndex];
+
+    if (!sourceKpi.indicators || !targetKpi) return;
+
+    const [movedItem] = sourceKpi.indicators.splice(indicatorIndex, 1);
+    targetKpi.indicators = [...(targetKpi.indicators || []), movedItem];
+
+    setLocalKpis(updated);
+    showNotification(`Indicador movido a "${targetKpi.name || `KPI #${targetKpiIndex + 1}`}"`, 'success');
+  };
+
+  const handleMoveKPI = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= localKpis.length) return;
+    const updated = [...localKpis];
+    const [movedItem] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, movedItem);
+    setLocalKpis(updated);
   };
 
   const handleAddParameter = (kpiIndex: number, indicatorIndex: number) => {
@@ -437,7 +475,31 @@ export default function PlantillasPage() {
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {localKpis.map((kpi, idx) => (
-                          <div key={idx} className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-xl hover:border-[#004C6C]/10 transition-all group relative">
+                          <div
+                            key={idx}
+                            draggable
+                            onDragStart={(e) => {
+                              setDraggedKpiIdx(idx);
+                              e.dataTransfer.effectAllowed = 'move';
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              if (draggedKpiIdx !== null && draggedKpiIdx !== idx) {
+                                handleMoveKPI(draggedKpiIdx, idx);
+                              }
+                              setDraggedKpiIdx(null);
+                            }}
+                            onDragEnd={() => setDraggedKpiIdx(null)}
+                            className={`bg-white p-8 rounded-[32px] shadow-sm border flex flex-col justify-between hover:shadow-xl hover:border-[#004C6C]/10 transition-all group relative ${
+                              draggedKpiIdx === idx
+                                ? 'border-[#EE9D4C] bg-orange-50/40 opacity-60 scale-[0.98]'
+                                : 'border-slate-100'
+                            }`}
+                          >
                             <button
                               onClick={() => setIsRemoveModalOpen({ open: true, index: idx })}
                               className="absolute top-4 right-4 h-8 w-8 flex items-center justify-center bg-red-50 text-red-200 hover:text-red-500 rounded-lg transition-all opacity-0 group-hover:opacity-100"
@@ -447,8 +509,36 @@ export default function PlantillasPage() {
 
                             <div className="space-y-4">
                               <div className="flex justify-between items-start">
-                                <div className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center text-[#004C6C]">
-                                  <Target size={20} />
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    title="Arrastra para reordenar KPI"
+                                    className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-600 rounded hover:bg-slate-50 transition-colors"
+                                  >
+                                    <GripVertical size={16} />
+                                  </div>
+                                  <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg">
+                                    #{idx + 1}
+                                  </span>
+                                  <div className="flex items-center gap-0.5">
+                                    <button
+                                      type="button"
+                                      disabled={idx === 0}
+                                      onClick={(e) => { e.stopPropagation(); handleMoveKPI(idx, idx - 1); }}
+                                      title="Subir KPI"
+                                      className="p-1 text-slate-300 hover:text-[#004C6C] hover:bg-slate-50 rounded disabled:opacity-20 transition-colors"
+                                    >
+                                      <ChevronUp size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={idx === localKpis.length - 1}
+                                      onClick={(e) => { e.stopPropagation(); handleMoveKPI(idx, idx + 1); }}
+                                      title="Bajar KPI"
+                                      className="p-1 text-slate-300 hover:text-[#004C6C] hover:bg-slate-50 rounded disabled:opacity-20 transition-colors"
+                                    >
+                                      <ChevronDown size={14} />
+                                    </button>
+                                  </div>
                                 </div>
                                 <span className="text-[10px] font-black text-[#EE9D4C] bg-orange-50 px-3 py-1 rounded-full border border-orange-100">
                                   {kpi.weight}%
@@ -585,17 +675,78 @@ export default function PlantillasPage() {
                       </div>
 
                       <div className="grid grid-cols-1 gap-4">
-                        {localKpis[activeKpiIdx].indicators?.map((ind, iIdx) => (
-                          <div key={iIdx} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between group hover:border-[#004C6C]/30 transition-all">
-                            <div className="flex items-center gap-6">
-                              <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-[#004C6C] transition-all">
-                                <Target size={24} />
-                              </div>
-                              <div>
-                                <p className="font-black text-slate-700">{ind.name || 'Indicador sin nombre'}</p>
-                                <div className="flex items-center gap-3 mt-1">
-                                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate max-w-[200px]">{ind.definition || 'Sin definición'}</p>
-                                  <div className="flex items-center gap-1.5">
+                        {localKpis[activeKpiIdx].indicators?.map((ind, iIdx) => {
+                          const totalIndicators = localKpis[activeKpiIdx].indicators?.length || 0;
+                          return (
+                            <div
+                              key={iIdx}
+                              draggable
+                              onDragStart={(e) => {
+                                setDraggedIndIdx(iIdx);
+                                e.dataTransfer.effectAllowed = 'move';
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move';
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                if (draggedIndIdx !== null && draggedIndIdx !== iIdx) {
+                                  handleMoveIndicator(activeKpiIdx, draggedIndIdx, iIdx);
+                                }
+                                setDraggedIndIdx(null);
+                              }}
+                              onDragEnd={() => setDraggedIndIdx(null)}
+                              className={`bg-white p-5 md:p-6 rounded-3xl border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 group transition-all ${
+                                draggedIndIdx === iIdx
+                                  ? 'border-[#EE9D4C] bg-orange-50/50 opacity-60 scale-[0.99]'
+                                  : 'border-slate-100 hover:border-[#004C6C]/30 hover:shadow-md'
+                              }`}
+                            >
+                              <div className="flex items-center gap-4 min-w-0 flex-1">
+                                {/* Order Controls & Drag Handle */}
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <div
+                                    title="Arrastra para reordenar indicador"
+                                    className="cursor-grab active:cursor-grabbing p-1.5 text-slate-300 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+                                  >
+                                    <GripVertical size={18} />
+                                  </div>
+                                  <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-black tracking-tight">
+                                    #{iIdx + 1}
+                                  </span>
+                                  <div className="flex flex-col gap-0.5">
+                                    <button
+                                      type="button"
+                                      disabled={iIdx === 0}
+                                      onClick={() => handleMoveIndicator(activeKpiIdx, iIdx, iIdx - 1)}
+                                      title="Mover arriba"
+                                      className="p-1 text-slate-300 hover:text-[#004C6C] hover:bg-slate-100 rounded disabled:opacity-20 disabled:hover:bg-transparent transition-colors"
+                                    >
+                                      <ChevronUp size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={iIdx === totalIndicators - 1}
+                                      onClick={() => handleMoveIndicator(activeKpiIdx, iIdx, iIdx + 1)}
+                                      title="Mover abajo"
+                                      className="p-1 text-slate-300 hover:text-[#004C6C] hover:bg-slate-100 rounded disabled:opacity-20 disabled:hover:bg-transparent transition-colors"
+                                    >
+                                      <ChevronDown size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-[#004C6C] shrink-0 transition-all">
+                                  <Target size={24} />
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-black text-slate-700 truncate">{ind.name || 'Indicador sin nombre'}</p>
+                                  <div className="flex items-center flex-wrap gap-2 mt-1">
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate max-w-[200px]">
+                                      {ind.definition || 'Sin definición'}
+                                    </p>
                                     {ind.parameters && ind.parameters.length > 0 && (
                                       <span className="px-1.5 py-0.5 bg-orange-50 text-[#EE9D4C] rounded text-[8px] font-black border border-orange-100 uppercase tracking-tighter">
                                         {ind.parameters.length} Parámetros
@@ -609,23 +760,60 @@ export default function PlantillasPage() {
                                   </div>
                                 </div>
                               </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex items-center gap-2 justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
+                                {localKpis.length > 1 && (
+                                  <div className="relative group/move">
+                                    <button
+                                      type="button"
+                                      title="Mover a otro KPI"
+                                      className="px-3 py-2 rounded-xl flex items-center gap-1.5 text-slate-400 hover:text-[#004C6C] hover:bg-slate-50 transition-all text-[10px] font-black uppercase tracking-wider"
+                                    >
+                                      <ArrowRightLeft size={14} />
+                                      <span className="hidden xl:inline">Mover a...</span>
+                                    </button>
+                                    <div className="absolute right-0 top-10 w-52 bg-white border border-slate-100 rounded-2xl shadow-xl p-2 hidden group-hover/move:block z-30 animate-in fade-in zoom-in-95 duration-150">
+                                      <p className="px-2 py-1 text-[9px] font-black uppercase text-slate-400 tracking-wider">
+                                        Mover a otro KPI:
+                                      </p>
+                                      <div className="max-h-40 overflow-y-auto space-y-1">
+                                        {localKpis.map((targetKpi, tIdx) => {
+                                          if (tIdx === activeKpiIdx) return null;
+                                          return (
+                                            <button
+                                              key={tIdx}
+                                              type="button"
+                                              onClick={() => handleMoveIndicatorToKpi(activeKpiIdx, iIdx, tIdx)}
+                                              className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-[#004C6C] truncate transition-colors"
+                                            >
+                                              {targetKpi.name || `KPI #${tIdx + 1}`}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                <button
+                                  onClick={() => handleRemoveIndicator(activeKpiIdx, iIdx)}
+                                  title="Eliminar indicador"
+                                  className="h-10 w-10 rounded-xl flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+
+                                <button
+                                  onClick={() => { setActiveIndIdx(iIdx); setActiveView('indicator-edit'); }}
+                                  className="px-5 py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#004C6C] hover:text-white transition-all shadow-sm"
+                                >
+                                  Configurar Métricas
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => handleRemoveIndicator(activeKpiIdx, iIdx)}
-                                className="h-10 w-10 rounded-xl flex items-center justify-center text-slate-200 hover:text-red-500 hover:bg-red-50 transition-all"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                              <button
-                                onClick={() => { setActiveIndIdx(iIdx); setActiveView('indicator-edit'); }}
-                                className="px-6 py-2.5 bg-slate-50 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#004C6C] hover:text-white transition-all shadow-sm"
-                              >
-                                Configurar Métricas
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                         {(!localKpis[activeKpiIdx].indicators || localKpis[activeKpiIdx].indicators!.length === 0) && (
                           <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-[40px] text-slate-300">
                             <p className="text-sm font-bold">No hay indicadores. Agrega uno para desglosar este KPI.</p>

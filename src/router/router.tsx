@@ -15,6 +15,7 @@ import RegistroPage from '../modules/ftra/pages/RegistroPage';
 import SeguimientoPage from '../modules/ftra/pages/SeguimientoPage';
 import RevisionPage from '../modules/ftra/pages/RevisionPage';
 import AprobacionPage from '../modules/ftra/pages/AprobacionPage';
+import DocumentalPage from '../modules/documental/pages/DocumentalPage';
 
 export const router = createBrowserRouter([
   {
@@ -84,6 +85,10 @@ export const router = createBrowserRouter([
       {
         path: 'ftra/parametrizacion',
         element: <ParametrizacionPage />,
+      },
+      {
+        path: 'documental',
+        element: <DocumentalPage />,
       }
     ],
   },
