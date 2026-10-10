@@ -135,6 +135,8 @@ export function useTasks() {
     try {
       const newTask = await taskService.createTask(taskData);
       setTasks(prev => [newTask, ...prev]);
+      // Sincronizar estadísticas y paginación en segundo plano
+      fetchTasks();
       return newTask;
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Error al registrar la tarea.';
@@ -143,49 +145,47 @@ export function useTasks() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchTasks]);
 
   // Editar tarea (parcial o completa)
   const updateTask = useCallback(async (id: number, taskData: Partial<Task>) => {
-    setLoading(true);
     try {
       const updatedTask = await taskService.updateTask(id, taskData);
       setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
+      fetchTasks();
       return updatedTask;
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Error al actualizar la tarea.';
       setError(msg);
       throw new Error(msg);
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [fetchTasks]);
 
   // Eliminar tarea
   const deleteTask = useCallback(async (id: number) => {
-    setLoading(true);
     try {
       await taskService.deleteTask(id);
       setTasks(prev => prev.filter(t => t.id !== id));
+      fetchTasks();
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Error al eliminar la tarea.';
       setError(msg);
       throw new Error(msg);
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [fetchTasks]);
 
   // Agregar observación (Daily standup)
   const addObservation = useCallback(async (taskId: number, observationText: string) => {
     try {
       const newObs = await taskService.addObservation(taskId, observationText);
-      // Actualizamos localmente el listado de tareas inyectando la nueva observación
+      // Actualizamos localmente el listado de tareas inyectando la nueva observación y el conteo
       setTasks(prev => prev.map(t => {
         if (t.id === taskId) {
           const currentObs = t.observations || [];
+          const currentCount = typeof t.observations_count === 'number' ? t.observations_count : currentObs.length;
           return {
             ...t,
+            observations_count: currentCount + 1,
             observations: [newObs, ...currentObs]
           };
         }

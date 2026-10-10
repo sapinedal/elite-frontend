@@ -2,8 +2,10 @@ import api from '../../../lib/axios';
 import type { User, KPI } from '../types';
 
 export const userService = {
-  getAllUsers: async (): Promise<User[]> => {
-    const { data } = await api.get('/v1/users');
+  getAllUsers: async (includeInactive: boolean = true): Promise<User[]> => {
+    const { data } = await api.get('/v1/users', {
+      params: { include_inactive: includeInactive }
+    });
     return data;
   },
 
@@ -24,6 +26,16 @@ export const userService = {
 
   deleteUser: async (id: number): Promise<void> => {
     await api.delete(`/v1/users/${id}`);
+  },
+
+  restoreUser: async (id: number): Promise<{ message: string; user: User }> => {
+    const { data } = await api.post(`/v1/users/${id}/restore`);
+    return data;
+  },
+
+  toggleStatus: async (id: number): Promise<{ message: string; user: User }> => {
+    const { data } = await api.patch(`/v1/users/${id}/toggle-status`);
+    return data;
   },
 
   changePassword: async (id: number, passwordData: any): Promise<void> => {

@@ -9,8 +9,34 @@ export interface User {
   area?: { id: number; name: string };
   position?: { id: number; name: string };
   email: string;
-  roles?: string[];
+  roles?: Array<{ id: number; name: string }> | string[];
+  roles_list?: string[];
+  permissions?: Array<{ id: number; name: string }> | string[];
+  direct_permissions_list?: string[];
   kpis?: KPI[];
+  is_active?: boolean;
+  deleted_at?: string | null;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  guard_name: string;
+  permissions?: Array<{ id: number; name: string }>;
+  users_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ModulePermissions {
+  title: string;
+  description: string;
+  permissions: string[];
+}
+
+export interface PermissionCatalogResponse {
+  all: string[];
+  modules: Record<string, ModulePermissions>;
 }
 
 export interface KPI {

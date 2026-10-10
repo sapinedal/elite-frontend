@@ -178,12 +178,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   <CustomSelect
                     label="Prioridad"
                     placeholder="Selecciona la prioridad"
+                    searchPlaceholder="Buscar prioridad..."
                     disabled={isPlanningFieldsDisabled || submitting}
                     options={[
-                      { value: 'P0', label: 'P0 - Crítica' },
-                      { value: 'P1', label: 'P1 - Alta' },
-                      { value: 'P2', label: 'P2 - Media' },
-                      { value: 'P3', label: 'P3 - Baja' }
+                      { value: 'P0', label: 'P0 - Crítica', sublabel: 'Atención inmediata' },
+                      { value: 'P1', label: 'P1 - Alta', sublabel: 'Impacto operativo alto' },
+                      { value: 'P2', label: 'P2 - Media', sublabel: 'Prioridad regular' },
+                      { value: 'P3', label: 'P3 - Baja', sublabel: 'Tareas secundarias' }
                     ]}
                     value={formData.priority}
                     onChange={val => setFormData({ ...formData, priority: val as TaskPriority })}
@@ -195,12 +196,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   <CustomSelect
                     label="Estado"
                     placeholder="Selecciona el estado"
+                    searchPlaceholder="Buscar estado..."
                     disabled={submitting} // El estado SIEMPRE lo pueden modificar todos
                     options={[
-                      { value: 'Por hacer', label: 'Por hacer' },
-                      { value: 'En espera', label: 'En espera' },
-                      { value: 'En progreso', label: 'En progreso' },
-                      { value: 'Completada', label: 'Completada' }
+                      { value: 'Por hacer', label: 'Por hacer', sublabel: 'Pendiente de iniciar' },
+                      { value: 'En espera', label: 'En espera', sublabel: 'Bloqueada o en pausa' },
+                      { value: 'En progreso', label: 'En progreso', sublabel: 'En ejecución activa' },
+                      { value: 'Completada', label: 'Completada', sublabel: 'Finalizada exitosamente' }
                     ]}
                     value={formData.status}
                     onChange={val => setFormData({ ...formData, status: val as TaskStatus })}
@@ -212,6 +214,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   <CustomSelect
                     label="Área Asignada"
                     placeholder="Selecciona el área"
+                    searchPlaceholder="Buscar área..."
                     disabled={isPlanningFieldsDisabled || submitting}
                     options={areas.map(a => ({ value: a.id.toString(), label: a.name }))}
                     value={formData.area_id}
@@ -224,8 +227,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   <CustomSelect
                     label="Responsable"
                     placeholder="Selecciona el responsable"
+                    searchPlaceholder="Buscar colaborador..."
                     disabled={isPlanningFieldsDisabled || submitting}
-                    options={users.map(u => ({ value: u.id.toString(), label: u.name }))}
+                    options={users.map(u => ({
+                      value: u.id.toString(),
+                      label: u.name,
+                      sublabel: u.position?.name ? `${u.position.name} • ${u.email || ''}` : u.email
+                    }))}
                     value={formData.responsible_id}
                     onChange={val => setFormData({ ...formData, responsible_id: val })}
                   />

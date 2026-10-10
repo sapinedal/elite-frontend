@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { User, KPI } from '../types';
 import { userService } from '../services/userService';
 
-export const useUsers = () => {
+export const useUsers = (includeInactive: boolean = true) => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -10,7 +10,7 @@ export const useUsers = () => {
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const data = await userService.getAllUsers();
+      const data = await userService.getAllUsers(includeInactive);
       setUsers(data);
     } catch (err) {
       setError('Error al cargar usuarios');
@@ -21,7 +21,7 @@ export const useUsers = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [includeInactive]);
 
   return { users, isLoading, error, refetch: fetchUsers };
 };

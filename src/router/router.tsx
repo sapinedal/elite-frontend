@@ -16,6 +16,11 @@ import SeguimientoPage from '../modules/ftra/pages/SeguimientoPage';
 import RevisionPage from '../modules/ftra/pages/RevisionPage';
 import AprobacionPage from '../modules/ftra/pages/AprobacionPage';
 import DocumentalPage from '../modules/documental/pages/DocumentalPage';
+import ContratosPage from '../modules/juridica/pages/ContratosPage';
+import ProyectosPage from '../modules/admin/pages/ProyectosPage';
+import RolesPage from '../modules/admin/pages/RolesPage';
+import PermisosPage from '../modules/admin/pages/PermisosPage';
+import InterventoriaPage from '../modules/obra/pages/InterventoriaPage';
 
 export const router = createBrowserRouter([
   {
@@ -35,65 +40,165 @@ export const router = createBrowserRouter([
     ),
     children: [
       {
+        path: 'obra/interventoria',
+        element: (
+          <ProtectedRoute permission="obra.ver">
+            <InterventoriaPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'kpi/dashboard',
-        element: <DashboardPage />,
+        element: (
+          <ProtectedRoute permission="kpi.ver">
+            <DashboardPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'kpi/plantillas',
-        element: <PlantillasPage />,
+        element: (
+          <ProtectedRoute permission="kpi.parametrizar">
+            <PlantillasPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'kpi/evaluacion',
-        element: <NuevaEvaluacionPage />,
+        element: (
+          <ProtectedRoute permission="kpi.evaluar">
+            <NuevaEvaluacionPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'kpi/historial',
-        element: <HistorialPage />,
+        element: (
+          <ProtectedRoute permission="kpi.historial">
+            <HistorialPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'usuarios',
-        element: <UsersPage />,
+        element: (
+          <ProtectedRoute permission="usuarios.ver">
+            <UsersPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'roles',
+        element: (
+          <ProtectedRoute permission="roles.ver">
+            <RolesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'permisos',
+        element: (
+          <ProtectedRoute permission="permisos.ver">
+            <PermisosPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'configuracion',
-        element: <ConfiguracionPage />,
+        element: (
+          <ProtectedRoute permission="configuracion.ver">
+            <ConfiguracionPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'task/dashboard',
-        element: <TaskDashboardPage />,
+        element: (
+          <ProtectedRoute permission="bitacora.ver">
+            <TaskDashboardPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'task/bitacora',
-        element: <TasksPage />,
+        element: (
+          <ProtectedRoute permission="bitacora.ver">
+            <TasksPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'ftra/registro',
-        element: <RegistroPage />,
+        element: (
+          <ProtectedRoute permission="ftra.crear">
+            <RegistroPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'ftra/seguimiento',
-        element: <SeguimientoPage />,
+        element: (
+          <ProtectedRoute permission="ftra.ver">
+            <SeguimientoPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'ftra/revision/:id',
-        element: <RevisionPage />,
+        element: (
+          <ProtectedRoute permission="ftra.revisar">
+            <RevisionPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'ftra/aprobacion/:id',
-        element: <AprobacionPage />,
+        element: (
+          <ProtectedRoute permission="ftra.aprobar">
+            <AprobacionPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'ftra/parametrizacion',
-        element: <ParametrizacionPage />,
+        element: (
+          <ProtectedRoute permission="ftra.parametrizar">
+            <ParametrizacionPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'documental',
         element: <DocumentalPage />,
+      },
+      {
+        path: 'juridica/contratos',
+        element: (
+          <ProtectedRoute permission="juridica.ver">
+            <ContratosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'contratos',
+        element: (
+          <ProtectedRoute permission="contratos.ver">
+            <ContratosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'proyectos',
+        element: (
+          <ProtectedRoute permission="proyectos.ver">
+            <ProyectosPage />
+          </ProtectedRoute>
+        ),
       }
     ],
   },
   {
     path: '*',
-    element: <div className="flex h-screen items-center justify-center">404 - Not Found</div>,
+    element: <div className="flex h-screen items-center justify-center font-bold text-slate-400">404 - Página no encontrada</div>,
   },
 ]);
