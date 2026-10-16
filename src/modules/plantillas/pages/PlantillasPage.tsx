@@ -833,7 +833,7 @@ export default function PlantillasPage() {
                   </div>
                 ) : activeView === 'indicator-edit' && activeKpiIdx !== null && activeIndIdx !== null ? (
                   // VIEW: INDICATOR CONFIGURATOR
-                  <div className="max-w-4xl mx-auto space-y-10 animate-slide-in">
+                  <div className="w-full space-y-10 animate-slide-in">
                     <div className="flex items-center gap-4">
                       <button
                         onClick={() => setActiveView('kpi-edit')}
@@ -849,7 +849,7 @@ export default function PlantillasPage() {
                       </div>
                     </div>
 
-                    <div className="bg-white p-12 rounded-[50px] border border-slate-100 shadow-sm space-y-10">
+                    <div className="bg-white p-6 md:p-10 xl:p-12 rounded-[50px] border border-slate-100 shadow-sm space-y-10">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                         <div className="space-y-4">
                           <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre</label>
@@ -1290,7 +1290,8 @@ export default function PlantillasPage() {
                                           tablaDetalle: { ...current, headers: newHeaders }
                                         });
                                       }}
-                                      className="bg-transparent border-none text-[10px] font-black text-slate-600 uppercase outline-none w-28"
+                                      style={{ width: `${Math.max(header.length, 8) + 2}ch` }}
+                                      className="bg-transparent border-none text-[10px] font-black text-slate-600 uppercase outline-none max-w-[320px]"
                                     />
                                     <button
                                       onClick={() => {
@@ -1333,7 +1334,7 @@ export default function PlantillasPage() {
                                   <thead>
                                     <tr className="bg-white">
                                       {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.headers.map((header, hIdx) => (
-                                        <th key={hIdx} className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase border-b border-slate-100">{header}</th>
+                                        <th key={hIdx} className={`px-4 py-3 text-[9px] font-black text-slate-400 uppercase border-b border-slate-100 whitespace-nowrap ${hIdx === 0 ? 'min-w-[240px]' : 'min-w-[150px]'}`}>{header}</th>
                                       ))}
                                       <th className="px-4 py-3 border-b border-slate-100 w-10"></th>
                                     </tr>
