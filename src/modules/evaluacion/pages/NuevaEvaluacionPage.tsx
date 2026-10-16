@@ -16,6 +16,17 @@ import { Collapse } from '../../../components/ui/Collapse';
 import { Modal } from '../../../components/ui/Modal';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import ReactMarkdown from 'react-markdown';
+import { evaluateFormula, formulaUsesColumns, detailTableColumns, applyDetailTableFormulas, normalizeDetailTable, type DetailTable } from '../../../lib/formula';
+
+/** Calcula el valor de un indicador con sus variables y, si la fórmula las usa, las columnas de su tabla de detalle. */
+const computeIndicatorValue = (formula: string | undefined, variables: Record<string, number | null>, table?: DetailTable | null): number => {
+  if (!formula) return 0;
+  try {
+    return evaluateFormula(formula, { vars: variables, columns: detailTableColumns(table) });
+  } catch {
+    return 0;
+  }
+};
 
 export default function NuevaEvaluacionPage() {
   const { users } = useUsers();
@@ -49,7 +60,10 @@ export default function NuevaEvaluacionPage() {
       total_score: Number(data.total_score || 0),
       results: (data.results || []).map((r: any) => {
         const details = r.details || {};
-        const indicator_results = details?.indicator_results || r.indicator_results || [];
+        const indicator_results = (details?.indicator_results || r.indicator_results || []).map((ind: any) => ({
+          ...ind,
+          tablaDetalle: applyDetailTableFormulas(ind.tablaDetalle)
+        }));
         const ai_analysis = details?.ai_analysis || r.ai_analysis || null;
         const tablaDetalle = details?.tablaDetalle || (r.tablaDetalle && (r.tablaDetalle as any).headers ? r.tablaDetalle : null);
 
@@ -118,19 +132,11 @@ export default function NuevaEvaluacionPage() {
                 score: 0,
                 indicator_results: kpi.indicators?.map((ind: any) => {
                   const initialVariables = ind.parameters?.reduce((acc: any, p: any) => ({ ...acc, [p.name]: p.value }), {}) || {};
-
-                  let initialCalculated = 0;
-                  try {
-                    let formula = ind.formula || '';
-                    Object.entries(initialVariables).forEach(([name, val]) => {
-                      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                      formula = formula.replace(new RegExp(escapedName, 'g'), (val as number).toString());
-                    });
-                    const cleanFormula = formula.replace(/[^-()\d/*+.]/g, '');
-                    initialCalculated = (0, eval)(cleanFormula) || 0;
-                  } catch (e) {
-                    initialCalculated = 0;
-                  }
+                  // Copia de la tabla de la plantilla (filas iniciales + columnas calculadas)
+                  const initialTable: DetailTable | null = ind.tablaDetalle
+                    ? applyDetailTableFormulas(JSON.parse(JSON.stringify(ind.tablaDetalle)))
+                    : null;
+                  const initialCalculated = computeIndicatorValue(ind.formula, initialVariables, initialTable);
 
                   const goals = ind.conditional_goals || [];
                   const matchedGoal = goals.find((g: any) => initialCalculated >= g.min_value && initialCalculated <= g.max_value);
@@ -148,7 +154,8 @@ export default function NuevaEvaluacionPage() {
                     score: matchedGoal ? (matchedGoal.score !== undefined ? matchedGoal.score : (initialCalculated > 100 ? 100 : initialCalculated)) : 0,
                     parameters: ind.parameters,
                     conditional_goals: ind.conditional_goals,
-                    fixed_goal: ind.fixed_goal
+                    fixed_goal: ind.fixed_goal,
+                    tablaDetalle: initialTable
                   };
                 }) || []
               }));
@@ -268,24 +275,8 @@ export default function NuevaEvaluacionPage() {
 
     indRes.variables = { ...indRes.variables, [varName]: numVal };
 
-    // Intentar calcular valor basado en la fórmula
-    // Ejemplo simple: (Ventas / Meta) * 100
-    // Reemplazamos nombres de variables en la fórmulax
-    let formula = indRes.formula || '';
-    Object.entries(indRes.variables).forEach(([name, val]) => {
-      // Escapar caracteres especiales para regex
-      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      formula = formula.replace(new RegExp(escapedName, 'g'), (val ?? 0).toString());
-    });
-
     try {
-      // Usar un evaluador seguro o simple
-      // Nota: eval() es peligroso, en prod usar un parser de expresiones
-      // Para este demo usaremos una aproximación simple
-      const cleanFormula = formula.replace(/[^-()\d/*+.]/g, '');
-      // Use indirect eval to avoid build warnings and security risks
-      const calculated = (0, eval)(cleanFormula);
-      indRes.calculated_value = isNaN(calculated) ? 0 : calculated;
+      indRes.calculated_value = computeIndicatorValue(indRes.formula, indRes.variables, indRes.tablaDetalle);
 
       // Determinar nivel y calificación
       const goals = (indRes as any).conditional_goals || [];
@@ -339,6 +330,7 @@ export default function NuevaEvaluacionPage() {
     if (!kpiRes.indicator_results) return;
 
     const indRes = kpiRes.indicator_results[indIdx];
+    tableData = applyDetailTableFormulas(tableData, { promoteCellFormulas: false });
     indRes.tablaDetalle = tableData;
 
     if (tableData && tableData.headers && tableData.rows) {
@@ -372,7 +364,10 @@ export default function NuevaEvaluacionPage() {
       });
       const valorColIdx = tableData.headers.findIndex((h: string) => h.toLowerCase() === 'valor');
 
-      if (diasColIdx !== -1) {
+      if (formulaUsesColumns(indRes.formula, tableData.headers)) {
+        // La fórmula del indicador referencia columnas de la tabla, ej: PROMEDIO(ADELANTO/RETRASO)
+        indRes.calculated_value = computeIndicatorValue(indRes.formula, indRes.variables, tableData);
+      } else if (diasColIdx !== -1) {
         // Lógica de promedio para Días
         const validRows = tableData.rows.filter((row: string[]) => row[diasColIdx] !== '' && row[diasColIdx] !== '-' && !isNaN(parseFloat((row[diasColIdx] || '').replace(',', '.'))));
         const sum = validRows.reduce((acc: number, row: string[]) => acc + parseFloat((row[diasColIdx] || '').replace(',', '.')), 0);
@@ -638,7 +633,19 @@ export default function NuevaEvaluacionPage() {
             parameters: ind.parameters,
             conditional_goals: ind.conditional_goals,
             fixed_goal: ind.fixed_goal,
-            tablaDetalle: existingInd?.tablaDetalle || ind.tablaDetalle || null,
+            // Conserva los datos capturados pero toma las fórmulas de columna vigentes en la plantilla
+            tablaDetalle: applyDetailTableFormulas(
+              existingInd?.tablaDetalle
+                ? {
+                  ...existingInd.tablaDetalle,
+                  formulas: existingInd.tablaDetalle.headers.map((h: string, i: number) => {
+                    const tpl = normalizeDetailTable(ind.tablaDetalle);
+                    const tIdx = tpl?.headers?.indexOf(h) ?? -1;
+                    return tIdx !== -1 ? (tpl.formulas?.[tIdx] ?? null) : (existingInd.tablaDetalle.formulas?.[i] ?? null);
+                  })
+                }
+                : (ind.tablaDetalle ? JSON.parse(JSON.stringify(ind.tablaDetalle)) : null)
+            ),
             ai_analysis: existingInd?.ai_analysis || null
           };
         }) || [];

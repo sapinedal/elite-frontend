@@ -1,19 +1,19 @@
 import React from 'react';
 import { Plus, Trash2, Table, X } from 'lucide-react';
 import { Modal } from '../../../components/ui/Modal';
+import { applyDetailTableFormulas, type DetailTable } from '../../../lib/formula';
 
 interface KPIDetailTableProps {
-  data: {
-    headers: string[];
-    rows: string[][];
-  } | null;
-  onChange: (newData: { headers: string[]; rows: string[][] } | null) => void;
+  data: DetailTable | null;
+  onChange: (newData: DetailTable | null) => void;
   defaultHeaders?: string[];
 }
 
 export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, defaultHeaders }) => {
   const [isRemoveModalOpen, setIsRemoveModalOpen] = React.useState(false);
   const isEnabled = !!data && Array.isArray(data.headers) && Array.isArray(data.rows);
+  const formulas = data?.formulas || [];
+  const emit = (newData: DetailTable | null) => onChange(applyDetailTableFormulas(newData, { promoteCellFormulas: false }));
 
   const handleInitialize = (preset?: 'dias' | 'estandar') => {
     let headers = defaultHeaders || ['Descripción', 'Valor', 'Observación'];
@@ -23,7 +23,7 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
       headers = ['DESCRIPCIÓN', 'VALOR', 'OBSERVACIÓN'];
     }
 
-    onChange({
+    emit({
       headers: headers,
       rows: [new Array(headers.length).fill('')]
     });
@@ -41,7 +41,7 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
     if (!data) return;
     const newHeaders = [...data.headers];
     newHeaders[colIdx] = value;
-    onChange({ ...data, headers: newHeaders });
+    emit({ ...data, headers: newHeaders });
   };
 
   const handleUpdateCell = (rowIdx: number, colIdx: number, value: string) => {
@@ -99,40 +99,40 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
       }
     }
 
-    onChange({ ...data, rows: newRows });
+    emit({ ...data, rows: newRows });
   };
 
   const handleAddColumn = () => {
     if (!data) return;
     const newHeaders = [...data.headers, `Columna ${data.headers.length + 1}`];
     const newRows = data.rows.map(row => [...row, '']);
-    onChange({ headers: newHeaders, rows: newRows });
+    emit({ headers: newHeaders, rows: newRows, formulas: data.headers.map((_, i) => formulas[i] || null).concat(null) });
   };
 
   const handleDeleteColumn = (colIdx: number) => {
     if (!data || data.headers.length <= 1) return;
     const newHeaders = data.headers.filter((_, i) => i !== colIdx);
     const newRows = data.rows.map(row => row.filter((_, i) => i !== colIdx));
-    onChange({ headers: newHeaders, rows: newRows });
+    emit({ headers: newHeaders, rows: newRows, formulas: data.headers.map((_, i) => formulas[i] || null).filter((_, i) => i !== colIdx) });
   };
 
   const handleAddRow = () => {
     if (!data) return;
     const newRow = new Array(data.headers.length).fill('');
-    onChange({ ...data, rows: [...data.rows, newRow] });
+    emit({ ...data, rows: [...data.rows, newRow] });
   };
 
   const handleDeleteRow = (rowIdx: number) => {
     if (!data || data.rows.length <= 1) {
       if (data && data.rows.length === 1) {
         const clearedRow = new Array(data.headers.length).fill('');
-        onChange({ ...data, rows: [clearedRow] });
+        emit({ ...data, rows: [clearedRow] });
         return;
       }
     }
     if (!data) return;
     const newRows = data.rows.filter((_, i) => i !== rowIdx);
-    onChange({ ...data, rows: newRows });
+    emit({ ...data, rows: newRows });
   };
 
   if (!isEnabled) {
@@ -171,6 +171,14 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
                       onChange={(e) => handleUpdateHeader(colIdx, e.target.value)}
                       className="bg-transparent border-none focus:ring-2 focus:ring-blue-100 rounded-lg px-2 py-1 text-[11px] font-black uppercase tracking-wider text-[#004C6C] w-full outline-none transition-all"
                     />
+                    {formulas[colIdx] && (
+                      <span
+                        title={`Columna calculada: =${formulas[colIdx]}`}
+                        className="shrink-0 px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded text-[9px] font-black italic border border-blue-100 cursor-help"
+                      >
+                        fx
+                      </span>
+                    )}
                     <button
                       onClick={() => handleDeleteColumn(colIdx)}
                       className="opacity-0 group-hover/col:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1"
@@ -199,12 +207,32 @@ export const KPIDetailTable: React.FC<KPIDetailTableProps> = ({ data, onChange, 
                   const header = data.headers[colIdx].toLowerCase();
                   const isDateField = header.includes('fecha') || header.includes('cierre');
 
+                  if (formulas[colIdx]) {
+                    return (
+                      <td
+                        key={colIdx}
+                        title={`=${formulas[colIdx]}`}
+                        className="p-4 border-b border-r border-slate-100 text-sm font-black text-[#004C6C] bg-blue-50/30"
+                      >
+                        {cell || <span className="text-slate-300 font-medium">—</span>}
+                      </td>
+                    );
+                  }
+
                   return (
                     <td key={colIdx} className="p-0 border-b border-r border-slate-100">
                       <input
                         type={isDateField ? 'date' : 'text'}
-                        value={cell}
+                        value={cell ?? ''}
                         onChange={(e) => handleUpdateCell(rowIdx, colIdx, e.target.value)}
+                        onBlur={(e) => {
+                          // Como en Excel: "=..." en una celda define la fórmula de toda la columna
+                          const v = e.target.value.trim();
+                          if (v.startsWith('=') && v.length > 1) {
+                            const newFormulas = data.headers.map((_, i) => (i === colIdx ? v.slice(1) : formulas[i] || null));
+                            emit({ ...data, formulas: newFormulas });
+                          }
+                        }}
                         className="w-full p-4 text-sm font-medium text-slate-600 bg-transparent outline-none focus:bg-white focus:ring-inset focus:ring-1 focus:ring-blue-50 transition-all"
                       />
                     </td>

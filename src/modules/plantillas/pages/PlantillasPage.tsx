@@ -6,6 +6,7 @@ import { useNotification } from '../../../context/NotificationContext';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { Modal } from '../../../components/ui/Modal';
 import { userService } from '../../users/services/userService';
+import { applyDetailTableFormulas, validateFormula } from '../../../lib/formula';
 
 export default function PlantillasPage() {
   const { users, isLoading: usersLoading } = useUsers();
@@ -28,7 +29,11 @@ export default function PlantillasPage() {
   // Update local KPIs when kpis from server change
   useEffect(() => {
     if (kpis && selectedUser) {
-      setLocalKpis(kpis);
+      // Normaliza tablas de detalle: una celda con "=..." pasa a ser fórmula de su columna
+      setLocalKpis(kpis.map(k => ({
+        ...k,
+        indicators: k.indicators?.map(ind => ({ ...ind, tablaDetalle: applyDetailTableFormulas(ind.tablaDetalle) }))
+      })));
       setActiveView('list');
       setActiveKpiIdx(null);
       setActiveIndIdx(null);
@@ -103,6 +108,9 @@ export default function PlantillasPage() {
     const updated = [...localKpis];
     const kpi = updated[kpiIndex];
     if (kpi.indicators) {
+      if (fields.tablaDetalle) {
+        fields = { ...fields, tablaDetalle: applyDetailTableFormulas(fields.tablaDetalle, { promoteCellFormulas: false }) };
+      }
       kpi.indicators[indicatorIndex] = { ...kpi.indicators[indicatorIndex], ...fields };
       setLocalKpis(updated);
     }
@@ -879,6 +887,24 @@ export default function PlantillasPage() {
                                 onChange={e => handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, { formula: e.target.value })}
                                 className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-mono font-bold text-[#004C6C] focus:ring-4 focus:ring-blue-50 outline-none transition-all"
                               />
+                              {(() => {
+                                const ind = localKpis[activeKpiIdx!].indicators![activeIndIdx!];
+                                if (!ind.formula?.trim()) return null;
+                                const error = validateFormula(
+                                  ind.formula,
+                                  (ind.parameters || []).map(p => p.name),
+                                  ind.tablaDetalle?.headers || []
+                                );
+                                return error ? (
+                                  <p className="text-[10px] font-bold text-red-500 ml-1">⚠ {error}</p>
+                                ) : (
+                                  <p className="text-[10px] font-bold text-green-600 ml-1">✓ Fórmula válida</p>
+                                );
+                              })()}
+                              <p className="text-[9px] font-medium text-slate-400 ml-1 leading-relaxed">
+                                Usa las variables y columnas de la tabla por su nombre. Funciones: SUMA, PROMEDIO, MIN, MAX, CONTAR, SI, ABS, REDONDEAR.
+                                Ej: <span className="font-mono">PROMEDIO(DÍAS)</span> o <span className="font-mono">SI(Ventas &gt;= Meta; 100; Ventas / Meta * 100)</span>
+                              </p>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
@@ -1272,8 +1298,9 @@ export default function PlantillasPage() {
                                         if (current.headers.length <= 1) return;
                                         const newHeaders = current.headers.filter((_, i) => i !== hIdx);
                                         const newRows = current.rows.map(row => row.filter((_, i) => i !== hIdx));
+                                        const newFormulas = current.headers.map((_, i) => current.formulas?.[i] ?? null).filter((_, i) => i !== hIdx);
                                         handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
-                                          tablaDetalle: { ...current, headers: newHeaders, rows: newRows }
+                                          tablaDetalle: { ...current, headers: newHeaders, rows: newRows, formulas: newFormulas }
                                         });
                                       }}
                                       className="text-slate-300 hover:text-red-500 transition-colors"
@@ -1310,17 +1337,64 @@ export default function PlantillasPage() {
                                       ))}
                                       <th className="px-4 py-3 border-b border-slate-100 w-10"></th>
                                     </tr>
+                                    <tr className="bg-blue-50/40">
+                                      {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.headers.map((_, hIdx) => {
+                                        const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;
+                                        const formula = current.formulas?.[hIdx] || '';
+                                        const error = formula ? validateFormula(formula, current.headers.filter((_, i) => i !== hIdx)) : null;
+                                        return (
+                                          <th key={hIdx} className="px-2 py-2 border-b border-slate-100 align-top">
+                                            <div className="flex items-center gap-1 bg-white rounded-lg border border-blue-100 px-2">
+                                              <span className="text-[10px] font-black italic text-blue-400">fx</span>
+                                              <input
+                                                type="text"
+                                                value={formula}
+                                                placeholder="Captura manual"
+                                                title="Fórmula de la columna. Usa los nombres de las otras columnas, ej: (AVANCE REAL - AVANCE TEÓRICO) / 100 * DURACIÓN"
+                                                onChange={(e) => {
+                                                  const newFormulas = current.headers.map((_, i) =>
+                                                    i === hIdx ? (e.target.value.replace(/^=/, '') || null) : (current.formulas?.[i] ?? null)
+                                                  );
+                                                  handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                                    tablaDetalle: { ...current, formulas: newFormulas }
+                                                  });
+                                                }}
+                                                className="w-full bg-transparent border-none py-1.5 text-[10px] font-mono font-bold normal-case text-[#004C6C] outline-none placeholder:text-slate-300 placeholder:font-sans"
+                                              />
+                                            </div>
+                                            {error && <p className="text-[9px] font-bold normal-case text-red-500 mt-1">{error}</p>}
+                                          </th>
+                                        );
+                                      })}
+                                      <th className="border-b border-slate-100"></th>
+                                    </tr>
                                   </thead>
                                   <tbody className="bg-white/50">
                                     {localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.rows.map((row, rIdx) => (
                                       <tr key={rIdx} className="hover:bg-white transition-colors">
-                                        {row.map((cell, cIdx) => (
+                                        {row.map((cell, cIdx) => localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.formulas?.[cIdx] ? (
+                                          <td key={cIdx} className="px-4 py-2 border-b border-slate-50 text-[11px] font-black text-[#004C6C] bg-blue-50/30">
+                                            {cell || <span className="text-slate-300 font-medium">—</span>}
+                                          </td>
+                                        ) : (
                                           <td key={cIdx} className="px-4 py-2 border-b border-slate-50">
                                             <input
                                               type={(localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.headers[cIdx].toLowerCase().includes('fecha') || 
                                                      localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.headers[cIdx].toLowerCase().includes('cierre') || 
                                                      localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!.headers[cIdx].toLowerCase().includes('inicial')) ? "date" : "text"}
-                                              value={cell}
+                                              value={cell ?? ''}
+                                              onBlur={(e) => {
+                                                const v = e.target.value.trim();
+                                                if (v.startsWith('=') && v.length > 1) {
+                                                  const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;
+                                                  handleUpdateIndicator(activeKpiIdx!, activeIndIdx!, {
+                                                    tablaDetalle: {
+                                                      ...current,
+                                                      formulas: current.headers.map((_, i) => (i === cIdx ? v.slice(1) : current.formulas?.[i] ?? null))
+                                                    }
+                                                  });
+                                                }
+                                              }}
                                               onChange={(e) => {
                                                 const current = localKpis[activeKpiIdx!].indicators![activeIndIdx!].tablaDetalle!;
                                                 let newRows = [...current.rows];

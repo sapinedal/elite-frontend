@@ -64,7 +64,9 @@ export interface Indicator {
   parameters: IndicatorParameter[];
   tablaDetalle?: {
     headers: string[];
-    rows: string[][];
+    rows: (string | null)[][];
+    /** Fórmula por columna (sin "="); null si es de captura manual. */
+    formulas?: (string | null)[];
   } | null;
 }
 
