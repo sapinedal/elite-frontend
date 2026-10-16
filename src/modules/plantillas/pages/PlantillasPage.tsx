@@ -229,6 +229,7 @@ export default function PlantillasPage() {
   };
 
   const filteredUsers = users.filter(user =>
+    (user.is_active !== false && !user.deleted_at) &&
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 

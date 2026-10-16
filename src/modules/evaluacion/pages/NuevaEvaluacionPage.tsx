@@ -40,7 +40,8 @@ export default function NuevaEvaluacionPage() {
   const [localDraftData, setLocalDraftData] = useState<any>(null);
 
 
-  const selectedUser = users.find(u => u.id === selectedUserId);
+  const activeUsers = users.filter(u => u.is_active !== false && !u.deleted_at);
+  const selectedUser = activeUsers.find(u => u.id === selectedUserId);
 
   const normalizeEvaluation = (data: any): Evaluation => {
     return {
@@ -763,7 +764,7 @@ export default function NuevaEvaluacionPage() {
           <div className="md:col-span-1">
             <Autocomplete
               label="Persona"
-              options={users.map(u => ({ value: u.id, label: u.name, sublabel: typeof u.area === 'object' ? u.area?.name : u.area }))}
+              options={activeUsers.map(u => ({ value: u.id, label: u.name, sublabel: typeof u.area === 'object' ? u.area?.name : u.area }))}
               value={selectedUserId}
               onChange={setSelectedUserId}
               placeholder="Buscar colaborador..."

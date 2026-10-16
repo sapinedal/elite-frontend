@@ -2,7 +2,7 @@ import api from '../../../lib/axios';
 import type { User, KPI } from '../types';
 
 export const userService = {
-  getAllUsers: async (includeInactive: boolean = true): Promise<User[]> => {
+  getAllUsers: async (includeInactive: boolean = false): Promise<User[]> => {
     const { data } = await api.get('/v1/users', {
       params: { include_inactive: includeInactive }
     });

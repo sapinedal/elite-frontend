@@ -83,10 +83,10 @@ export function useTasks() {
   const fetchMetadata = useCallback(async () => {
     try {
       const [allUsers, allAreas] = await Promise.all([
-        userService.getAllUsers(),
+        userService.getAllUsers(false),
         configuracionService.getAreas()
       ]);
-      setUsers(allUsers);
+      setUsers(allUsers.filter(u => u.is_active !== false && !u.deleted_at));
       setAreas(allAreas);
     } catch (err) {
       console.error('Error cargando catálogos de bitácora:', err);

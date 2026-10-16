@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -118,7 +118,8 @@ const CustomKPITooltip = ({ active, payload }: any) => {
 };
 
 export default function DashboardPage() {
-  const { users, isLoading: usersLoading } = useUsers();
+  const { users: rawUsers, isLoading: usersLoading } = useUsers();
+  const users = useMemo(() => rawUsers.filter(u => u.is_active !== false && !u.deleted_at), [rawUsers]);
   const [allEvaluations, setAllEvaluations] = useState<Evaluation[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [view, setView] = useState<'areas' | 'detail'>('areas');

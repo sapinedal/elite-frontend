@@ -13,6 +13,7 @@ import { Modal } from '../../../components/ui/Modal';
 
 export default function HistorialPage() {
   const { users } = useUsers();
+  const activeUsers = users.filter(u => u.is_active !== false && !u.deleted_at);
   const [history, setHistory] = useState<Evaluation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEval, setSelectedEval] = useState<Evaluation | null>(null);
@@ -29,7 +30,7 @@ export default function HistorialPage() {
   const [selectedMonth, setSelectedMonth] = useState<number | ''>('');
   const [selectedYear, setSelectedYear] = useState<number | ''>('');
 
-  const areas = Array.from(new Set(users.map(u => typeof u.area === 'object' ? u.area?.name : u.area))).filter((a): a is string => !!a);
+  const areas = Array.from(new Set(activeUsers.map(u => typeof u.area === 'object' ? u.area?.name : u.area))).filter((a): a is string => !!a);
 
   useEffect(() => {
     loadHistory();
@@ -105,7 +106,7 @@ export default function HistorialPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Autocomplete
             label="Colaborador"
-            options={users.map(u => ({ value: u.id, label: u.name, sublabel: typeof u.area === 'object' ? u.area?.name : u.area }))}
+            options={activeUsers.map(u => ({ value: u.id, label: u.name, sublabel: typeof u.area === 'object' ? u.area?.name : u.area }))}
             value={selectedUser}
             onChange={setSelectedUser}
             placeholder="Buscar persona..."

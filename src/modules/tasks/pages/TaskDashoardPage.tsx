@@ -147,11 +147,11 @@ export default function TaskDashboardPage() {
                 const [allTasks, allAreas, allUsers] = await Promise.all([
                     taskService.getTasks({}), // Recuperamos TODO el universo de tareas
                     configuracionService.getAreas(),
-                    userService.getAllUsers()
+                    userService.getAllUsers(false)
                 ]);
                 setTasks(allTasks as Task[]);
                 setAreas(allAreas);
-                setUsers(allUsers);
+                setUsers(allUsers.filter(u => u.is_active !== false && !u.deleted_at));
             } catch (error) {
                 console.error('Error al cargar datos del dashboard de tareas:', error);
             } finally {

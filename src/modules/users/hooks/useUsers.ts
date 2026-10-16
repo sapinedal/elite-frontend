@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { User, KPI } from '../types';
 import { userService } from '../services/userService';
 
-export const useUsers = (includeInactive: boolean = true) => {
+export const useUsers = (includeInactive: boolean = false) => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
