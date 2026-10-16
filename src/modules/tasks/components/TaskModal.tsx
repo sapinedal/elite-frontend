@@ -24,7 +24,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   task,
   users,
   areas,
-  isEditor,
+  isEditor: _isEditor,
   isLoading
 }) => {
   const [formData, setFormData] = useState({
@@ -94,10 +94,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  // Determinar si los campos de planificación estratégica deben bloquearse.
-  // 1. Si es una tarea nueva -> Todo el personal puede crearla (no se bloquea).
-  // 2. Si es edición -> Se bloquean los campos estratégicos si el usuario NO es un editor.
-  const isPlanningFieldsDisabled = task !== null && !isEditor;
+  // Todo el personal puede crear, editar y actualizar los campos de la tarea
+  const isPlanningFieldsDisabled = false;
 
   return (
     <Portal isOpen={isOpen}>

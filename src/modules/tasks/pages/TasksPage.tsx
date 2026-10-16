@@ -18,18 +18,15 @@ import { TaskTable } from '../components/TaskTable';
 import { TaskModal } from '../components/TaskModal';
 import { DailyObservationsModal } from '../components/DailyObservationsModal';
 import { AuditLogModal } from '../components/AuditLogModal';
-import { useAuth } from '../../../context/AuthContext';
 import type { Task, TaskStatus } from '../types';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
 
 export default function TasksPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Verificamos el permiso de edición. Si el backend simula el permiso basado en cargo/email,
-  // el objeto user del token ya contendrá 'bitacora.editar' de forma limpia y transparente.
-  const isEditor = user?.permissions?.includes('bitacora.editar') || false;
+  // Todo el personal puede acceder, crear, asignar y editar tareas en la bitácora
+  const isEditor = true;
 
   const {
     tasks,

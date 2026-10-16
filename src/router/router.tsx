@@ -114,7 +114,7 @@ export const router = createBrowserRouter([
       {
         path: 'task/dashboard',
         element: (
-          <ProtectedRoute permission="bitacora.ver">
+          <ProtectedRoute>
             <TaskDashboardPage />
           </ProtectedRoute>
         ),
@@ -122,7 +122,7 @@ export const router = createBrowserRouter([
       {
         path: 'task/bitacora',
         element: (
-          <ProtectedRoute permission="bitacora.ver">
+          <ProtectedRoute>
             <TasksPage />
           </ProtectedRoute>
         ),

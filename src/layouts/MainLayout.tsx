@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { useLocation, useOutlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './Header';
 import Sidebar from './Sidebar';
@@ -8,6 +8,7 @@ export default function MainLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
   const location = useLocation();
+  const currentOutlet = useOutlet();
 
   return (
     <div id="root-layout" className="flex h-screen bg-slate-50 relative overflow-hidden transition-all duration-500">
@@ -34,7 +35,7 @@ export default function MainLayout() {
               }}
               className="p-4 md:p-10"
             >
-              <Outlet />
+              {currentOutlet}
             </motion.div>
           </AnimatePresence>
         </main>

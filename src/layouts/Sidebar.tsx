@@ -59,21 +59,18 @@ const eliteMenuItems: SidebarItem[] = [
         id: 'task',
         label: 'Tareas',
         icon: <ClipboardList className="w-5 h-5" />,
-        permission: 'bitacora.ver',
         children: [
             {
                 id: 'dashboard',
                 label: 'Dashboard',
                 icon: <LayoutDashboard className="w-4 h-4" />,
                 href: '/app/task/dashboard',
-                permission: 'bitacora.ver',
             },
             {
                 id: 'bitacora',
                 label: 'Kanban',
                 icon: <ClipboardList className="w-4 h-4" />,
                 href: '/app/task/bitacora',
-                permission: 'bitacora.ver',
             }
         ]
     },
