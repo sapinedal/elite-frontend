@@ -11,7 +11,6 @@ import {
   FolderOpen,
   Loader2,
   Info,
-  Lock,
   Settings,
 } from 'lucide-react';
 import { useNotification } from '../../../context/NotificationContext';
@@ -381,25 +380,6 @@ export default function DocumentalPage() {
           totalFiles={browseData.total_files}
           totalSizeFormatted={browseData.total_size_formatted}
         />
-      )}
-
-      {/* Aviso de carpeta restringida */}
-      {permissions.restricted && !loading && (
-        <div className="p-3 px-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center gap-3 text-xs text-indigo-800 font-medium">
-          <Lock className="w-4 h-4 text-indigo-600 shrink-0" />
-          <span className="flex-1">
-            Esta carpeta está <strong>restringida</strong>: solo algunos roles pueden verla.
-          </span>
-          {permissions.is_admin && (
-            <button
-              type="button"
-              onClick={() => handleOpenRestrictions(currentPath)}
-              className="text-[11px] font-bold text-indigo-700 hover:underline"
-            >
-              Ver roles con acceso
-            </button>
-          )}
-        </div>
       )}
 
       {/* Permission Notice if write restricted */}
