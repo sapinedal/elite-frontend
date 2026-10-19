@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Save, ClipboardList, Type, Calendar, ShieldAlert } from 'lucide-react';
 import type { Task, TaskPriority, TaskStatus } from '../types';
 import type { User } from '../../users/types';
@@ -96,6 +96,39 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   // Todo el personal puede crear, editar y actualizar los campos de la tarea
   const isPlanningFieldsDisabled = false;
+
+  // Con un área seleccionada solo se ofrecen las personas activas de esa área
+  // (`users` ya llega sin inactivos ni eliminados desde useTasks)
+  const responsibleOptions = useMemo(() => {
+    const inArea = formData.area_id
+      ? users.filter(u => String(u.area_id) === formData.area_id)
+      : users;
+    return inArea.map(u => ({
+      value: u.id.toString(),
+      label: u.name,
+      sublabel: u.position?.name ? `${u.position.name} • ${u.email || ''}` : u.email
+    }));
+  }, [users, formData.area_id]);
+
+  const handleAreaChange = (areaId: string) => {
+    // Si el responsable elegido no pertenece a la nueva área, se limpia para no asignar a alguien de otra área
+    const responsibleStillValid = users.some(
+      u => u.id.toString() === formData.responsible_id && String(u.area_id) === areaId
+    );
+    setFormData({ ...formData, area_id: areaId, responsible_id: responsibleStillValid ? formData.responsible_id : '' });
+  };
+
+  const handleResponsibleChange = (userId: string) => {
+    // Si aún no hay área, se toma la del responsable elegido
+    const selected = users.find(u => u.id.toString() === userId);
+    setFormData({
+      ...formData,
+      responsible_id: userId,
+      area_id: formData.area_id || (selected?.area_id ? String(selected.area_id) : ''),
+    });
+  };
+
+  const selectedAreaName = areas.find(a => a.id.toString() === formData.area_id)?.name;
 
   return (
     <Portal isOpen={isOpen}>
@@ -216,7 +249,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     disabled={isPlanningFieldsDisabled || submitting}
                     options={areas.map(a => ({ value: a.id.toString(), label: a.name }))}
                     value={formData.area_id}
-                    onChange={val => setFormData({ ...formData, area_id: val })}
+                    onChange={val => handleAreaChange(String(val))}
                   />
                 </div>
 
@@ -224,17 +257,22 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <div>
                   <CustomSelect
                     label="Responsable"
-                    placeholder="Selecciona el responsable"
+                    placeholder={
+                      formData.area_id && responsibleOptions.length === 0
+                        ? 'No hay personas activas en esta área'
+                        : 'Selecciona el responsable'
+                    }
                     searchPlaceholder="Buscar colaborador..."
-                    disabled={isPlanningFieldsDisabled || submitting}
-                    options={users.map(u => ({
-                      value: u.id.toString(),
-                      label: u.name,
-                      sublabel: u.position?.name ? `${u.position.name} • ${u.email || ''}` : u.email
-                    }))}
+                    disabled={isPlanningFieldsDisabled || submitting || (!!formData.area_id && responsibleOptions.length === 0)}
+                    options={responsibleOptions}
                     value={formData.responsible_id}
-                    onChange={val => setFormData({ ...formData, responsible_id: val })}
+                    onChange={val => handleResponsibleChange(String(val))}
                   />
+                  {selectedAreaName && responsibleOptions.length > 0 && (
+                    <p className="mt-1.5 ml-1 text-[10px] font-semibold text-slate-400">
+                      {responsibleOptions.length} persona(s) activa(s) en {selectedAreaName}
+                    </p>
+                  )}
                 </div>
 
                 {/* Fecha de Inicio */}

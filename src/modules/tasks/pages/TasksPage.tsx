@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   PlusCircle,
@@ -54,6 +54,17 @@ export default function TasksPage() {
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
+  // Responsables del filtro: con un área seleccionada, solo las personas activas de esa área
+  const responsibleFilterOptions = useMemo(
+    () =>
+      (filters.area_id ? users.filter(u => String(u.area_id) === String(filters.area_id)) : users).map(u => ({
+        value: u.id.toString(),
+        label: u.name,
+        sublabel: u.position?.name ? `${u.position.name} • ${u.email || ''}` : u.email
+      })),
+    [users, filters.area_id]
+  );
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isObsModalOpen, setIsObsModalOpen] = useState(false);
@@ -254,7 +265,13 @@ export default function TasksPage() {
               searchPlaceholder="Buscar área..."
               options={areas.map(a => ({ value: a.id.toString(), label: a.name }))}
               value={filters.area_id}
-              onChange={val => setFilter('area_id', val)}
+              onChange={val => {
+                // Si el responsable filtrado no es de la nueva área, se quita para no dejar un filtro sin resultados
+                const keepResponsible = users.some(
+                  u => u.id.toString() === filters.responsible_id && String(u.area_id) === String(val)
+                );
+                applyFilters({ area_id: val, ...(keepResponsible ? {} : { responsible_id: '' }) });
+              }}
               clearable={!!filters.area_id}
               onClear={() => setFilter('area_id', '')}
             />
@@ -264,13 +281,13 @@ export default function TasksPage() {
           <div>
             <CustomSelect
               label="Responsable Asignado"
-              placeholder="Todos los responsables"
+              placeholder={
+                filters.area_id && responsibleFilterOptions.length === 0
+                  ? 'No hay personas activas en esta área'
+                  : 'Todos los responsables'
+              }
               searchPlaceholder="Buscar responsable..."
-              options={users.map(u => ({
-                value: u.id.toString(),
-                label: u.name,
-                sublabel: u.position?.name ? `${u.position.name} • ${u.email || ''}` : u.email
-              }))}
+              options={responsibleFilterOptions}
               value={filters.responsible_id}
               onChange={val => setFilter('responsible_id', val)}
               clearable={!!filters.responsible_id}
