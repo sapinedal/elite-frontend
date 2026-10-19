@@ -14,7 +14,6 @@ import {
     Shield,
     Key,
     Building2,
-    Construction,
     FolderArchive,
     Scale,
     FileText,
@@ -41,23 +40,8 @@ interface SidebarProps {
 
 const eliteMenuItems: SidebarItem[] = [
     {
-        id: 'obra',
-        label: 'Control de Obra',
-        icon: <Building2 className="w-5 h-5" />,
-        permission: 'obra.ver',
-        children: [
-            {
-                id: 'interventoria',
-                label: 'Interventoría & Resumen',
-                icon: <LayoutDashboard className="w-4 h-4" />,
-                href: '/app/obra/interventoria',
-                permission: 'obra.ver',
-            }
-        ]
-    },
-    {
         id: 'task',
-        label: 'Tareas',
+        label: 'Dashboard de Tareas',
         icon: <ClipboardList className="w-5 h-5" />,
         children: [
             {
@@ -65,15 +49,53 @@ const eliteMenuItems: SidebarItem[] = [
                 label: 'Dashboard',
                 icon: <LayoutDashboard className="w-4 h-4" />,
                 href: '/app/task/dashboard',
+                permission: 'bitacora.ver',
             },
             {
                 id: 'bitacora',
                 label: 'Kanban',
                 icon: <ClipboardList className="w-4 h-4" />,
                 href: '/app/task/bitacora',
+                permission: 'bitacora.ver',
             }
         ]
     },
+    {
+        id: 'obra',
+        label: 'Módulo Técnico',
+        icon: <Building2 className="w-5 h-5" />,
+        children: [
+            {
+                id: 'interventoria',
+                label: 'Interventoría & Resumen',
+                icon: <LayoutDashboard className="w-4 h-4" />,
+                href: '/app/obra/interventoria',
+                permission: 'obra.ver',
+            },
+            {
+                id: 'ftra-registro',
+                label: 'FTRA - Registro',
+                icon: <PlusCircle className="w-4 h-4" />,
+                href: '/app/ftra/registro',
+                permission: 'ftra.crear',
+            },
+            {
+                id: 'ftra-seguimiento',
+                label: 'FTRA - Seguimiento',
+                icon: <ClipboardList className="w-4 h-4" />,
+                href: '/app/ftra/seguimiento',
+                permission: 'ftra.ver',
+            },
+            {
+                id: 'ftra-parametrizacion',
+                label: 'FTRA - Parametrización',
+                icon: <Settings className="w-4 h-4" />,
+                href: '/app/ftra/parametrizacion',
+                permission: 'ftra.parametrizar',
+            }
+        ]
+    },
+
     {
         id: 'kpi',
         label: 'KPI',
@@ -109,37 +131,10 @@ const eliteMenuItems: SidebarItem[] = [
             }
         ]
     },
-    {
-        id: 'ftra',
-        label: 'FTRA',
-        icon: <Construction className="w-5 h-5" />,
-        children: [
-            {
-                id: 'registro',
-                label: 'Registro',
-                icon: <LayoutDashboard className="w-4 h-4" />,
-                href: '/app/ftra/registro',
-                permission: 'ftra.crear',
-            },
-            {
-                id: 'seguimiento',
-                label: 'Seguimiento',
-                icon: <ClipboardList className="w-4 h-4" />,
-                href: '/app/ftra/seguimiento',
-                permission: 'ftra.ver',
-            },
-            {
-                id: 'parametrización',
-                label: 'Parametrización',
-                icon: <Settings className="w-4 h-4" />,
-                href: '/app/ftra/parametrizacion',
-                permission: 'ftra.parametrizar',
-            }
-        ]
-    },
+
     {
         id: 'juridica',
-        label: 'Área Jurídica',
+        label: 'Módulo Jurídica',
         icon: <Scale className="w-5 h-5" />,
         permission: 'juridica.ver',
         children: [
@@ -156,12 +151,14 @@ const eliteMenuItems: SidebarItem[] = [
         id: 'documental',
         label: 'Gestión Documental',
         icon: <FolderArchive className="w-5 h-5" />,
+        permission: 'documental.ver',
         children: [
             {
                 id: 'explorador',
                 label: 'Explorador S3',
                 icon: <FolderArchive className="w-4 h-4" />,
                 href: '/app/documental',
+                permission: 'documental.ver',
             }
         ]
     },
@@ -216,6 +213,15 @@ const eliteMenuItems: SidebarItem[] = [
     }
 ];
 
+const isChildActiveCheck = (child: SidebarItem, path: string) => {
+    if (!child.href) return false;
+    if (child.href === path) return true;
+    if (child.id === 'ftra-seguimiento' && (path.startsWith('/app/ftra/revision') || path.startsWith('/app/ftra/aprobacion'))) {
+        return true;
+    }
+    return false;
+};
+
 const SidebarItemComponent: React.FC<{
     item: SidebarItem;
     isExpanded: boolean;
@@ -228,7 +234,7 @@ const SidebarItemComponent: React.FC<{
     const visibleChildren = item.children?.filter(child => !child.permission || userPermissions.includes(child.permission)) || [];
     const hasChildren = visibleChildren.length > 0;
     const isItemExpanded = expandedItems.includes(item.id);
-    const isAnyChildActive = visibleChildren.some(child => child.href === currentPath);
+    const isAnyChildActive = visibleChildren.some(child => isChildActiveCheck(child, currentPath));
     const isMainActive = item.href === currentPath || isAnyChildActive;
 
     // Si tiene permiso asignado directamente al item, se valida
@@ -289,7 +295,7 @@ const SidebarItemComponent: React.FC<{
             >
                 <div className="space-y-1 mt-1">
                     {visibleChildren.map((child) => {
-                        const isChildActive = child.href === currentPath;
+                        const isChildActive = isChildActiveCheck(child, currentPath);
                         return (
                             <div
                                 key={child.id}
@@ -327,7 +333,7 @@ export default function Sidebar({ isExpanded, onToggle, isMobileOpen = false, on
 
     useEffect(() => {
         const activeParent = eliteMenuItems.find(item =>
-            item.children?.some(child => child.href === location.pathname)
+            item.children?.some(child => isChildActiveCheck(child, location.pathname))
         );
         if (activeParent) {
             setExpandedItems([activeParent.id]);

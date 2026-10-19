@@ -159,7 +159,7 @@ export default function UsersPage() {
         const rolesList = user.roles_list || 
           (Array.isArray(user.roles) 
             ? user.roles.map((r: any) => typeof r === 'string' ? r : r.name) 
-            : ['empleado']);
+            : []);
         const directPermsCount = user.direct_permissions_list?.length || 0;
 
         return (

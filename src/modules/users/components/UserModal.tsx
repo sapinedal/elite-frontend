@@ -22,7 +22,7 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, u
     area_id: '',
     position_id: '',
     document: '',
-    roles: ['empleado'],
+    roles: [] as string[],
     permissions: [] as string[]
   });
   
@@ -59,7 +59,7 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, u
       const userRoles = user.roles_list || 
         (Array.isArray(user.roles) 
           ? user.roles.map((r: any) => typeof r === 'string' ? r : r.name) 
-          : ['empleado']);
+          : []);
 
       const userPermissions = user.direct_permissions_list || 
         (Array.isArray(user.permissions) 
@@ -74,7 +74,7 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, u
         area_id: user.area_id?.toString() || '',
         position_id: user.position_id?.toString() || '',
         document: user.document || '',
-        roles: userRoles.length > 0 ? userRoles : ['empleado'],
+        roles: userRoles,
         permissions: userPermissions
       });
 
@@ -91,7 +91,7 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, u
         area_id: '',
         position_id: '',
         document: '',
-        roles: ['empleado'],
+        roles: [],
         permissions: []
       });
       setAvailablePositions([]);
