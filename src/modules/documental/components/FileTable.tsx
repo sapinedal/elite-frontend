@@ -6,10 +6,12 @@ import {
   Link as LinkIcon,
   Edit2,
   Trash2,
-  ArrowRight
+  ArrowRight,
+  Lock,
 } from 'lucide-react';
 import type { FolderItem, FileItem, EffectivePermissions } from '../types/documental.types';
 import { getFileIconConfig } from '../utils/fileIcons';
+import { ItemLocation } from './ItemLocation';
 
 interface FileTableProps {
   folders: FolderItem[];
@@ -23,6 +25,7 @@ interface FileTableProps {
   onRenameFile: (file: FileItem) => void;
   onDeleteFolder: (folder: FolderItem) => void;
   onDeleteFile: (file: FileItem) => void;
+  onRestrictFolder: (folder: FolderItem) => void;
 }
 
 export const FileTable: React.FC<FileTableProps> = ({
@@ -37,6 +40,7 @@ export const FileTable: React.FC<FileTableProps> = ({
   onRenameFile,
   onDeleteFolder,
   onDeleteFile,
+  onRestrictFolder,
 }) => {
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -70,6 +74,14 @@ export const FileTable: React.FC<FileTableProps> = ({
                     <span className="font-bold text-slate-800 group-hover:text-[#004C6C] truncate max-w-md">
                       {folder.name}
                     </span>
+                    {folder.restricted && (
+                      <span title="Carpeta restringida a ciertos roles" className="shrink-0">
+                        <Lock className="w-3.5 h-3.5 text-indigo-500" />
+                      </span>
+                    )}
+                  </div>
+                  <div className="pl-11">
+                    <ItemLocation location={folder.location} onOpen={onOpenFolder} />
                   </div>
                 </td>
                 <td className="py-3 px-4 text-xs text-slate-400">Carpeta</td>
@@ -85,13 +97,23 @@ export const FileTable: React.FC<FileTableProps> = ({
                       <ArrowRight className="w-4 h-4" />
                     </button>
 
-                    {permissions.can_upload && (
+                    {permissions.can_rename && (
                       <button
                         onClick={() => onRenameFolder(folder)}
                         title="Renombrar"
                         className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {permissions.is_admin && (
+                      <button
+                        onClick={() => onRestrictFolder(folder)}
+                        title={folder.restricted ? 'Editar restricción' : 'Restringir acceso'}
+                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
                       </button>
                     )}
 
@@ -134,6 +156,9 @@ export const FileTable: React.FC<FileTableProps> = ({
                       <span className="font-semibold text-slate-800 hover:text-[#004C6C] truncate max-w-md">
                         {file.name}
                       </span>
+                    </div>
+                    <div className="pl-11">
+                      <ItemLocation location={file.location} onOpen={onOpenFolder} />
                     </div>
                   </td>
                   <td className="py-3 px-4">
@@ -181,7 +206,7 @@ export const FileTable: React.FC<FileTableProps> = ({
                         <LinkIcon className="w-3.5 h-3.5" />
                       </button>
 
-                      {permissions.can_upload && (
+                      {permissions.can_rename && (
                         <button
                           onClick={() => onRenameFile(file)}
                           title="Renombrar"

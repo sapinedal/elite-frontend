@@ -155,7 +155,7 @@ const eliteMenuItems: SidebarItem[] = [
         children: [
             {
                 id: 'explorador',
-                label: 'Explorador S3',
+                label: 'Explorador',
                 icon: <FolderArchive className="w-4 h-4" />,
                 href: '/app/documental',
                 permission: 'documental.ver',

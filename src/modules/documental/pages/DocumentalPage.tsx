@@ -11,14 +11,20 @@ import {
   FolderOpen,
   Loader2,
   Info,
+  Lock,
+  Settings,
 } from 'lucide-react';
-import { useAuth } from '../../../context/AuthContext';
 import { useNotification } from '../../../context/NotificationContext';
 import { documentalService } from '../services/documentalService';
 import type {
   BrowseData,
   FileItem,
-  DocumentAreaPermission,
+  FolderItem,
+  FolderRoleRule,
+  RestrictedFolder,
+  RoleOption,
+  DocumentalSettings,
+  DocumentalSettingsInput,
 } from '../types/documental.types';
 
 // Components
@@ -31,11 +37,11 @@ import { UploadModal } from '../components/UploadModal';
 import { FilePreviewModal } from '../components/FilePreviewModal';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { RenameModal } from '../components/RenameModal';
-import { AreaPermissionsModal } from '../components/AreaPermissionsModal';
+import { FolderRestrictionsModal } from '../components/FolderRestrictionsModal';
 import { DocumentLogsModal } from '../components/DocumentLogsModal';
+import { DocumentalSettingsModal } from '../components/DocumentalSettingsModal';
 
 export default function DocumentalPage() {
-  const { user } = useAuth();
   const { showNotification } = useNotification();
 
   // Navigation State
@@ -43,6 +49,7 @@ export default function DocumentalPage() {
   const [browseData, setBrowseData] = useState<BrowseData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchInSubfolders, setSearchInSubfolders] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // Modals State
@@ -63,17 +70,20 @@ export default function DocumentalPage() {
     type: 'file' | 'folder';
   } | null>(null);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [restrictionTarget, setRestrictionTarget] = useState<string | null>(null);
   const [isLogsOpen, setIsLogsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<DocumentalSettings | null>(null);
 
-  // Admin Permissions & Rules State
-  const [areaRules, setAreaRules] = useState<DocumentAreaPermission[]>([]);
-  const [areasList, setAreasList] = useState<Array<{ id: number; name: string }>>([]);
+  // Admin: restricciones de carpetas por rol
+  const [restrictedFolders, setRestrictedFolders] = useState<RestrictedFolder[]>([]);
+  const [rolesList, setRolesList] = useState<RoleOption[]>([]);
 
   const loadDirectory = useCallback(
-    async (path = currentPath, search = searchQuery, refresh = false) => {
+    async (path = currentPath, search = searchQuery, refresh = false, recursive = searchInSubfolders) => {
       try {
         setLoading(true);
-        const data = await documentalService.browse(path, search, refresh);
+        const data = await documentalService.browse(path, search.trim(), refresh, recursive);
         setBrowseData(data);
         setCurrentPath(data.current_path);
       } catch (err: any) {
@@ -85,18 +95,32 @@ export default function DocumentalPage() {
         setLoading(false);
       }
     },
-    [currentPath, searchQuery, showNotification]
+    [currentPath, searchQuery, searchInSubfolders, showNotification]
   );
 
   const loadAdminRules = useCallback(async () => {
     try {
       const res = await documentalService.getPermissions(currentPath);
-      setAreaRules(res.rules || []);
-      setAreasList(res.areas || []);
+      setRestrictedFolders(res.restricted_folders || []);
+      setRolesList(res.roles || []);
     } catch (err) {
-      console.error('Error al cargar reglas de área:', err);
+      console.error('Error al cargar restricciones de carpetas:', err);
     }
   }, [currentPath]);
+
+  // Configuración de subidas (tamaño máximo y extensiones), usada por el formulario de subida
+  useEffect(() => {
+    documentalService
+      .getSettings()
+      .then(setSettings)
+      .catch((err) => console.error('Error al cargar configuración documental:', err));
+  }, []);
+
+  const handleSaveSettings = async (data: DocumentalSettingsInput) => {
+    const updated = await documentalService.updateSettings(data);
+    setSettings(updated);
+    showNotification('Configuración del repositorio actualizada.', 'success');
+  };
 
   useEffect(() => {
     loadDirectory(currentPath, searchQuery);
@@ -126,12 +150,8 @@ export default function DocumentalPage() {
     loadDirectory(currentPath);
   };
 
-  // Download Actions
+  // Download Actions: siempre se pide una URL de descarga al backend para forzar la descarga y registrarla en auditoría
   const handleDownload = async (file: FileItem) => {
-    if (file.preview_url) {
-      window.open(file.preview_url, '_blank');
-      return;
-    }
     try {
       const res = await documentalService.getDownloadUrl(file.path);
       window.open(res.download_url, '_blank');
@@ -174,23 +194,19 @@ export default function DocumentalPage() {
     loadDirectory(currentPath);
   };
 
-  // Area Permissions Actions
-  const handleOpenPermissions = () => {
+  // Restricciones de carpetas por rol
+  const handleOpenRestrictions = (folderPath: string | null = null) => {
     loadAdminRules();
+    setRestrictionTarget(folderPath);
     setIsPermissionsOpen(true);
   };
 
-  const handleSaveRule = async (data: any) => {
-    await documentalService.saveAreaPermission(data);
-    showNotification('Regla de permisos actualizada exitosamente.', 'success');
-    loadAdminRules();
-    loadDirectory(currentPath);
-  };
+  const handleRestrictFolder = (folder: FolderItem) => handleOpenRestrictions(folder.path);
 
-  const handleDeleteRule = async (id: number) => {
-    await documentalService.deleteAreaPermission(id);
-    showNotification('Regla de permisos eliminada.', 'info');
-    loadAdminRules();
+  const handleSaveRestriction = async (folderPath: string, rules: FolderRoleRule[]) => {
+    const res = await documentalService.syncFolderRules(folderPath, rules);
+    showNotification(res.message, 'success');
+    await loadAdminRules();
     loadDirectory(currentPath);
   };
 
@@ -198,8 +214,10 @@ export default function DocumentalPage() {
     can_read: true,
     can_upload: false,
     can_create_folder: false,
+    can_rename: false,
     can_delete: false,
     is_admin: false,
+    restricted: false,
   };
 
   return (
@@ -207,33 +225,47 @@ export default function DocumentalPage() {
       {/* Toolbar */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
         {/* Search */}
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar carpetas o archivos en este nivel..."
-            className="w-full pl-10 pr-24 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EE9D4C] shadow-sm transition-all"
-          />
-          {searchQuery && (
+        <form onSubmit={handleSearchSubmit} className="flex-1 max-w-md">
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={searchInSubfolders ? 'Buscar en esta carpeta y subcarpetas...' : 'Buscar solo en esta carpeta...'}
+              className="w-full pl-10 pr-24 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EE9D4C] shadow-sm transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  loadDirectory(currentPath, '');
+                }}
+                className="absolute right-14 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400 hover:text-slate-600"
+              >
+                Limpiar
+              </button>
+            )}
             <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                loadDirectory(currentPath, '');
-              }}
-              className="absolute right-14 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400 hover:text-slate-600"
+              type="submit"
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-xl text-[11px] font-bold text-slate-700 transition-colors"
             >
-              Limpiar
+              Buscar
             </button>
-          )}
-          <button
-            type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-xl text-[11px] font-bold text-slate-700 transition-colors"
-          >
-            Buscar
-          </button>
+          </div>
+          <label className="flex items-center gap-1.5 mt-1.5 ml-1 text-[11px] font-semibold text-slate-500 cursor-pointer select-none w-fit">
+            <input
+              type="checkbox"
+              checked={searchInSubfolders}
+              onChange={(e) => {
+                setSearchInSubfolders(e.target.checked);
+                if (searchQuery.trim()) loadDirectory(currentPath, searchQuery, false, e.target.checked);
+              }}
+              className="rounded text-[#004C6C] focus:ring-[#EE9D4C]"
+            />
+            Incluir subcarpetas
+          </label>
         </form>
 
         {/* Action Buttons */}
@@ -281,11 +313,23 @@ export default function DocumentalPage() {
           {permissions.is_admin && (
             <button
               type="button"
-              onClick={handleOpenPermissions}
+              onClick={() => handleOpenRestrictions()}
               className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 rounded-2xl shadow-sm transition-colors"
             >
               <Shield className="w-4 h-4 text-indigo-500" />
-              <span>Permisos Área</span>
+              <span>Restricciones</span>
+            </button>
+          )}
+
+          {/* Admin: Configuración */}
+          {permissions.is_admin && (
+            <button
+              type="button"
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 rounded-2xl shadow-sm transition-colors"
+            >
+              <Settings className="w-4 h-4 text-slate-500" />
+              <span>Configuración</span>
             </button>
           )}
 
@@ -339,13 +383,55 @@ export default function DocumentalPage() {
         />
       )}
 
+      {/* Aviso de carpeta restringida */}
+      {permissions.restricted && !loading && (
+        <div className="p-3 px-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center gap-3 text-xs text-indigo-800 font-medium">
+          <Lock className="w-4 h-4 text-indigo-600 shrink-0" />
+          <span className="flex-1">
+            Esta carpeta está <strong>restringida</strong>: solo algunos roles pueden verla.
+          </span>
+          {permissions.is_admin && (
+            <button
+              type="button"
+              onClick={() => handleOpenRestrictions(currentPath)}
+              className="text-[11px] font-bold text-indigo-700 hover:underline"
+            >
+              Ver roles con acceso
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Permission Notice if write restricted */}
       {!permissions.can_upload && !permissions.can_create_folder && !loading && (
         <div className="p-3 px-4 bg-sky-50 border border-sky-100 rounded-2xl flex items-center gap-3 text-xs text-sky-800 font-medium">
           <Info className="w-4 h-4 text-sky-600 shrink-0" />
           <span>
-            Tienes permisos de <strong>solo lectura</strong> en esta carpeta de acuerdo a las políticas de tu área ({user?.area || 'General'}).
+            Tienes permisos de <strong>solo lectura</strong> en esta carpeta según los permisos de tu rol.
           </span>
+        </div>
+      )}
+
+      {/* Resumen de resultados de búsqueda */}
+      {browseData?.search && !loading && (
+        <div className="p-3 px-4 bg-amber-50 border border-amber-100 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-amber-900 font-medium">
+          <Search className="w-4 h-4 text-amber-600 shrink-0 hidden sm:block" />
+          <span className="flex-1">
+            <strong>{browseData.search.total_matches}</strong> resultado(s) para "<strong>{browseData.search.query}</strong>"{' '}
+            {browseData.search.recursive ? 'en esta carpeta y sus subcarpetas' : 'en esta carpeta'}.
+            {browseData.search.truncated &&
+              ` Se muestran los primeros ${browseData.total_folders + browseData.total_files}; agrega más palabras para afinar.`}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              loadDirectory(currentPath, '');
+            }}
+            className="text-[11px] font-bold text-amber-800 hover:underline self-start sm:self-auto"
+          >
+            Ver toda la carpeta
+          </button>
         </div>
       )}
 
@@ -399,6 +485,7 @@ export default function DocumentalPage() {
                       setItemToDelete({ name: f.name, path: f.path, type: 'folder' });
                       setIsDeleteOpen(true);
                     }}
+                    onRestrict={handleRestrictFolder}
                   />
                 ))}
               </div>
@@ -423,6 +510,7 @@ export default function DocumentalPage() {
                     }}
                     onDownload={handleDownload}
                     onCopyLink={handleCopyLink}
+                    onOpenLocation={handleNavigate}
                     onRename={(f) => {
                       setItemToRename({ name: f.name, path: f.path, type: 'file' });
                       setIsRenameOpen(true);
@@ -466,6 +554,7 @@ export default function DocumentalPage() {
             setItemToDelete({ name: f.name, path: f.path, type: 'file' });
             setIsDeleteOpen(true);
           }}
+          onRestrictFolder={handleRestrictFolder}
         />
       )}
 
@@ -482,6 +571,7 @@ export default function DocumentalPage() {
         targetPath={currentPath}
         onClose={() => setIsUploadOpen(false)}
         onSubmit={handleUploadFiles}
+        settings={settings}
       />
 
       <FilePreviewModal
@@ -514,14 +604,22 @@ export default function DocumentalPage() {
         onSubmit={handleRenameSubmit}
       />
 
-      <AreaPermissionsModal
+      <FolderRestrictionsModal
         isOpen={isPermissionsOpen}
-        rules={areaRules}
-        areas={areasList}
+        initialFolderPath={restrictionTarget}
         currentPath={currentPath}
+        restrictedFolders={restrictedFolders}
+        roles={rolesList}
         onClose={() => setIsPermissionsOpen(false)}
-        onSaveRule={handleSaveRule}
-        onDeleteRule={handleDeleteRule}
+        onSave={handleSaveRestriction}
+        onNavigate={handleNavigate}
+      />
+
+      <DocumentalSettingsModal
+        isOpen={isSettingsOpen}
+        settings={settings}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={handleSaveSettings}
       />
 
       <DocumentLogsModal

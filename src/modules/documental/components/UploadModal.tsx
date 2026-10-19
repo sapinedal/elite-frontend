@@ -1,18 +1,44 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, X, File, Trash2, Loader2, CheckCircle2 } from 'lucide-react';
+import type { DocumentalSettings } from '../types/documental.types';
 
 interface UploadModalProps {
   isOpen: boolean;
   targetPath: string;
   onClose: () => void;
   onSubmit: (files: File[]) => Promise<void>;
+  settings: DocumentalSettings | null;
 }
+
+const extensionOf = (name: string) => {
+  const dot = name.lastIndexOf('.');
+  return dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
+};
+
+/** Mismas reglas que valida el backend; devuelve el motivo del rechazo o null */
+const validateFile = (file: File, settings: DocumentalSettings | null): string | null => {
+  if (!settings) return null;
+  const maxMb = settings.effective_max_upload_mb;
+  if (file.size > maxMb * 1024 * 1024) {
+    return `"${file.name}" supera el máximo de ${maxMb} MB.`;
+  }
+  const ext = extensionOf(file.name);
+  if (settings.extension_mode === 'allowlist') {
+    if (!ext || !settings.allowed_extensions.includes(ext)) {
+      return `"${file.name}": ${ext ? `.${ext}` : 'sin extensión'} no está permitido.`;
+    }
+  } else if (ext && settings.blocked_extensions.includes(ext)) {
+    return `"${file.name}": los archivos .${ext} están bloqueados.`;
+  }
+  return null;
+};
 
 export const UploadModal: React.FC<UploadModalProps> = ({
   isOpen,
   targetPath,
   onClose,
   onSubmit,
+  settings,
 }) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -25,14 +51,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList) return;
     const newFiles = Array.from(fileList);
-    // Verificar límite de 100MB por archivo
-    const oversized = newFiles.filter((f) => f.size > 100 * 1024 * 1024);
-    if (oversized.length > 0) {
-      setError(`El archivo "${oversized[0].name}" excede el límite máximo de 100MB.`);
-      return;
-    }
-    setError(null);
-    setSelectedFiles((prev) => [...prev, ...newFiles]);
+    const rejected: string[] = [];
+    const accepted = newFiles.filter((f) => {
+      const reason = validateFile(f, settings);
+      if (reason) rejected.push(reason);
+      return !reason;
+    });
+    setError(rejected.length > 0 ? `No se agregaron ${rejected.length} archivo(s): ${rejected.join(' ')}` : null);
+    setSelectedFiles((prev) => [...prev, ...accepted]);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -124,7 +150,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               type="file"
               ref={fileInputRef}
               multiple
-              onChange={(e) => handleFiles(e.target.files)}
+              accept={
+                settings?.extension_mode === 'allowlist'
+                  ? settings.allowed_extensions.map((e) => `.${e}`).join(',')
+                  : undefined
+              }
+              onChange={(e) => {
+                handleFiles(e.target.files);
+                e.target.value = '';
+              }}
               className="hidden"
             />
             <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center mb-3">
@@ -134,7 +168,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               Arrastra archivos aquí o <span className="text-[#EE9D4C]">explora tu equipo</span>
             </p>
             <p className="text-xs text-slate-400 mt-1">
-              Soporta documentos PDF, Word, Excel, planos, imágenes y archivos comprimidos (máx. 100MB cada uno).
+              {settings?.extension_mode === 'allowlist'
+                ? `Tipos permitidos: ${settings.allowed_extensions.map((e) => `.${e}`).join(', ')}`
+                : 'Documentos, planos, imágenes y archivos comprimidos'}
+              {` (máx. ${settings?.effective_max_upload_mb ?? 100} MB cada uno).`}
             </p>
           </div>
 

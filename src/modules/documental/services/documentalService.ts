@@ -2,19 +2,23 @@ import api from '../../../lib/axios';
 import type {
   BrowseData,
   PermissionsResponse,
-  DocumentAreaPermission,
-  DocumentActivityLog
+  FolderRoleRule,
+  DocumentLogFilters,
+  DocumentLogsResponse,
+  DocumentalSettings,
+  DocumentalSettingsInput,
 } from '../types/documental.types';
 
 export const documentalService = {
   /**
    * Navega y lista carpetas y archivos en la ruta del S3.
    */
-  async browse(path = '', search = '', refresh = false): Promise<BrowseData> {
-    const params: Record<string, string | boolean> = {};
+  async browse(path = '', search = '', refresh = false, recursive = false): Promise<BrowseData> {
+    const params: Record<string, string | number> = {};
     if (path) params.path = path;
     if (search) params.search = search;
-    if (refresh) params.refresh = true;
+    if (search && recursive) params.recursive = 1;
+    if (refresh) params.refresh = 1;
 
     const response = await api.get('/v1/documental', { params });
     return response.data.data;
@@ -82,7 +86,7 @@ export const documentalService = {
   },
 
   /**
-   * Consulta los permisos del usuario actual y las reglas por área.
+   * Consulta los permisos del usuario actual y, si administra el módulo, las restricciones por carpeta.
    */
   async getPermissions(path = ''): Promise<PermissionsResponse> {
     const response = await api.get('/v1/documental/permissions', {
@@ -92,34 +96,39 @@ export const documentalService = {
   },
 
   /**
-   * Guarda o actualiza una regla de permisos para un área específica.
+   * Reemplaza los roles con acceso a una carpeta. Una lista vacía quita la restricción.
    */
-  async saveAreaPermission(data: {
-    area_id: number;
-    folder_path: string;
-    can_read: boolean;
-    can_upload: boolean;
-    can_create_folder: boolean;
-    can_delete: boolean;
-  }): Promise<DocumentAreaPermission> {
-    const response = await api.post('/v1/documental/permissions', data);
-    return response.data.permission;
-  },
-
-  /**
-   * Elimina una regla de permisos de área.
-   */
-  async deleteAreaPermission(id: number): Promise<void> {
-    await api.delete(`/v1/documental/permissions/${id}`);
-  },
-
-  /**
-   * Obtiene los logs de actividad sobre documentos.
-   */
-  async getLogs(page = 1, perPage = 25): Promise<{ data: DocumentActivityLog[]; total: number; current_page: number }> {
-    const response = await api.get('/v1/documental/logs', {
-      params: { page, per_page: perPage },
+  async syncFolderRules(folderPath: string, rules: FolderRoleRule[]): Promise<{ message: string; restricted: boolean }> {
+    const response = await api.put('/v1/documental/permissions/folder', {
+      folder_path: folderPath,
+      rules,
     });
-    return response.data.logs;
+    return response.data.data;
+  },
+
+  /**
+   * Obtiene los registros de auditoría con filtros opcionales.
+   */
+  async getLogs(page = 1, perPage = 25, filters: DocumentLogFilters = {}): Promise<DocumentLogsResponse> {
+    const params: Record<string, string | number> = { page, per_page: perPage };
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params[key] = value;
+    });
+
+    const response = await api.get('/v1/documental/logs', { params });
+    return { ...response.data.logs, denied_last_7_days: response.data.denied_last_7_days };
+  },
+
+  /**
+   * Configuración del módulo: tamaño máximo de subida y extensiones permitidas o bloqueadas.
+   */
+  async getSettings(): Promise<DocumentalSettings> {
+    const response = await api.get('/v1/documental/settings');
+    return response.data.data;
+  },
+
+  async updateSettings(data: DocumentalSettingsInput): Promise<DocumentalSettings> {
+    const response = await api.put('/v1/documental/settings', data);
+    return response.data.data;
   },
 };

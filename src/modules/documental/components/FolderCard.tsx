@@ -1,6 +1,7 @@
 import React from 'react';
-import { Folder, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { Folder, MoreVertical, Edit2, Trash2, Lock } from 'lucide-react';
 import type { FolderItem, EffectivePermissions } from '../types/documental.types';
+import { ItemLocation } from './ItemLocation';
 
 interface FolderCardProps {
   folder: FolderItem;
@@ -8,6 +9,7 @@ interface FolderCardProps {
   onOpen: (path: string) => void;
   onRename: (folder: FolderItem) => void;
   onDelete: (folder: FolderItem) => void;
+  onRestrict: (folder: FolderItem) => void;
 }
 
 export const FolderCard: React.FC<FolderCardProps> = ({
@@ -16,6 +18,7 @@ export const FolderCard: React.FC<FolderCardProps> = ({
   onOpen,
   onRename,
   onDelete,
+  onRestrict,
 }) => {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -40,8 +43,16 @@ export const FolderCard: React.FC<FolderCardProps> = ({
           onClick={() => onOpen(folder.path)}
           className="flex items-center gap-3 min-w-0 flex-1"
         >
-          <div className="w-12 h-12 rounded-xl bg-amber-50 group-hover:bg-amber-100/80 border border-amber-100 flex items-center justify-center shrink-0 transition-colors">
+          <div className="relative w-12 h-12 rounded-xl bg-amber-50 group-hover:bg-amber-100/80 border border-amber-100 flex items-center justify-center shrink-0 transition-colors">
             <Folder className="w-6 h-6 text-amber-500 fill-amber-500/20" />
+            {folder.restricted && (
+              <span
+                title="Carpeta restringida a ciertos roles"
+                className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center"
+              >
+                <Lock className="w-2.5 h-2.5 text-white" />
+              </span>
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <h4
@@ -50,12 +61,15 @@ export const FolderCard: React.FC<FolderCardProps> = ({
             >
               {folder.name}
             </h4>
-            <span className="text-[11px] font-medium text-slate-400">Carpeta</span>
+            <ItemLocation location={folder.location} onOpen={onOpen} />
+            <span className="text-[11px] font-medium text-slate-400">
+              {folder.restricted ? 'Carpeta restringida' : 'Carpeta'}
+            </span>
           </div>
         </div>
 
         {/* Action Menu */}
-        {(permissions.can_upload || permissions.can_delete) && (
+        {(permissions.can_rename || permissions.can_delete || permissions.is_admin) && (
           <div className="relative" ref={menuRef}>
             <button
               onClick={(e) => {
@@ -68,8 +82,8 @@ export const FolderCard: React.FC<FolderCardProps> = ({
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-7 w-36 bg-white border border-slate-100 rounded-xl shadow-xl py-1 z-20 animate-in fade-in zoom-in-95 duration-150">
-                {permissions.can_upload && (
+              <div className="absolute right-0 top-7 w-44 bg-white border border-slate-100 rounded-xl shadow-xl py-1 z-20 animate-in fade-in zoom-in-95 duration-150">
+                {permissions.can_rename && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -80,6 +94,20 @@ export const FolderCard: React.FC<FolderCardProps> = ({
                   >
                     <Edit2 className="w-3.5 h-3.5 text-slate-400" />
                     <span>Renombrar</span>
+                  </button>
+                )}
+
+                {permissions.is_admin && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      onRestrict(folder);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>{folder.restricted ? 'Editar restricción' : 'Restringir acceso'}</span>
                   </button>
                 )}
 

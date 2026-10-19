@@ -2,6 +2,7 @@ import React from 'react';
 import { Download, Eye, Link as LinkIcon, MoreVertical, Edit2, Trash2 } from 'lucide-react';
 import type { FileItem, EffectivePermissions } from '../types/documental.types';
 import { getFileIconConfig } from '../utils/fileIcons';
+import { ItemLocation } from './ItemLocation';
 
 interface FileCardProps {
   file: FileItem;
@@ -11,6 +12,7 @@ interface FileCardProps {
   onCopyLink: (file: FileItem) => void;
   onRename: (file: FileItem) => void;
   onDelete: (file: FileItem) => void;
+  onOpenLocation?: (path: string) => void;
 }
 
 export const FileCard: React.FC<FileCardProps> = ({
@@ -21,6 +23,7 @@ export const FileCard: React.FC<FileCardProps> = ({
   onCopyLink,
   onRename,
   onDelete,
+  onOpenLocation,
 }) => {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -60,6 +63,7 @@ export const FileCard: React.FC<FileCardProps> = ({
               >
                 {file.name}
               </h4>
+              <ItemLocation location={file.location} onOpen={onOpenLocation} />
               <div className="flex items-center gap-2 mt-0.5">
                 <span
                   className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${iconConfig.badgeBg} ${iconConfig.badgeText}`}
@@ -117,7 +121,7 @@ export const FileCard: React.FC<FileCardProps> = ({
                   <span>Copiar enlace</span>
                 </button>
 
-                {permissions.can_upload && (
+                {permissions.can_rename && (
                   <button
                     onClick={() => {
                       setMenuOpen(false);

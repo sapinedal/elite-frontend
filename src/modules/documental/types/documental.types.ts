@@ -7,6 +7,10 @@ export interface FolderItem {
   name: string;
   path: string;
   type: 'folder';
+  /** La carpeta tiene restricciones por rol */
+  restricted?: boolean;
+  /** Carpeta contenedora; solo en resultados de búsqueda en subcarpetas */
+  location?: string;
 }
 
 export interface FileItem {
@@ -19,15 +23,28 @@ export interface FileItem {
   extension: string;
   last_modified: string | null;
   preview_url: string | null;
+  /** Carpeta contenedora; solo en resultados de búsqueda en subcarpetas */
+  location?: string;
+}
+
+export interface SearchMeta {
+  query: string;
+  recursive: boolean;
+  /** Coincidencias totales visibles para el usuario (puede superar las devueltas) */
+  total_matches: number;
+  truncated: boolean;
+  index_built_at: string | null;
 }
 
 export interface EffectivePermissions {
   can_read: boolean;
   can_upload: boolean;
   can_create_folder: boolean;
+  can_rename: boolean;
   can_delete: boolean;
   is_admin: boolean;
-  role_type?: string;
+  /** La carpeta (o un ancestro) tiene restricciones por rol */
+  restricted: boolean;
 }
 
 export interface BrowseData {
@@ -41,22 +58,26 @@ export interface BrowseData {
   total_size: number;
   total_size_formatted: string;
   permissions: EffectivePermissions;
+  search?: SearchMeta;
 }
 
-export interface DocumentAreaPermission {
-  id: number;
-  area_id: number;
-  folder_path: string;
+export interface FolderRoleRule {
+  role_id: number;
+  role_name?: string | null;
   can_read: boolean;
   can_upload: boolean;
   can_create_folder: boolean;
   can_delete: boolean;
-  area?: {
-    id: number;
-    name: string;
-  };
-  created_at?: string;
-  updated_at?: string;
+}
+
+export interface RestrictedFolder {
+  folder_path: string;
+  rules: FolderRoleRule[];
+}
+
+export interface RoleOption {
+  id: number;
+  name: string;
 }
 
 export interface DocumentActivityLog {
@@ -64,7 +85,7 @@ export interface DocumentActivityLog {
   user_id: number | null;
   action: string;
   path: string;
-  details: Record<string, any> | null;
+  details: Record<string, unknown> | null;
   ip_address: string | null;
   created_at: string;
   user?: {
@@ -80,9 +101,44 @@ export interface PermissionsResponse {
   user: {
     id?: number;
     name?: string;
-    area?: string;
-    position?: string;
+    roles?: string[];
   };
-  rules: DocumentAreaPermission[];
-  areas: Array<{ id: number; name: string }>;
+  restricted_folders: RestrictedFolder[];
+  roles: RoleOption[];
 }
+
+export interface DocumentLogFilters {
+  action?: string;
+  user?: string;
+  path?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+export interface DocumentLogsResponse {
+  data: DocumentActivityLog[];
+  total: number;
+  current_page: number;
+  last_page: number;
+  denied_last_7_days: number;
+}
+
+export type ExtensionMode = 'blocklist' | 'allowlist';
+
+export interface DocumentalSettings {
+  max_upload_mb: number;
+  extension_mode: ExtensionMode;
+  blocked_extensions: string[];
+  allowed_extensions: string[];
+  /** Máximo de archivos para renombrar o eliminar una carpeta desde la app */
+  max_folder_operation_files: number;
+  /** Límite real de PHP en el servidor (upload_max_filesize / post_max_size) */
+  server_max_upload_mb: number;
+  /** El menor entre el configurado y el del servidor */
+  effective_max_upload_mb: number;
+}
+
+export type DocumentalSettingsInput = Pick<
+  DocumentalSettings,
+  'max_upload_mb' | 'extension_mode' | 'blocked_extensions' | 'allowed_extensions' | 'max_folder_operation_files'
+>;
