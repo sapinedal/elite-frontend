@@ -15,8 +15,11 @@ import {
 import { roleService } from '../../users/services/roleService';
 import type { Role, PermissionCatalogResponse } from '../../users/types';
 import { Portal } from '../../../components/ui/Portal';
+import { getErrorMessage } from '../../../lib/apiError';
+import { useNotification } from '../../../context/NotificationContext';
 
 export default function RolesPage() {
+  const { showNotification } = useNotification();
   const [roles, setRoles] = useState<Role[]>([]);
   const [catalog, setCatalog] = useState<PermissionCatalogResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,7 +117,7 @@ export default function RolesPage() {
       await fetchRolesAndCatalog();
       setIsModalOpen(false);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar el rol');
+      setErrorMsg(getErrorMessage(err, 'Error al guardar el rol'));
     } finally {
       setIsSubmitting(false);
     }
@@ -122,7 +125,7 @@ export default function RolesPage() {
 
   const handleDeleteRole = async (role: Role) => {
     if (role.name === 'admin') {
-      alert('El rol Administrador es fundamental para el sistema y no puede eliminarse.');
+      showNotification('El rol Administrador es fundamental para el sistema y no puede eliminarse.', 'warning');
       return;
     }
     if (window.confirm(`¿Estás seguro de que deseas eliminar el rol "${role.name}"?`)) {
@@ -130,7 +133,7 @@ export default function RolesPage() {
         await roleService.deleteRole(role.id);
         await fetchRolesAndCatalog();
       } catch (err: any) {
-        alert(err.response?.data?.message || 'Error al eliminar el rol');
+        showNotification(getErrorMessage(err, 'Error al eliminar el rol'), 'error');
       }
     }
   };

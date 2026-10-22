@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { formatService } from '../services/formatService';
 import type { FtraFormat } from '../types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export function useFormats() {
   const [formats, setFormats] = useState<FtraFormat[]>([]);
@@ -71,7 +72,7 @@ export function useFormats() {
       await fetchFormats(); // Recargar para mantener orden y paginación consistentes
       return newFormat;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al guardar el formato.';
+      const msg = getErrorMessage(err, 'Error al guardar el formato.');
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -87,7 +88,7 @@ export function useFormats() {
       await fetchFormats();
       return updated;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al actualizar el formato.';
+      const msg = getErrorMessage(err, 'Error al actualizar el formato.');
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -102,7 +103,7 @@ export function useFormats() {
       await formatService.deleteFormat(id);
       await fetchFormats();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al eliminar el formato.';
+      const msg = getErrorMessage(err, 'Error al eliminar el formato.');
       setError(msg);
       throw new Error(msg);
     } finally {

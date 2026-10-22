@@ -6,6 +6,7 @@ import type { Task, TaskPriority, TaskStatus, PaginatedTasksResponse } from '../
 import type { User } from '../../users/types';
 import type { Area } from '../../configuracion/services/configuracionService';
 import { useProject } from '../../../context/ProjectContext';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export function useTasks() {
   // Las tareas se consultan siempre dentro del proyecto activo del header
@@ -170,7 +171,7 @@ export function useTasks() {
       fetchTasks();
       return newTask;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al registrar la tarea.';
+      const msg = getErrorMessage(err, 'Error al registrar la tarea.');
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -186,7 +187,7 @@ export function useTasks() {
       fetchTasks();
       return updatedTask;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al actualizar la tarea.';
+      const msg = getErrorMessage(err, 'Error al actualizar la tarea.');
       setError(msg);
       throw new Error(msg);
     }
@@ -199,7 +200,7 @@ export function useTasks() {
       setTasks(prev => prev.filter(t => t.id !== id));
       fetchTasks();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al eliminar la tarea.';
+      const msg = getErrorMessage(err, 'Error al eliminar la tarea.');
       setError(msg);
       throw new Error(msg);
     }
@@ -224,7 +225,7 @@ export function useTasks() {
       }));
       return newObs;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al agregar la observación.';
+      const msg = getErrorMessage(err, 'Error al agregar la observación.');
       throw new Error(msg);
     }
   }, []);

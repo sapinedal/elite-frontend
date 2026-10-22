@@ -18,6 +18,7 @@ import {
     Scale,
     FileText,
     FolderLock,
+    FileSignature,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo_inver.svg';
@@ -144,6 +145,21 @@ const eliteMenuItems: SidebarItem[] = [
                 icon: <FileText className="w-4 h-4" />,
                 href: '/app/juridica/contratos',
                 permission: 'juridica.ver',
+            }
+        ]
+    },
+    {
+        id: 'contratacion',
+        label: 'Módulo Contratación',
+        icon: <FileSignature className="w-5 h-5" />,
+        permission: 'contratacion.ver',
+        children: [
+            {
+                id: 'contratacion-contratos',
+                label: 'Contratos de Obra',
+                icon: <FileText className="w-4 h-4" />,
+                href: '/app/contratacion',
+                permission: 'contratacion.ver',
             }
         ]
     },

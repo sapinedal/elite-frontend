@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, FileText, Building2, DollarSign, ShieldCheck, Link2, Briefcase, Hash, Calendar, Loader2, Plus } from 'lucide-react';
 import { Portal } from '../../../components/ui/Portal';
 import type { Contract, CreateContractDTO, Tower, ContractType } from '../types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface ProjectOption {
   id: number | string;
@@ -161,7 +162,7 @@ export const ContractModal: React.FC<ContractModalProps> = ({
     } catch (err: any) {
       console.error('Error al guardar contrato:', err);
       setErrorMessage(
-        err?.response?.data?.message || err?.message || 'Error al guardar el contrato'
+        getErrorMessage(err, 'Error al guardar el contrato')
       );
     } finally {
       setIsSubmitting(false);

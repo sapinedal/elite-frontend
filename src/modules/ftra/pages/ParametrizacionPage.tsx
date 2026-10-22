@@ -13,10 +13,13 @@ import { ResidenteModal } from '../components/ResidenteModal';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
 import type { FtraFormat, FtraContractor, Residente } from '../types';
+import { useNotification } from '../../../context/NotificationContext';
+import { getErrorMessage } from '../../../lib/apiError';
 
 type ActiveTab = 'formats' | 'contractors' | 'residentes';
 
 export default function ParametrizacionPage() {
+  const { showNotification } = useNotification();
   const { user } = useAuth();
   // Forzado a true temporalmente para permitir pruebas del CRUD sin Spatie
   const isEditor = true || !!user;
@@ -63,7 +66,7 @@ export default function ParametrizacionPage() {
       try {
         await formatsData.deleteFormat(id);
       } catch (err: any) {
-        alert(err.message || 'Error al eliminar el formato.');
+        showNotification(getErrorMessage(err, 'Error al eliminar el formato.'), 'error');
       }
     }
   };
@@ -92,7 +95,7 @@ export default function ParametrizacionPage() {
       try {
         await contractorsData.deleteContractor(id);
       } catch (err: any) {
-        alert(err.message || 'Error al eliminar el contratista.');
+        showNotification(getErrorMessage(err, 'Error al eliminar el contratista.'), 'error');
       }
     }
   };
@@ -121,7 +124,7 @@ export default function ParametrizacionPage() {
       try {
         await residentesData.deleteResidente(id);
       } catch (err: any) {
-        alert(err.message || 'Error al eliminar el residente.');
+        showNotification(getErrorMessage(err, 'Error al eliminar el residente.'), 'error');
       }
     }
   };

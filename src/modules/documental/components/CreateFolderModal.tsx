@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FolderPlus, X, Loader2 } from 'lucide-react';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface CreateFolderModalProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
       setFolderName('');
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Error al crear la carpeta');
+      setError(getErrorMessage(err, 'Error al crear la carpeta'));
     } finally {
       setIsSubmitting(false);
     }

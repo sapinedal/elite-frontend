@@ -7,6 +7,7 @@ import { Skeleton } from '../../../components/ui/Skeleton';
 import { Modal } from '../../../components/ui/Modal';
 import { userService } from '../../users/services/userService';
 import { applyDetailTableFormulas, validateFormula } from '../../../lib/formula';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export default function PlantillasPage() {
   const { users, isLoading: usersLoading } = useUsers();
@@ -70,7 +71,7 @@ export default function PlantillasPage() {
       showNotification('KPI eliminado correctamente', 'success');
     } catch (error) {
       console.error(error);
-      showNotification('Error al intentar eliminar el KPI de la base de datos', 'error');
+      showNotification(getErrorMessage(error, 'Error al intentar eliminar el KPI de la base de datos'), 'error');
     }
   };
 
@@ -230,7 +231,7 @@ export default function PlantillasPage() {
       await saveKPIs(localKpis);
       showNotification('Plantilla de KPIs guardada con éxito', 'success');
     } catch (error) {
-      showNotification('Error al intentar guardar la plantilla', 'error');
+      showNotification(getErrorMessage(error, 'Error al intentar guardar la plantilla'), 'error');
     } finally {
       setIsSaving(false);
     }

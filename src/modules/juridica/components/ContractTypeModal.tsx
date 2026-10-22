@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Tag, Plus, Trash2, Loader2, CheckCircle2 } from 'lucide-react';
 import { Portal } from '../../../components/ui/Portal';
 import type { ContractType, CreateContractTypeDTO } from '../types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface ContractTypeModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ export const ContractTypeModal: React.FC<ContractTypeModalProps> = ({
     } catch (err: any) {
       console.error('Error al crear tipo de contrato:', err);
       setErrorMessage(
-        err?.response?.data?.message || err?.message || 'Error al crear el tipo de contrato'
+        getErrorMessage(err, 'Error al crear el tipo de contrato')
       );
     } finally {
       setIsSubmitting(false);

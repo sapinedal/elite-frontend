@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Trash2, X, Loader2 } from 'lucide-react';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
       await onConfirm();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Error al eliminar el elemento');
+      setError(getErrorMessage(err, 'Error al eliminar el elemento'));
     } finally {
       setIsDeleting(false);
     }

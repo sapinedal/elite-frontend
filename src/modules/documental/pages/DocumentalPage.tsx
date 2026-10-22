@@ -39,6 +39,7 @@ import { RenameModal } from '../components/RenameModal';
 import { FolderRestrictionsModal } from '../components/FolderRestrictionsModal';
 import { DocumentLogsModal } from '../components/DocumentLogsModal';
 import { DocumentalSettingsModal } from '../components/DocumentalSettingsModal';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export default function DocumentalPage() {
   const { showNotification } = useNotification();
@@ -87,7 +88,7 @@ export default function DocumentalPage() {
         setCurrentPath(data.current_path);
       } catch (err: any) {
         showNotification(
-          err.response?.data?.message || err.message || 'Error al cargar el repositorio',
+          getErrorMessage(err, 'Error al cargar el repositorio'),
           'error'
         );
       } finally {
@@ -155,7 +156,7 @@ export default function DocumentalPage() {
       const res = await documentalService.getDownloadUrl(file.path);
       window.open(res.download_url, '_blank');
     } catch (err: any) {
-      showNotification('Error al generar enlace de descarga', 'error');
+      showNotification(getErrorMessage(err, 'Error al generar enlace de descarga'), 'error');
     }
   };
 

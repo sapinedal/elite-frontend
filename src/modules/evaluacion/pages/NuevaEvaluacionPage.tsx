@@ -17,6 +17,7 @@ import { Modal } from '../../../components/ui/Modal';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import ReactMarkdown from 'react-markdown';
 import { evaluateFormula, formulaUsesColumns, detailTableColumns, applyDetailTableFormulas, normalizeDetailTable, type DetailTable } from '../../../lib/formula';
+import { getErrorMessage } from '../../../lib/apiError';
 
 /** Calcula el valor de un indicador con sus variables y, si la fórmula las usa, las columnas de su tabla de detalle. */
 const computeIndicatorValue = (formula: string | undefined, variables: Record<string, number | null>, table?: DetailTable | null): number => {
@@ -673,7 +674,7 @@ export default function NuevaEvaluacionPage() {
       showNotification('Estructura sincronizada con la plantilla actual. Revisa los parámetros y guarda los cambios.', 'success');
     } catch (error) {
       console.error('Sync Error:', error);
-      showNotification('Error al intentar sincronizar con la plantilla', 'error');
+      showNotification(getErrorMessage(error, 'Error al intentar sincronizar con la plantilla'), 'error');
     } finally {
       setIsDataLoading(false);
     }
@@ -712,7 +713,7 @@ export default function NuevaEvaluacionPage() {
         'success'
       );
     } catch (error) {
-      showNotification('Error al intentar guardar la evaluación', 'error');
+      showNotification(getErrorMessage(error, 'Error al intentar guardar la evaluación'), 'error');
     } finally {
       setIsSaving(false);
     }

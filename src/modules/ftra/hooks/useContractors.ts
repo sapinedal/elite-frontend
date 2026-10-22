@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { contractorService } from '../services/contractorService';
 import type { FtraContractor } from '../types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export function useContractors() {
   const [contractors, setContractors] = useState<FtraContractor[]>([]);
@@ -71,7 +72,7 @@ export function useContractors() {
       await fetchContractors();
       return newContractor;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al guardar el contratista.';
+      const msg = getErrorMessage(err, 'Error al guardar el contratista.');
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -87,7 +88,7 @@ export function useContractors() {
       await fetchContractors();
       return updated;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al actualizar el contratista.';
+      const msg = getErrorMessage(err, 'Error al actualizar el contratista.');
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -102,7 +103,7 @@ export function useContractors() {
       await contractorService.deleteContractor(id);
       await fetchContractors();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al eliminar el contratista.';
+      const msg = getErrorMessage(err, 'Error al eliminar el contratista.');
       setError(msg);
       throw new Error(msg);
     } finally {

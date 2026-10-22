@@ -6,6 +6,7 @@ import { useNotification } from '../../../context/NotificationContext';
 import { Mail, Lock, LogIn, Sparkles } from 'lucide-react';
 import logoinver from '../../../assets/logo_inver.svg';
 import logoelite from '../../../assets/logo_inver_bg.png';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -25,7 +26,7 @@ export default function LoginPage() {
       navigate('/app/kpi/dashboard');
     } catch (error: any) {
       console.error(error);
-      const message = error.response?.data?.message || 'Error al iniciar sesión. Verifica tus credenciales.';
+      const message = getErrorMessage(error, 'Error al iniciar sesión. Verifica tus credenciales.');
       showNotification(message, 'error');
     } finally {
       setIsLoading(false);

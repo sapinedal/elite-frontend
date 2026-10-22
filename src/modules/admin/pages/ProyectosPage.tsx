@@ -20,8 +20,11 @@ import { useProject } from '../../../context/ProjectContext';
 import { DataTable } from '../../../components/ui/DataTable';
 import { ProjectModal } from '../components/ProjectModal';
 import type { Project, CreateProjectDTO } from '../types';
+import { useNotification } from '../../../context/NotificationContext';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export default function ProyectosPage() {
+  const { showNotification } = useNotification();
   const { projects, isLoading, error, refetch } = useProjects();
   const { refreshProjects } = useProject();
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,7 +80,7 @@ export default function ProyectosPage() {
       await refreshProjects();
     } catch (err) {
       console.error('Error al eliminar proyecto:', err);
-      alert('Ocurrió un error al intentar eliminar el proyecto.');
+      showNotification(getErrorMessage(err, 'Ocurrió un error al intentar eliminar el proyecto.'), 'error');
     }
   };
 

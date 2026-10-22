@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Project } from '../types';
 import { projectService } from '../services/projectService';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export const useProjects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -15,7 +16,7 @@ export const useProjects = () => {
       setProjects(data);
     } catch (err: any) {
       console.error('Error fetching projects:', err);
-      setError(err?.response?.data?.message || 'Error al cargar los proyectos');
+      setError(getErrorMessage(err, 'Error al cargar los proyectos'));
     } finally {
       setIsLoading(false);
     }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { residenteService } from '../services/residenteService';
 import type { Residente } from '../types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export function useResidentes() {
   const [residentes, setResidentes] = useState<Residente[]>([]);
@@ -71,7 +72,7 @@ export function useResidentes() {
       await fetchResidentes();
       return newResidente;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al guardar el residente.';
+      const msg = getErrorMessage(err, 'Error al guardar el residente.');
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -87,7 +88,7 @@ export function useResidentes() {
       await fetchResidentes();
       return updated;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al actualizar el residente.';
+      const msg = getErrorMessage(err, 'Error al actualizar el residente.');
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -102,7 +103,7 @@ export function useResidentes() {
       await residenteService.deleteResidente(id);
       await fetchResidentes();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al eliminar el residente.';
+      const msg = getErrorMessage(err, 'Error al eliminar el residente.');
       setError(msg);
       throw new Error(msg);
     } finally {

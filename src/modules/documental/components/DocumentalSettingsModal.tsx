@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Settings, X, Check, Loader2, AlertTriangle, Ban, ShieldCheck } from 'lucide-react';
 import type { DocumentalSettings, DocumentalSettingsInput, ExtensionMode } from '../types/documental.types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface DocumentalSettingsModalProps {
   isOpen: boolean;
@@ -154,7 +155,7 @@ export const DocumentalSettingsModal: React.FC<DocumentalSettingsModalProps> = (
       onClose();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(e.response?.data?.message || e.message || 'Error al guardar la configuración');
+      setError(getErrorMessage(e, 'Error al guardar la configuración'));
     } finally {
       setIsSubmitting(false);
     }

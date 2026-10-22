@@ -21,6 +21,7 @@ import ProyectosPage from '../modules/admin/pages/ProyectosPage';
 import RolesPage from '../modules/admin/pages/RolesPage';
 import PermisosPage from '../modules/admin/pages/PermisosPage';
 import InterventoriaPage from '../modules/obra/pages/InterventoriaPage';
+import ContratacionPage from '../modules/contratacion/pages/ContratacionPage';
 
 export const router = createBrowserRouter([
   {
@@ -188,6 +189,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permission="contratos.ver">
             <ContratosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'contratacion',
+        element: (
+          <ProtectedRoute permission="contratacion.ver">
+            <ContratacionPage />
           </ProtectedRoute>
         ),
       },

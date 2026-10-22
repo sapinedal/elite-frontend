@@ -3,6 +3,8 @@ import { X, Calendar, ClipboardList, CheckCircle2, AlertTriangle, Eye, User } fr
 import type { FtraRecord, FtraRecordStatus } from '../types';
 import { Portal } from '../../../components/ui/Portal';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
+import { useNotification } from '../../../context/NotificationContext';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface FtraRecordDetailModalProps {
   isOpen: boolean;
@@ -17,6 +19,7 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
   record,
   onUpdateStatus,
 }) => {
+  const { showNotification } = useNotification();
   const [status, setStatus] = useState<FtraRecordStatus>('Registrada');
   const [updating, setUpdating] = useState(false);
   const [activePhoto, setActivePhoto] = useState<string | null>(null);
@@ -40,9 +43,9 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
     setUpdating(true);
     try {
       await onUpdateStatus(record.id, status);
-      alert('Estado del registro actualizado correctamente.');
+      showNotification('Estado del registro actualizado correctamente.', 'success');
     } catch (err: any) {
-      alert(err.message || 'Error al actualizar el estado.');
+      showNotification(getErrorMessage(err, 'Error al actualizar el estado.'), 'error');
     } finally {
       setUpdating(false);
     }

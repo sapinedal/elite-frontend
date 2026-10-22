@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import { config } from '../config/env';
 import { getActiveProjectId, PROJECT_HEADER } from './activeProject';
+import { scheduleGlobalErrorToast, translateAxiosError } from './apiError';
 
 const api = axios.create({
   baseURL: config.API_URL,
@@ -35,46 +36,24 @@ api.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error: AxiosError<any>) => {
-    if (error.response?.status === 401) {
+  (error: AxiosError) => {
+    const status = error.response?.status;
+
+    // Mensaje entendible para el usuario: quien use `err.message` ya recibe el texto amigable
+    const friendlyMessage = translateAxiosError(error);
+    error.message = friendlyMessage;
+
+    if (status === 401) {
       const token = localStorage.getItem('token');
       if (token) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/';
       }
-    } else if (error.response?.status === 422) {
-      // Mapear errores de validación del FormRequest
-      // Soportar dos formatos: { errors: {...} } y objeto plano {...}
-      const data = error.response?.data as any;
-      const candidate = (data && typeof data === 'object') ? (data.errors ?? data) : {};
-      const mensajes: string[] = [];
-
-      if (candidate && typeof candidate === 'object') {
-        Object.entries(candidate).forEach(([_, messages]) => {
-          if (Array.isArray(messages)) {
-            mensajes.push(...messages);
-          } else if (typeof messages === 'string') {
-            mensajes.push(messages);
-          }
-        });
-      }
-
-      const mensaje = mensajes.length > 0
-        ? mensajes.slice(0, 3).join('\n')
-        : 'Error de validación';
-
-      console.log(mensaje);
-    } else if (error.response?.status === 500) {
-      const mensaje = error.response?.data?.error ||
-        error.response?.data?.message ||
-        'Error interno del servidor';
-      console.log(mensaje);
-    } else if (error.response?.status === 400) {
-      const mensaje = error.response?.data?.error ||
-        error.response?.data?.message ||
-        'Solicitud inválida';
-      console.log(mensaje);
+    } else if (status !== 422 && !axios.isCancel(error)) {
+      // Los 422 los muestran los formularios junto a sus campos; el resto se notifica
+      // en un toast si el componente que hizo la petición no lo maneja
+      scheduleGlobalErrorToast(error, friendlyMessage);
     }
 
     return Promise.reject(error);

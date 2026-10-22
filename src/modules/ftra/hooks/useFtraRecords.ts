@@ -4,6 +4,7 @@ import { formatService } from '../services/formatService';
 import { contractorService } from '../services/contractorService';
 import { residenteService } from '../services/residenteService';
 import type { FtraRecord, FtraFormat, FtraContractor, Residente, FtraRecordStatus } from '../types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export function useFtraRecords() {
   const [records, setRecords] = useState<FtraRecord[]>([]);
@@ -103,7 +104,7 @@ export function useFtraRecords() {
       await fetchRecords();
       return newRecord;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al guardar el registro FTRA.';
+      const msg = getErrorMessage(err, 'Error al guardar el registro FTRA.');
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -119,7 +120,7 @@ export function useFtraRecords() {
       await fetchRecords();
       return updated;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al actualizar el registro FTRA.';
+      const msg = getErrorMessage(err, 'Error al actualizar el registro FTRA.');
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -135,7 +136,7 @@ export function useFtraRecords() {
       setRecords(prev => prev.map(r => r.id === id ? updated : r));
       return updated;
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al actualizar el estado.';
+      const msg = getErrorMessage(err, 'Error al actualizar el estado.');
       setError(msg);
       throw new Error(msg);
     } finally {
@@ -150,7 +151,7 @@ export function useFtraRecords() {
       await ftraRecordService.deleteRecord(id);
       await fetchRecords();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Error al eliminar el registro FTRA.';
+      const msg = getErrorMessage(err, 'Error al eliminar el registro FTRA.');
       setError(msg);
       throw new Error(msg);
     } finally {

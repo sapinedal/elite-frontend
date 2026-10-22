@@ -13,6 +13,7 @@ import {
   Info,
 } from 'lucide-react';
 import type { FolderRoleRule, RestrictedFolder, RoleOption } from '../types/documental.types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface FolderRestrictionsModalProps {
   isOpen: boolean;
@@ -110,7 +111,7 @@ export const FolderRestrictionsModal: React.FC<FolderRestrictionsModalProps> = (
       setConfirmRemovePath(null);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(e.response?.data?.message || e.message || 'Error al guardar la restricción');
+      setError(getErrorMessage(e, 'Error al guardar la restricción'));
     } finally {
       setIsSubmitting(false);
     }

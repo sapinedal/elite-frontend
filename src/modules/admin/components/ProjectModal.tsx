@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Building2, FileText, DollarSign, Code2, Tag, Loader2 } from 'lucide-react';
 import { Portal } from '../../../components/ui/Portal';
 import type { Project, CreateProjectDTO } from '../types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface ProjectModalProps {
   isOpen: boolean;
@@ -65,7 +66,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     } catch (err: any) {
       console.error('Error saving project:', err);
       setErrorMessage(
-        err?.response?.data?.message || err?.message || 'Error al guardar el proyecto'
+        getErrorMessage(err, 'Error al guardar el proyecto')
       );
     } finally {
       setIsSubmitting(false);

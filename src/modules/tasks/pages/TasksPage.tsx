@@ -21,8 +21,11 @@ import { AuditLogModal } from '../components/AuditLogModal';
 import type { Task, TaskStatus } from '../types';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
+import { useNotification } from '../../../context/NotificationContext';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export default function TasksPage() {
+  const { showNotification } = useNotification();
   const navigate = useNavigate();
 
   // Todo el personal puede acceder, crear, asignar y editar tareas en la bitácora
@@ -102,8 +105,8 @@ export default function TasksPage() {
     try {
       const freshTask = await getTaskDetails(task.id);
       setSelectedTask(freshTask);
-    } catch {
-      alert('Error al cargar comentarios recientes de la tarea.');
+    } catch (err) {
+      showNotification(getErrorMessage(err, 'Error al cargar comentarios recientes de la tarea.'), 'error');
     } finally {
       setIsLoadingDetails(false);
     }
@@ -116,8 +119,8 @@ export default function TasksPage() {
     try {
       const freshTask = await getTaskDetails(task.id);
       setSelectedTask(freshTask);
-    } catch {
-      alert('Error al cargar el historial de auditoría.');
+    } catch (err) {
+      showNotification(getErrorMessage(err, 'Error al cargar el historial de auditoría.'), 'error');
     } finally {
       setIsLoadingDetails(false);
     }
@@ -130,8 +133,8 @@ export default function TasksPage() {
     try {
       const freshTask = await getTaskDetails(task.id);
       setSelectedTask(freshTask);
-    } catch {
-      alert('Error al cargar la tarea para edición.');
+    } catch (err) {
+      showNotification(getErrorMessage(err, 'Error al cargar la tarea para edición.'), 'error');
     } finally {
       setIsLoadingDetails(false);
     }
@@ -173,7 +176,7 @@ export default function TasksPage() {
         await deleteTask(id);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Error al eliminar la tarea.';
-        alert(msg);
+        showNotification(msg, 'error');
       }
     }
   };
@@ -184,7 +187,7 @@ export default function TasksPage() {
       await updateTask(taskId, { status: newStatus });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al actualizar el estado de la tarea.';
-      alert(msg);
+      showNotification(msg, 'error');
     }
   };
 

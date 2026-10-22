@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Edit2, X, Loader2 } from 'lucide-react';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface RenameModalProps {
   isOpen: boolean;
@@ -49,7 +50,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
       await onSubmit(trimmed);
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Error al renombrar');
+      setError(getErrorMessage(err, 'Error al renombrar'));
     } finally {
       setIsSubmitting(false);
     }

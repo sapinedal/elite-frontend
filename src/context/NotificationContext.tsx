@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
+import { onGlobalError } from '../lib/apiError';
 
 type NotificationType = 'success' | 'error' | 'info' | 'warning';
 
@@ -12,6 +13,8 @@ interface Notification {
 interface NotificationContextType {
   showNotification: (message: string, type?: NotificationType) => void;
 }
+
+let notificationSeq = 0;
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
@@ -27,12 +30,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const showNotification = useCallback((message: string, type: NotificationType = 'info') => {
-    const id = Date.now();
-    setNotifications((prev) => [...prev, { id, message, type }]);
+    const id = ++notificationSeq;
+    setNotifications((prev) =>
+      // Evita repetir el mismo mensaje mientras sigue visible (ej. varias peticiones fallan a la vez)
+      prev.some((n) => n.message === message && n.type === type) ? prev : [...prev, { id, message, type }]
+    );
+    // Los errores se leen con más calma
     setTimeout(() => {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
-    }, 4000);
+    }, type === 'error' ? 7000 : 4000);
   }, []);
+
+  // Errores de la API que ningún componente manejó (ver lib/apiError.ts)
+  useEffect(() => onGlobalError((message) => showNotification(message, 'error')), [showNotification]);
 
   const removeNotification = (id: number) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -58,7 +68,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               {n.type === 'warning' && <AlertCircle size={20} />}
               {n.type === 'info' && <Info size={20} />}
             </div>
-            <p className="flex-1 text-sm font-bold text-slate-700">{n.message}</p>
+            <p className="flex-1 max-w-[420px] text-sm font-bold text-slate-700 whitespace-pre-line">{n.message}</p>
             <button onClick={() => removeNotification(n.id)} className="text-slate-300 hover:text-slate-500">
               <X size={16} />
             </button>

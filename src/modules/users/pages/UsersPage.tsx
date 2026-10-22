@@ -20,8 +20,11 @@ import { DataTable } from '../../../components/ui/DataTable';
 import { UserModal } from '../components/UserModal';
 import { PasswordChangeModal } from '../components/PasswordChangeModal';
 import type { User } from '../types';
+import { useNotification } from '../../../context/NotificationContext';
+import { getErrorMessage } from '../../../lib/apiError';
 
 export default function UsersPage() {
+  const { showNotification } = useNotification();
   const { users, isLoading, refetch } = useUsers(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -87,7 +90,7 @@ export default function UsersPage() {
       refetch();
     } catch (error) {
       console.error(error);
-      alert('Error al cambiar el estado del usuario');
+      showNotification(getErrorMessage(error, 'Error al cambiar el estado del usuario'), 'error');
     }
   };
 

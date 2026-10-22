@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, X, File, Trash2, Loader2, CheckCircle2 } from 'lucide-react';
 import type { DocumentalSettings } from '../types/documental.types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -96,7 +97,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       setSelectedFiles([]);
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Error al subir los archivos');
+      setError(getErrorMessage(err, 'Error al subir los archivos'));
     } finally {
       setIsSubmitting(false);
     }

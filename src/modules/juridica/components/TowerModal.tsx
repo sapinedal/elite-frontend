@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Building2, Loader2, Trash2, Plus, CheckCircle2 } from 'lucide-react';
 import { Portal } from '../../../components/ui/Portal';
 import type { Tower, CreateTowerDTO } from '../types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface TowerModalProps {
   isOpen: boolean;
@@ -43,7 +44,7 @@ export const TowerModal: React.FC<TowerModalProps> = ({
     } catch (err: any) {
       console.error('Error al guardar torre:', err);
       setErrorMessage(
-        err?.response?.data?.message || err?.message || 'Error al guardar la torre'
+        getErrorMessage(err, 'Error al guardar la torre')
       );
     } finally {
       setIsSubmitting(false);

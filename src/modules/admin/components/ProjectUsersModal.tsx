@@ -5,6 +5,7 @@ import { projectService } from '../services/projectService';
 import { userService } from '../../users/services/userService';
 import type { Project } from '../types';
 import type { User } from '../../users/types';
+import { getErrorMessage } from '../../../lib/apiError';
 
 interface ProjectUsersModalProps {
   isOpen: boolean;
@@ -58,7 +59,7 @@ export const ProjectUsersModal: React.FC<ProjectUsersModalProps> = ({
         setInitialIds(new Set(memberIds));
       } catch (err: any) {
         if (!cancelled) {
-          setErrorMessage(err?.response?.data?.message || 'Error al cargar los usuarios del proyecto');
+          setErrorMessage(getErrorMessage(err, 'Error al cargar los usuarios del proyecto'));
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -120,7 +121,7 @@ export const ProjectUsersModal: React.FC<ProjectUsersModalProps> = ({
       await onSaved?.();
       onClose();
     } catch (err: any) {
-      setErrorMessage(err?.response?.data?.message || 'Error al guardar los usuarios del proyecto');
+      setErrorMessage(getErrorMessage(err, 'Error al guardar los usuarios del proyecto'));
     } finally {
       setIsSubmitting(false);
     }
