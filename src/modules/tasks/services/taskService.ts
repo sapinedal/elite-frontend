@@ -11,6 +11,14 @@ export const taskService = {
   },
 
   /**
+   * IDs de los usuarios que pueden ser responsables en el proyecto activo (header X-Project-Id).
+   */
+  getAssignableUserIds: async (): Promise<number[]> => {
+    const { data } = await api.get('/v1/tasks/assignable-users');
+    return data.user_ids ?? [];
+  },
+
+  /**
    * Obtiene el detalle completo de una tarea incluyendo su historial de observaciones y auditorías.
    */
   getTaskById: async (id: number): Promise<Task> => {

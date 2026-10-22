@@ -19,6 +19,7 @@ export type TaskStatus = 'Por hacer' | 'En espera' | 'En progreso' | 'Completada
  */
 export interface Task {
   id: number;
+  project_id: number;
   title: string;
   priority: TaskPriority;
   status: TaskStatus;
@@ -32,6 +33,7 @@ export interface Task {
   updated_at: string;
   
   // Relaciones cargadas por eager loading
+  project?: { id: number; code: string; name: string };
   requested_by?: User;
   responsible?: User;
   area?: { id: number; name: string };

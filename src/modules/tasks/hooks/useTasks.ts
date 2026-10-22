@@ -5,8 +5,13 @@ import { configuracionService } from '../../configuracion/services/configuracion
 import type { Task, TaskPriority, TaskStatus, PaginatedTasksResponse } from '../types';
 import type { User } from '../../users/types';
 import type { Area } from '../../configuracion/services/configuracionService';
+import { useProject } from '../../../context/ProjectContext';
 
 export function useTasks() {
+  // Las tareas se consultan siempre dentro del proyecto activo del header
+  const { activeProject, isLoading: isLoadingProjects } = useProject();
+  const activeProjectId = activeProject?.id ?? null;
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
@@ -37,8 +42,26 @@ export function useTasks() {
     search: '',
   });
 
+  // Al cambiar de proyecto se vuelve a la página 1 y se quita el responsable filtrado,
+  // que puede no pertenecer al nuevo proyecto (ajuste de estado durante el render)
+  const [filtersProjectId, setFiltersProjectId] = useState(activeProjectId);
+  if (filtersProjectId !== activeProjectId) {
+    setFiltersProjectId(activeProjectId);
+    setCurrentPage(1);
+    setFilters(prev => (prev.responsible_id ? { ...prev, responsible_id: '' } : prev));
+  }
+
   // Carga las tareas aplicando filtros y paginación
   const fetchTasks = useCallback(async () => {
+    // Sin proyecto activo (cargando o sin asignaciones) no hay tareas que mostrar
+    if (isLoadingProjects || !activeProjectId) {
+      setTasks([]);
+      setTotalItems(0);
+      setTotalPages(0);
+      setStats({ total: 0, todo: 0, in_progress: 0, completed: 0, waiting: 0, critical: 0 });
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -77,21 +100,29 @@ export function useTasks() {
     } finally {
       setLoading(false);
     }
-  }, [filters, currentPage, perPage]);
+  }, [filters, currentPage, perPage, activeProjectId, isLoadingProjects]);
 
-  // Carga catálogos auxiliares (usuarios y áreas) para los filtros y asignaciones
+  // Carga catálogos auxiliares (usuarios y áreas) para los filtros y asignaciones.
+  // Solo se ofrecen como responsables las personas con acceso al proyecto activo.
   const fetchMetadata = useCallback(async () => {
+    if (isLoadingProjects || !activeProjectId) {
+      setUsers([]);
+      return;
+    }
+
     try {
-      const [allUsers, allAreas] = await Promise.all([
+      const [allUsers, allAreas, assignableIds] = await Promise.all([
         userService.getAllUsers(false),
-        configuracionService.getAreas()
+        configuracionService.getAreas(),
+        taskService.getAssignableUserIds()
       ]);
-      setUsers(allUsers.filter(u => u.is_active !== false && !u.deleted_at));
+      const assignable = new Set(assignableIds);
+      setUsers(allUsers.filter(u => u.is_active !== false && !u.deleted_at && assignable.has(u.id)));
       setAreas(allAreas);
     } catch (err) {
       console.error('Error cargando catálogos de bitácora:', err);
     }
-  }, []);
+  }, [activeProjectId, isLoadingProjects]);
 
   // Recarga al cambiar filtros o paginación
   useEffect(() => {
@@ -209,6 +240,7 @@ export function useTasks() {
   }, []);
 
   return {
+    activeProject,
     tasks,
     users,
     areas,

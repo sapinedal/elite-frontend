@@ -8,7 +8,7 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth();
-  const { activeProject, setProjectById, projects } = useProject();
+  const { activeProject, setProjectById, projects, isLoading: isLoadingProjects } = useProject();
 
   return (
     <header className="h-[64px] bg-white border-b border-slate-100 sticky top-0 z-20 flex items-center justify-between px-4 md:px-8 shadow-sm">
@@ -20,25 +20,40 @@ export default function Header({ onMenuClick }: HeaderProps) {
         >
           <Menu size={24} />
         </button>
-        <div className="hidden md:flex items-center gap-3">
-          <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="hidden md:inline text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
             ELITE
           </span>
-          <div className="h-4 w-px bg-slate-200" />
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl">
-            <Building2 size={15} className="text-[#004C6C]" />
-            <select
-              value={activeProject.id}
-              onChange={(e) => setProjectById(e.target.value)}
-              className="bg-transparent text-xs font-bold text-[#004C6C] outline-none cursor-pointer"
+          <div className="hidden md:block h-4 w-px bg-slate-200" />
+          {/* Proyecto activo: define qué información ve el usuario (se envía como X-Project-Id) */}
+          {isLoadingProjects ? (
+            <div className="h-8 w-40 bg-slate-100 rounded-2xl animate-pulse" />
+          ) : activeProject ? (
+            <div
+              className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl min-w-0"
+              title="Proyecto activo"
             >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
+              <Building2 size={15} className="text-[#004C6C] shrink-0" />
+              <select
+                value={activeProject.id}
+                onChange={(e) => setProjectById(e.target.value)}
+                disabled={projects.length < 2}
+                aria-label="Proyecto activo"
+                className="bg-transparent text-xs font-bold text-[#004C6C] outline-none cursor-pointer disabled:cursor-default min-w-0 max-w-[160px] md:max-w-none truncate"
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-2xl">
+              <Building2 size={15} className="text-amber-600 shrink-0" />
+              <span className="text-xs font-bold text-amber-700">Sin proyectos asignados</span>
+            </div>
+          )}
         </div>
       </div>
 

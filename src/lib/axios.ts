@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { config } from '../config/env';
+import { getActiveProjectId, PROJECT_HEADER } from './activeProject';
 
 const api = axios.create({
   baseURL: config.API_URL,
@@ -15,6 +16,12 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Proyecto activo del selector del header; el backend filtra la información por él
+    const projectId = getActiveProjectId();
+    if (projectId && !config.headers.has(PROJECT_HEADER)) {
+      config.headers.set(PROJECT_HEADER, String(projectId));
     }
     return config;
   },

@@ -103,12 +103,20 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     const inArea = formData.area_id
       ? users.filter(u => String(u.area_id) === formData.area_id)
       : users;
-    return inArea.map(u => ({
+    const options = inArea.map(u => ({
       value: u.id.toString(),
       label: u.name,
       sublabel: u.position?.name ? `${u.position.name} • ${u.email || ''}` : u.email
     }));
-  }, [users, formData.area_id]);
+
+    // `users` solo trae personas del proyecto activo: si una tarea antigua tiene un responsable
+    // que ya no está en el proyecto, se conserva como opción para no perderlo al editar
+    const current = task?.responsible;
+    if (current && String(current.id) === formData.responsible_id && !options.some(o => o.value === formData.responsible_id)) {
+      options.unshift({ value: String(current.id), label: current.name, sublabel: 'Fuera del proyecto' });
+    }
+    return options;
+  }, [users, formData.area_id, formData.responsible_id, task]);
 
   const handleAreaChange = (areaId: string) => {
     // Si el responsable elegido no pertenece a la nueva área, se limpia para no asignar a alguien de otra área

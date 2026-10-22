@@ -32,6 +32,7 @@ import type { Task, TaskStatus } from '../types';
 import type { User } from '../../users/types';
 import type { Area } from '../../configuracion/services/configuracionService';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
+import { useProject } from '../../../context/ProjectContext';
 
 // Paleta de colores HSL premium para gráficos - Aligned with ELITE palette
 const areaColors = [
@@ -119,6 +120,8 @@ const AreaIndicatorGauge = ({ areaName, count, maxVal = 50 }: { areaName: string
 
 export default function TaskDashboardPage() {
     const navigate = useNavigate();
+    const { activeProject, isLoading: isLoadingProjects } = useProject();
+    const activeProjectId = activeProject?.id ?? null;
 
     // Datos crudos del backend
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -140,12 +143,15 @@ export default function TaskDashboardPage() {
     const years = Array.from({ length: 5 }, (_, i) => (2024 + i).toString());
 
     // Carga inicial de datos completos (sin filtrar en backend para permitir rebanado local dinámico)
+    // Se recarga al cambiar el proyecto activo del header (el backend filtra por X-Project-Id)
     useEffect(() => {
+        if (isLoadingProjects || !activeProjectId) return;
+
         const loadDashboardData = async () => {
             setLoading(true);
             try {
                 const [allTasks, allAreas, allUsers] = await Promise.all([
-                    taskService.getTasks({}), // Recuperamos TODO el universo de tareas
+                    taskService.getTasks({}), // Recuperamos TODAS las tareas del proyecto activo
                     configuracionService.getAreas(),
                     userService.getAllUsers(false)
                 ]);
@@ -159,10 +165,13 @@ export default function TaskDashboardPage() {
             }
         };
         loadDashboardData();
-    }, []);
+    }, [activeProjectId, isLoadingProjects]);
+
+    // Sin proyecto activo no hay tareas que mostrar
+    const projectTasks = activeProjectId ? tasks : [];
 
     // --- REBANADO LOCAL DE DATOS (Filtros Reactivos) ---
-    const filteredTasks = tasks.filter(task => {
+    const filteredTasks = projectTasks.filter(task => {
         // 1. Filtro por Área
         if (selectedAreaId !== 'Todo' && task.area_id?.toString() !== selectedAreaId) {
             return false;
@@ -213,7 +222,7 @@ export default function TaskDashboardPage() {
     const activeYear = selectedYear !== 'Todo' ? Number(selectedYear) : new Date().getFullYear();
 
     // Filtramos tareas únicamente por área y responsable para calcular las métricas de la ventana de tiempo
-    const areaUserFiltered = tasks.filter(task => {
+    const areaUserFiltered = projectTasks.filter(task => {
         if (selectedAreaId !== 'Todo' && task.area_id?.toString() !== selectedAreaId) return false;
         if (selectedUserId !== 'Todo' && task.responsible_id?.toString() !== selectedUserId) return false;
         return true;
@@ -294,7 +303,7 @@ export default function TaskDashboardPage() {
         }, {} as Record<string, any>)
     ).map(([_, data]) => data);
 
-    if (loading) {
+    if (isLoadingProjects || (activeProjectId && loading)) {
         return (
             <div className="p-8 space-y-8 animate-pulse">
                 <div className="h-12 bg-slate-100 rounded-2xl w-64" />
@@ -317,7 +326,7 @@ export default function TaskDashboardPage() {
                         Dashboard de Tareas
                     </h1>
                     <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
-                        Control de compromisos, carga operativa e indicadores de avance
+                        {activeProject ? activeProject.name : 'Sin proyectos asignados'} · Control de compromisos, carga operativa e indicadores de avance
                     </p>
                 </div>
 

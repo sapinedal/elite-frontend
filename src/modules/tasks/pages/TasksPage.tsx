@@ -29,6 +29,7 @@ export default function TasksPage() {
   const isEditor = true;
 
   const {
+    activeProject,
     tasks,
     users,
     areas,
@@ -320,7 +321,7 @@ export default function TasksPage() {
           <div className="space-y-1">
             <h1 className="text-3xl font-black text-[#004C6C] tracking-tight">Bitácora de Tareas</h1>
             <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">
-              Planificación y compromisos operativos en tiempo real
+              {activeProject ? activeProject.name : 'Sin proyectos asignados'} · Planificación y compromisos operativos en tiempo real
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0">
@@ -333,7 +334,9 @@ export default function TasksPage() {
             </button>
             <button
               onClick={handleAddNewTaskClick}
-              className="flex items-center justify-center gap-3 px-6 py-3.5 bg-[#004C6C] text-white rounded-[20px] font-black text-xs uppercase tracking-widest hover:bg-[#003a53] shadow-lg shadow-blue-900/10 transition-all hover:scale-[1.02] active:scale-95 group shrink-0 cursor-pointer"
+              disabled={!activeProject}
+              title={activeProject ? `Nueva tarea en ${activeProject.name}` : 'No tienes proyectos asignados'}
+              className="flex items-center justify-center gap-3 px-6 py-3.5 bg-[#004C6C] text-white rounded-[20px] font-black text-xs uppercase tracking-widest hover:bg-[#003a53] shadow-lg shadow-blue-900/10 transition-all hover:scale-[1.02] active:scale-95 group shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               <PlusCircle size={18} className="transition-transform group-hover:rotate-90 duration-300" />
               Nueva Tarea

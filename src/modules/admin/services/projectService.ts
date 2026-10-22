@@ -1,5 +1,5 @@
 import api from '../../../lib/axios';
-import type { Project, CreateProjectDTO, UpdateProjectDTO } from '../types';
+import type { Project, CreateProjectDTO, UpdateProjectDTO, ProjectMember } from '../types';
 
 export const projectService = {
   getAllProjects: async (): Promise<Project[]> => {
@@ -24,5 +24,16 @@ export const projectService = {
 
   deleteProject: async (id: number): Promise<void> => {
     await api.delete(`/v1/configuracion/projects/${id}`);
+  },
+
+  getProjectUsers: async (id: number): Promise<ProjectMember[]> => {
+    const { data } = await api.get(`/v1/configuracion/projects/${id}/users`);
+    return data.data || [];
+  },
+
+  /** Reemplaza la lista completa de usuarios asignados al proyecto */
+  syncProjectUsers: async (id: number, userIds: number[]): Promise<ProjectMember[]> => {
+    const { data } = await api.put(`/v1/configuracion/projects/${id}/users`, { user_ids: userIds });
+    return data.data || [];
   }
 };

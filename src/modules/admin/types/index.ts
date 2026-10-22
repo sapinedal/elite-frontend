@@ -20,3 +20,11 @@ export interface CreateProjectDTO {
 }
 
 export interface UpdateProjectDTO extends Partial<CreateProjectDTO> {}
+
+/** Usuario asignado a un proyecto (tabla project_user) */
+export interface ProjectMember {
+  id: number;
+  name: string;
+  email: string;
+  area_id: number | null;
+}

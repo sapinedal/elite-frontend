@@ -9,8 +9,11 @@ import {
   FolderKanban,
   CheckCircle2,
   XCircle,
-  Code2
+  Code2,
+  Users
 } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
+import { ProjectUsersModal } from '../components/ProjectUsersModal';
 import { useProjects } from '../hooks/useProjects';
 import { projectService } from '../services/projectService';
 import { useProject } from '../../../context/ProjectContext';
@@ -24,6 +27,10 @@ export default function ProyectosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [usersProject, setUsersProject] = useState<Project | null>(null);
+  const { user } = useAuth();
+  // Igual que PUT /configuracion/projects/{id}/users en el backend
+  const canEditProjects = ['proyectos.editar', 'configuracion.editar'].some(p => user?.permissions?.includes(p));
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CO', {
@@ -143,6 +150,15 @@ export default function ProyectosPage() {
       header: 'Acciones',
       accessor: (project: Project) => (
         <div className="flex items-center gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+          {canEditProjects && (
+            <button
+              onClick={() => setUsersProject(project)}
+              title="Asignar Usuarios"
+              className="p-3 text-slate-400 hover:text-[#004C6C] hover:bg-blue-50 rounded-2xl transition-all"
+            >
+              <Users size={18} />
+            </button>
+          )}
           <button
             onClick={() => {
               setSelectedProject(project);
@@ -279,6 +295,13 @@ export default function ProyectosPage() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveProject}
         project={selectedProject}
+      />
+
+      <ProjectUsersModal
+        isOpen={usersProject !== null}
+        onClose={() => setUsersProject(null)}
+        onSaved={refreshProjects}
+        project={usersProject}
       />
     </div>
   );
