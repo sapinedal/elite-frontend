@@ -148,11 +148,11 @@ export default function CortesPage() {
       </div>
 
       {tabs.length > 1 && (
-        <Tabs items={tabs} activeTab={scope} onChange={(id) => setScope(id as CorteScope)} centered={false} />
+        <Tabs items={tabs} activeTab={scope} onChange={(id) => setScope(id as CorteScope)} />
       )}
 
       {/* Filtros */}
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_auto] gap-4 items-end">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-5 grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-center">
         <div className="relative">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
           <input
@@ -163,6 +163,7 @@ export default function CortesPage() {
           />
         </div>
         <CustomSelect
+          pyClass="py-3.5"
           placeholder="Proyecto"
           clearable
           onClear={() => setFilter('project_id', '')}
@@ -171,6 +172,7 @@ export default function CortesPage() {
           onChange={(v) => setFilter('project_id', String(v))}
         />
         <CustomSelect
+          pyClass="py-3.5"
           placeholder="Estado"
           searchable={false}
           clearable
