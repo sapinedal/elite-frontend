@@ -141,18 +141,18 @@ const eliteMenuItems: SidebarItem[] = [
         // Sin permiso en el grupo: se muestra si el usuario ve al menos una de sus opciones
         children: [
             {
-                id: 'contratacion-contratos',
-                label: 'Contratos de Obra',
-                icon: <FileText className="w-4 h-4" />,
-                href: '/app/contratacion',
-                permission: 'contratacion.ver',
-            },
-            {
                 id: 'contratacion-cortes',
                 label: 'Registro de Corte',
                 icon: <Scissors className="w-4 h-4" />,
                 href: '/app/contratacion/cortes',
                 permission: 'cortes.ver',
+            },
+            {
+                id: 'contratacion-contratos',
+                label: 'Contratos de Obra',
+                icon: <FileText className="w-4 h-4" />,
+                href: '/app/contratacion',
+                permission: 'contratacion.ver',
             }
         ]
     },
