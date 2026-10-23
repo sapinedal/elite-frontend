@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import LoginPage from '../modules/auth/pages/LoginPage';
 import DashboardPage from '../modules/dashboard/pages/DashboardPage';
 import PlantillasPage from '../modules/plantillas/pages/PlantillasPage';
@@ -16,12 +16,13 @@ import SeguimientoPage from '../modules/ftra/pages/SeguimientoPage';
 import RevisionPage from '../modules/ftra/pages/RevisionPage';
 import AprobacionPage from '../modules/ftra/pages/AprobacionPage';
 import DocumentalPage from '../modules/documental/pages/DocumentalPage';
-import ContratosPage from '../modules/juridica/pages/ContratosPage';
 import ProyectosPage from '../modules/admin/pages/ProyectosPage';
 import RolesPage from '../modules/admin/pages/RolesPage';
 import PermisosPage from '../modules/admin/pages/PermisosPage';
 import InterventoriaPage from '../modules/obra/pages/InterventoriaPage';
 import ContratacionPage from '../modules/contratacion/pages/ContratacionPage';
+import CortesPage from '../modules/cortes/pages/CortesPage';
+import CortesRedirect from '../modules/cortes/pages/CortesRedirect';
 
 export const router = createBrowserRouter([
   {
@@ -176,22 +177,9 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      {
-        path: 'juridica/contratos',
-        element: (
-          <ProtectedRoute permission="juridica.ver">
-            <ContratosPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'contratos',
-        element: (
-          <ProtectedRoute permission="contratos.ver">
-            <ContratosPage />
-          </ProtectedRoute>
-        ),
-      },
+      // Módulo Jurídica oculto por ahora: sus rutas llevan a Contratación
+      { path: 'juridica/contratos', element: <Navigate to="/app/contratacion" replace /> },
+      { path: 'contratos', element: <Navigate to="/app/contratacion" replace /> },
       {
         path: 'contratacion',
         element: (
@@ -200,6 +188,16 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      {
+        path: 'contratacion/cortes',
+        element: (
+          <ProtectedRoute permission="cortes.ver">
+            <CortesPage />
+          </ProtectedRoute>
+        ),
+      },
+      // Ruta anterior de Registro de Corte (conserva el ?corte=<id> de los correos ya enviados)
+      { path: 'cortes', element: <CortesRedirect /> },
       {
         path: 'proyectos',
         element: (

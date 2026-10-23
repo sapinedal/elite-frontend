@@ -15,10 +15,10 @@ import {
     Key,
     Building2,
     FolderArchive,
-    Scale,
     FileText,
     FolderLock,
     FileSignature,
+    Scissors,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo_inver.svg';
@@ -133,26 +133,12 @@ const eliteMenuItems: SidebarItem[] = [
         ]
     },
 
-    {
-        id: 'juridica',
-        label: 'Módulo Jurídica',
-        icon: <Scale className="w-5 h-5" />,
-        permission: 'juridica.ver',
-        children: [
-            {
-                id: 'contratos',
-                label: 'Contratos & Pólizas',
-                icon: <FileText className="w-4 h-4" />,
-                href: '/app/juridica/contratos',
-                permission: 'juridica.ver',
-            }
-        ]
-    },
+    // Módulo Jurídica oculto por ahora: los contratos de obra se gestionan en Contratación
     {
         id: 'contratacion',
         label: 'Módulo Contratación',
         icon: <FileSignature className="w-5 h-5" />,
-        permission: 'contratacion.ver',
+        // Sin permiso en el grupo: se muestra si el usuario ve al menos una de sus opciones
         children: [
             {
                 id: 'contratacion-contratos',
@@ -160,6 +146,13 @@ const eliteMenuItems: SidebarItem[] = [
                 icon: <FileText className="w-4 h-4" />,
                 href: '/app/contratacion',
                 permission: 'contratacion.ver',
+            },
+            {
+                id: 'contratacion-cortes',
+                label: 'Registro de Corte',
+                icon: <Scissors className="w-4 h-4" />,
+                href: '/app/contratacion/cortes',
+                permission: 'cortes.ver',
             }
         ]
     },
@@ -196,13 +189,6 @@ const eliteMenuItems: SidebarItem[] = [
                 href: '/app/proyectos',
                 icon: <FolderLock className="w-4 h-4" />,
                 permission: 'proyectos.ver',
-            },
-            {
-                id: 'contratos',
-                label: 'Contratos',
-                href: '/app/contratos',
-                icon: <FileText className="w-4 h-4" />,
-                permission: 'contratos.ver',
             },
             {
                 id: 'areas-cargos',

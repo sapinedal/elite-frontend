@@ -7,6 +7,12 @@ export interface ContractTower {
 export interface ContractTypeOption {
   id: number;
   name: string;
+  description?: string | null;
+}
+
+export interface ContractTypePayload {
+  name: string;
+  description?: string | null;
 }
 
 export interface ContractPolicy {
@@ -115,4 +121,12 @@ export interface ContractFilters {
   contract_type_id: string;
   status: string;
   alerts_only: boolean;
+}
+
+export interface ContractPage {
+  data: Contract[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
 }

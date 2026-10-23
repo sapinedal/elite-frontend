@@ -2,8 +2,11 @@ import api from '../../../lib/axios';
 import type {
   Contract,
   ContractDocument,
+  ContractPage,
   ContractPayload,
   ContractTower,
+  ContractTypeOption,
+  ContractTypePayload,
   ContratacionAlerts,
   ContratacionCatalogs,
 } from '../types';
@@ -21,12 +24,33 @@ export const contratacionService = {
     return data.data;
   },
 
+  getContractTypes: async (): Promise<ContractTypeOption[]> => {
+    const { data } = await api.get(`${BASE}/contract-types`);
+    return data.data;
+  },
+
+  createContractType: async (payload: ContractTypePayload): Promise<ContractTypeOption> => {
+    const { data } = await api.post(`${BASE}/contract-types`, payload);
+    return data.data;
+  },
+
+  updateContractType: async (id: number, payload: ContractTypePayload): Promise<ContractTypeOption> => {
+    const { data } = await api.put(`${BASE}/contract-types/${id}`, payload);
+    return data.data;
+  },
+
+  /** Devuelve el mensaje del backend: si el tipo tiene contratos se desactiva en lugar de eliminarse */
+  deleteContractType: async (id: number): Promise<string> => {
+    const { data } = await api.delete(`${BASE}/contract-types/${id}`);
+    return data.message;
+  },
+
   getAlerts: async (): Promise<ContratacionAlerts> => {
     const { data } = await api.get(`${BASE}/alerts`);
     return data.data;
   },
 
-  getContracts: async (filters: Record<string, unknown> = {}): Promise<Contract[]> => {
+  getContracts: async (filters: Record<string, unknown> = {}): Promise<ContractPage> => {
     const { data } = await api.get(`${BASE}/contracts`, { params: filters });
     return data.data;
   },

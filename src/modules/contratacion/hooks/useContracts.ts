@@ -29,6 +29,9 @@ export function useContracts() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [alerts, setAlerts] = useState<ContratacionAlerts | null>(null);
   const [filters, setFilters] = useState<ContractFilters>(EMPTY_FILTERS);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(15);
+  const [pagination, setPagination] = useState({ total: 0, lastPage: 1 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,25 +55,33 @@ export function useContracts() {
     setLoading(true);
     setError(null);
     try {
-      const params: Record<string, unknown> = {};
+      const params: Record<string, unknown> = { page, per_page: perPage };
       if (filters.search) params.search = filters.search;
       if (filters.tower_id) params.tower_id = filters.tower_id;
       if (filters.contract_type_id) params.contract_type_id = filters.contract_type_id;
       if (filters.status) params.status = filters.status;
       if (filters.alerts_only) params.alerts_only = 'true';
 
-      setContracts(await contratacionService.getContracts(params));
+      const result = await contratacionService.getContracts(params);
+      // Si un cambio dejó la página actual vacía (ej. al eliminar el último de la página), se vuelve a la última
+      if (result.data.length === 0 && result.current_page > 1) {
+        setPage(result.last_page);
+        return;
+      }
+      setContracts(result.data);
+      setPagination({ total: result.total, lastPage: result.last_page });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Error al cargar los contratos.'));
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, page, perPage]);
 
   // Catálogos (frentes del proyecto) y alertas dependen del proyecto activo
   useEffect(() => {
     if (!projectId) return;
     setFilters(EMPTY_FILTERS);
+    setPage(1);
     fetchCatalogs();
     fetchAlerts();
   }, [projectId, fetchCatalogs, fetchAlerts]);
@@ -80,11 +91,21 @@ export function useContracts() {
     fetchContracts();
   }, [projectId, fetchContracts]);
 
+  // Cambiar un filtro vuelve a la primera página
   const setFilter = useCallback(<K extends keyof ContractFilters>(key: K, value: ContractFilters[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
   }, []);
 
-  const clearFilters = useCallback(() => setFilters(EMPTY_FILTERS), []);
+  const clearFilters = useCallback(() => {
+    setFilters(EMPTY_FILTERS);
+    setPage(1);
+  }, []);
+
+  const changePerPage = useCallback((value: number) => {
+    setPerPage(value);
+    setPage(1);
+  }, []);
 
   // Tras cualquier cambio se refrescan contratos y alertas (faltantes y pólizas)
   const refresh = useCallback(async () => {
@@ -128,11 +149,17 @@ export function useContracts() {
     contracts,
     alerts,
     filters,
+    page,
+    perPage,
+    pagination,
+    setPage,
+    changePerPage,
     loading,
     error,
     setFilter,
     clearFilters,
     refresh,
+    refreshCatalogs: fetchCatalogs,
     saveContract,
     deleteContract,
     createTower,

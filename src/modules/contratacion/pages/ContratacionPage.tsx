@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react';
 import {
-  FileSignature, Plus, Search, FolderOpen, Edit2, Trash2, AlertTriangle, ShieldAlert, Layers, X,
+  FileSignature, Plus, Search, FolderOpen, Edit2, Trash2, AlertTriangle, ShieldAlert, Layers, X, Tag,
 } from 'lucide-react';
 import { DataTable } from '../../../components/ui/DataTable';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Modal } from '../../../components/ui/Modal';
+import { Pagination } from '../../../components/ui/Pagination';
 import { useAuth } from '../../../context/AuthContext';
 import { useNotification } from '../../../context/NotificationContext';
 import { useContracts } from '../hooks/useContracts';
 import { ContractFormModal } from '../components/ContractFormModal';
 import { ContractDocumentsModal } from '../components/ContractDocumentsModal';
 import { ContractAlertsPanel } from '../components/ContractAlertsPanel';
+import { ContractTypesModal } from '../components/ContractTypesModal';
 import type { Contract, ContractPayload } from '../types';
 
 const STATUS_STYLES: Record<string, string> = {
@@ -31,8 +33,8 @@ export default function ContratacionPage() {
   const { useCan } = useAuth();
   const { showNotification } = useNotification();
   const {
-    activeProject, catalogs, contracts, alerts, filters, loading, error,
-    setFilter, clearFilters, refresh, saveContract, deleteContract, createTower,
+    activeProject, catalogs, contracts, alerts, filters, page, perPage, pagination, loading, error,
+    setFilter, clearFilters, setPage, changePerPage, refresh, refreshCatalogs, saveContract, deleteContract, createTower,
   } = useContracts();
 
   const canCreate = useCan('contratacion.crear');
@@ -43,14 +45,16 @@ export default function ContratacionPage() {
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [documentsContractId, setDocumentsContractId] = useState<number | null>(null);
   const [contractToDelete, setContractToDelete] = useState<Contract | null>(null);
+  const [typesOpen, setTypesOpen] = useState(false);
 
   const hasFilters = Boolean(filters.search || filters.tower_id || filters.contract_type_id || filters.status || filters.alerts_only);
 
   const stats = useMemo(() => ({
-    total: contracts.length,
+    // Total del proyecto con los filtros actuales (el listado viene paginado)
+    total: pagination.total,
     missing: alerts?.missing_documents.length ?? 0,
     policies: alerts?.expiring_policies.length ?? 0,
-  }), [contracts, alerts]);
+  }), [pagination.total, alerts]);
 
   const openCreate = () => {
     setEditingContract(null);
@@ -191,12 +195,20 @@ export default function ContratacionPage() {
             <p className="text-xs font-bold text-white/60 uppercase tracking-widest mt-1">{activeProject.name}</p>
           </div>
         </div>
-        {canCreate && (
-          <button onClick={openCreate}
-            className="relative z-10 flex items-center justify-center gap-2 bg-[#EE9D4C] hover:bg-[#e08a35] text-white px-6 py-3.5 rounded-2xl font-bold shadow-lg transition-all hover:scale-[1.02]">
-            <Plus size={18} /> Nuevo contrato
-          </button>
-        )}
+        <div className="relative z-10 flex flex-col sm:flex-row gap-3">
+          {canEdit && (
+            <button onClick={() => setTypesOpen(true)}
+              className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border border-white/15 text-white px-5 py-3.5 rounded-2xl font-bold transition-all">
+              <Tag size={18} /> Tipos de contrato
+            </button>
+          )}
+          {canCreate && (
+            <button onClick={openCreate}
+              className="flex items-center justify-center gap-2 bg-[#EE9D4C] hover:bg-[#e08a35] text-white px-6 py-3.5 rounded-2xl font-bold shadow-lg transition-all hover:scale-[1.02]">
+              <Plus size={18} /> Nuevo contrato
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Indicadores */}
@@ -281,6 +293,17 @@ export default function ContratacionPage() {
         emptyMessage="No hay contratos registrados para este proyecto."
       />
 
+      {pagination.total > 0 && (
+        <Pagination
+          currentPage={page}
+          totalPages={pagination.lastPage}
+          onPageChange={setPage}
+          totalItems={pagination.total}
+          perPage={perPage}
+          onPerPageChange={changePerPage}
+        />
+      )}
+
       <ContractFormModal
         isOpen={formOpen}
         onClose={() => setFormOpen(false)}
@@ -299,6 +322,13 @@ export default function ContratacionPage() {
         catalogs={catalogs}
         canUpload={canCreate || canEdit}
         canDelete={canEdit}
+      />
+
+      <ContractTypesModal
+        isOpen={typesOpen}
+        onClose={() => setTypesOpen(false)}
+        onChanged={refreshCatalogs}
+        canDelete={canDelete}
       />
 
       <Modal
