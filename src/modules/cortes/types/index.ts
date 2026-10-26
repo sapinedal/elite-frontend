@@ -3,11 +3,14 @@ export type CorteStatus =
   | 'pendiente_director'
   | 'pendiente_gerencia'
   | 'devuelto'
-  | 'aprobado';
+  | 'aprobado'
+  | 'facturado';
 
 export type CorteStageKey = 'interventor' | 'director_obra' | 'gerencia';
 
-export type CorteScope = 'mine' | 'pending' | 'all';
+export type CorteScope = 'mine' | 'pending' | 'all' | 'billing';
+
+export type InvoiceDocumentType = 'factura_inicial' | 'nota_credito' | 'factura_reemplazo';
 
 export interface CorteProjectOption {
   id: number;
@@ -31,6 +34,9 @@ export interface CorteCatalogs {
   /** Etapas que el usuario puede revisar */
   review_stages: CorteStageKey[];
   can_view_all: boolean;
+  /** Puede cargar facturas a cortes aprobados (cortes.facturar) */
+  can_invoice: boolean;
+  invoice_document_types: { key: InvoiceDocumentType; label: string }[];
   stages: { key: CorteStageKey; label: string; status: CorteStatus }[];
   statuses: { key: CorteStatus; label: string }[];
 }
@@ -45,7 +51,7 @@ export interface CorteProgressStep {
 
 export interface CorteHistoryEntry {
   id: number;
-  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado';
+  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'factura';
   stage: CorteStageKey | null;
   stage_label: string | null;
   comment: string | null;
@@ -78,9 +84,33 @@ export interface Corte {
   approved_at: string | null;
   can_review: boolean;
   can_resubmit: boolean;
+  can_invoice: boolean;
+  invoices_count: number;
   // Solo en el detalle
   progress?: CorteProgressStep[];
   history?: CorteHistoryEntry[];
+  invoices?: CorteInvoice[];
+}
+
+export interface CorteInvoice {
+  id: number;
+  invoice_number: string;
+  document_type: InvoiceDocumentType;
+  document_type_label: string;
+  related_document: string | null;
+  observation: string | null;
+  file_name: string;
+  file_size: number;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
+export interface CorteInvoicePayload {
+  invoice_number: string;
+  document_type: InvoiceDocumentType;
+  related_document: string | null;
+  observation: string | null;
+  upload_token: string;
 }
 
 export interface CortePayload {
@@ -111,4 +141,6 @@ export interface CortePage {
 export interface CorteCounts {
   mine: number;
   pending: number;
+  /** Cortes aprobados que aún no tienen factura */
+  billing: number;
 }

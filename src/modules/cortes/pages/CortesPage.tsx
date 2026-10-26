@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Scissors, Plus, Search, X, FileText, ClipboardCheck, Layers, Eye } from 'lucide-react';
+import { Scissors, Plus, Search, X, FileText, ClipboardCheck, Layers, Eye, Receipt } from 'lucide-react';
 import { DataTable } from '../../../components/ui/DataTable';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
@@ -20,7 +20,7 @@ export default function CortesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     catalogs, cortes, counts, scope, filters, page, perPage, pagination, loading, error,
-    setScope, setFilter, clearFilters, setPage, changePerPage, createCorte, resubmitCorte, reviewCorte,
+    setScope, setFilter, clearFilters, setPage, changePerPage, createCorte, resubmitCorte, reviewCorte, createInvoice,
   } = useCortes();
 
   const canCreate = useCan('cortes.crear');
@@ -45,6 +45,7 @@ export default function CortesPage() {
   const tabs = useMemo(() => [
     { id: 'mine', label: 'Mis registros', icon: <FileText size={14} />, count: counts.mine },
     ...(isReviewer ? [{ id: 'pending', label: 'Por revisar', icon: <ClipboardCheck size={14} />, count: counts.pending }] : []),
+    ...(catalogs?.can_invoice ? [{ id: 'billing', label: 'Facturación', icon: <Receipt size={14} />, count: counts.billing }] : []),
     ...(catalogs?.can_view_all ? [{ id: 'all', label: 'Todos', icon: <Layers size={14} /> }] : []),
   ], [counts, isReviewer, catalogs]);
 
@@ -59,6 +60,12 @@ export default function CortesPage() {
   const handleReview = async (id: number, decision: 'aprobar' | 'devolver', comment?: string) => {
     const corte = await reviewCorte(id, decision, comment);
     showNotification(decision === 'aprobar' ? 'Corte aprobado.' : 'Corte devuelto al residente.', 'success');
+    return corte;
+  };
+
+  const handleCreateInvoice = async (corteId: number, payload: Parameters<typeof createInvoice>[1]) => {
+    const corte = await createInvoice(corteId, payload);
+    showNotification('Documento cargado. Se notificó para su registro en Multifox.', 'success');
     return corte;
   };
 
@@ -112,14 +119,20 @@ export default function CortesPage() {
     {
       header: 'Acciones',
       className: 'text-right',
-      accessor: (c: Corte) => (
-        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => setDetailId(c.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap ${c.can_review || c.can_resubmit ? 'bg-[#EE9D4C] text-white hover:bg-[#e08a35]' : 'text-[#004C6C] hover:bg-blue-50'}`}>
-            <Eye size={15} /> {c.can_review ? 'Revisar' : c.can_resubmit ? 'Corregir' : 'Ver'}
-          </button>
-        </div>
-      ),
+      accessor: (c: Corte) => {
+        // Acción principal según lo que el usuario puede hacer con el corte
+        const pendingInvoice = c.can_invoice && c.status === 'aprobado';
+        const highlighted = c.can_review || c.can_resubmit || pendingInvoice;
+        const label = c.can_review ? 'Revisar' : c.can_resubmit ? 'Corregir' : pendingInvoice ? 'Facturar' : 'Ver';
+        return (
+          <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setDetailId(c.id)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap ${highlighted ? 'bg-[#EE9D4C] text-white hover:bg-[#e08a35]' : 'text-[#004C6C] hover:bg-blue-50'}`}>
+              {pendingInvoice ? <Receipt size={15} /> : <Eye size={15} />} {label}
+            </button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -197,7 +210,11 @@ export default function CortesPage() {
         data={cortes}
         isLoading={loading}
         onRowClick={(c) => setDetailId(c.id)}
-        emptyMessage={scope === 'pending' ? 'No tienes cortes pendientes de revisión.' : 'Aún no hay cortes registrados.'}
+        emptyMessage={
+          scope === 'pending' ? 'No tienes cortes pendientes de revisión.'
+            : scope === 'billing' ? 'No hay cortes aprobados para facturar.'
+            : 'Aún no hay cortes registrados.'
+        }
       />
 
       {pagination.total > 0 && (
@@ -224,6 +241,9 @@ export default function CortesPage() {
         onClose={closeDetail}
         onReview={handleReview}
         onResubmit={openResubmit}
+        onCreateInvoice={handleCreateInvoice}
+        invoiceDocumentTypes={catalogs?.invoice_document_types ?? []}
+        maxUploadMb={catalogs?.max_upload_mb ?? 1024}
       />
     </div>
   );

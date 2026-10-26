@@ -6,14 +6,18 @@ import { Portal } from '../../../components/ui/Portal';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { corteService, getApiErrorMessage } from '../services/corteService';
 import { CorteStatusBadge } from './CorteStatusBadge';
+import { CorteInvoicesSection } from './CorteInvoicesSection';
 import { formatBytes } from '../utils/format';
-import type { Corte, CorteHistoryEntry, CorteProgressStep } from '../types';
+import type { Corte, CorteHistoryEntry, CorteInvoicePayload, CorteProgressStep, InvoiceDocumentType } from '../types';
 
 interface CorteDetailModalProps {
   corteId: number | null;
   onClose: () => void;
   onReview: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Corte>;
   onResubmit: (corte: Corte) => void;
+  onCreateInvoice: (corteId: number, payload: CorteInvoicePayload) => Promise<Corte>;
+  invoiceDocumentTypes: { key: InvoiceDocumentType; label: string }[];
+  maxUploadMb: number;
 }
 
 const STEP_STYLES: Record<CorteProgressStep['state'], { icon: React.ReactNode; tone: string; text: string }> = {
@@ -28,6 +32,7 @@ const ACTION_LABELS: Record<CorteHistoryEntry['action'], { label: string; tone: 
   reenviado: { label: 'Reenviado', tone: 'text-[#004C6C]' },
   aprobado: { label: 'Aprobado', tone: 'text-green-600' },
   devuelto: { label: 'Devuelto', tone: 'text-red-600' },
+  factura: { label: 'Documento de facturación cargado', tone: 'text-teal-700' },
 };
 
 // El contenido se monta por cada corte abierto (`key`), así arranca sin datos del corte anterior
@@ -37,7 +42,9 @@ export const CorteDetailModal: React.FC<CorteDetailModalProps> = ({ corteId, ...
   </Portal>
 );
 
-const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { corteId: number }> = ({ corteId, onClose, onReview, onResubmit }) => {
+const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { corteId: number }> = ({
+  corteId, onClose, onReview, onResubmit, onCreateInvoice, invoiceDocumentTypes, maxUploadMb,
+}) => {
   const [corte, setCorte] = useState<Corte | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -207,6 +214,17 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
                     <RotateCcw size={16} /> Corregir y reenviar
                   </button>
                 </div>
+              )}
+
+              {/* Facturación: con las tres aprobaciones */}
+              {(corte.can_invoice || (corte.invoices?.length ?? 0) > 0) && (
+                <CorteInvoicesSection
+                  corte={corte}
+                  documentTypes={invoiceDocumentTypes}
+                  maxUploadMb={maxUploadMb}
+                  onCreate={onCreateInvoice}
+                  onCreated={setCorte}
+                />
               )}
 
               {/* Historial */}

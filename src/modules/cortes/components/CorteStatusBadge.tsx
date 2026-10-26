@@ -7,6 +7,7 @@ const STATUS_STYLES: Record<CorteStatus, string> = {
   pendiente_gerencia: 'bg-purple-50 text-purple-600',
   devuelto: 'bg-red-50 text-red-600',
   aprobado: 'bg-green-50 text-green-600',
+  facturado: 'bg-teal-50 text-teal-700',
 };
 
 export const CorteStatusBadge: React.FC<{ status: CorteStatus; label: string }> = ({ status, label }) => (
