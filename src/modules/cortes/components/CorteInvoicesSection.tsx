@@ -15,8 +15,8 @@ interface CorteInvoicesSectionProps {
 }
 
 const inputClass =
-  'w-full bg-white border border-slate-100 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none transition-all shadow-sm placeholder:text-slate-300 disabled:opacity-60';
-const labelClass = 'text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1';
+  'w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-700 outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:bg-white focus:border-[#004C6C] focus:ring-4 focus:ring-blue-50 disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed';
+const labelClass = 'text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1';
 
 const TYPE_STYLES: Record<InvoiceDocumentType, string> = {
   factura_inicial: 'bg-blue-50 text-[#004C6C]',
@@ -187,7 +187,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
               {documentTypes.map((type) => (
                 <button key={type.key} type="button" disabled={submitting}
                   onClick={() => { setDocumentType(type.key); if (type.key === 'factura_inicial') setRelatedDocument(''); }}
-                  className={`px-4 py-3 rounded-2xl text-sm font-bold transition-all ${documentType === type.key ? 'bg-[#004C6C] text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                  className={`px-4 py-3 rounded-2xl border text-sm font-bold transition-all ${documentType === type.key ? 'bg-[#004C6C] border-[#004C6C] text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-[#004C6C]/40 hover:bg-slate-50'}`}>
                   {type.label}
                 </button>
               ))}
@@ -224,7 +224,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
             <div onClick={() => !submitting && fileInputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => { e.preventDefault(); if (!submitting) selectFile(e.dataTransfer.files[0]); }}
-              className="border-2 border-dashed border-slate-200 hover:border-[#004C6C]/40 rounded-3xl p-5 flex flex-col items-center justify-center gap-1.5 text-center cursor-pointer bg-white transition-all">
+              className="border-2 border-dashed border-slate-300 hover:border-[#004C6C]/60 hover:bg-blue-50/30 rounded-3xl p-5 flex flex-col items-center justify-center gap-1.5 text-center cursor-pointer bg-slate-50 transition-all">
               <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.xml,.zip,.png,.jpg,.jpeg"
                 onChange={(e) => { selectFile(e.target.files?.[0]); e.target.value = ''; }} />
               {file ? (
@@ -235,7 +235,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
                 </>
               ) : (
                 <>
-                  <UploadCloud size={24} className="text-slate-300" />
+                  <UploadCloud size={24} className="text-slate-400" />
                   <p className="text-sm font-bold text-slate-500">Arrastra la factura o haz clic (PDF, XML o ZIP)</p>
                 </>
               )}
