@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Trash2, X, Loader2 } from 'lucide-react';
 import { getErrorMessage } from '../../../lib/apiError';
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   onClose,
   onConfirm,
 }) => {
+  useEscapeToClose(isOpen, onClose);
+
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

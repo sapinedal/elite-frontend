@@ -172,7 +172,7 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, u
   };
 
   return (
-    <Portal isOpen={isOpen}>
+    <Portal isOpen={isOpen} onClose={onClose}>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
         <div className="bg-[#f8fafc] w-full max-w-3xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-in">
           

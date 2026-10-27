@@ -42,7 +42,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ isOpen
   };
 
   return (
-    <Portal isOpen={isOpen}>
+    <Portal isOpen={isOpen} onClose={onClose}>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 animate-fade-in">
         <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden flex flex-col animate-scale-in">
           <div className="p-10 space-y-8">

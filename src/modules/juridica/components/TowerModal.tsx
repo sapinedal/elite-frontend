@@ -52,7 +52,7 @@ export const TowerModal: React.FC<TowerModalProps> = ({
   };
 
   return (
-    <Portal isOpen={isOpen}>
+    <Portal isOpen={isOpen} onClose={onClose}>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 bg-slate-900/60 backdrop-blur-md animate-fade-in">
         <div
           className="bg-white rounded-[32px] w-full max-w-lg max-h-[90vh] shadow-2xl overflow-hidden border border-slate-100 animate-scale-up flex flex-col"

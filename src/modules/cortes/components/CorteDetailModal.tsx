@@ -3,6 +3,7 @@ import {
   X, Scissors, Download, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, FileText,
 } from 'lucide-react';
 import { Portal } from '../../../components/ui/Portal';
+import { HistoryButton, HistoryModal } from '../../../components/ui/HistoryModal';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { corteService, getApiErrorMessage } from '../services/corteService';
 import { CorteStatusBadge } from './CorteStatusBadge';
@@ -16,6 +17,7 @@ interface CorteDetailModalProps {
   onReview: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Corte>;
   onResubmit: (corte: Corte) => void;
   onCreateInvoice: (corteId: number, payload: CorteInvoicePayload) => Promise<Corte>;
+  onConfirmMultifox: (invoiceId: number) => Promise<Corte>;
   invoiceDocumentTypes: { key: InvoiceDocumentType; label: string }[];
   maxUploadMb: number;
 }
@@ -33,17 +35,18 @@ const ACTION_LABELS: Record<CorteHistoryEntry['action'], { label: string; tone: 
   aprobado: { label: 'Aprobado', tone: 'text-green-600' },
   devuelto: { label: 'Devuelto', tone: 'text-red-600' },
   factura: { label: 'Documento de facturación cargado', tone: 'text-teal-700' },
+  multifox: { label: 'Cargada en Multifox', tone: 'text-green-700' },
 };
 
 // El contenido se monta por cada corte abierto (`key`), así arranca sin datos del corte anterior
 export const CorteDetailModal: React.FC<CorteDetailModalProps> = ({ corteId, ...props }) => (
-  <Portal isOpen={corteId !== null}>
+  <Portal isOpen={corteId !== null} onClose={props.onClose}>
     {corteId !== null && <CorteDetailContent key={corteId} corteId={corteId} {...props} />}
   </Portal>
 );
 
 const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { corteId: number }> = ({
-  corteId, onClose, onReview, onResubmit, onCreateInvoice, invoiceDocumentTypes, maxUploadMb,
+  corteId, onClose, onReview, onResubmit, onCreateInvoice, onConfirmMultifox, invoiceDocumentTypes, maxUploadMb,
 }) => {
   const [corte, setCorte] = useState<Corte | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +54,7 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
   const [decision, setDecision] = useState<'aprobar' | 'devolver' | null>(null);
   const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     corteService.getCorte(corteId)
@@ -107,9 +111,12 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
               )}
             </div>
           </div>
-          <button onClick={onClose} className="p-3 text-slate-300 hover:bg-slate-50 rounded-2xl transition-all cursor-pointer">
-            <X size={24} />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {corte && <HistoryButton count={corte.history?.length} onClick={() => setHistoryOpen(true)} />}
+            <button onClick={onClose} className="p-3 text-slate-300 hover:bg-slate-50 rounded-2xl transition-all cursor-pointer">
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
         <div className="p-8 space-y-6 overflow-y-auto flex-1">
@@ -224,38 +231,39 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
                   maxUploadMb={maxUploadMb}
                   onCreate={onCreateInvoice}
                   onCreated={setCorte}
+                  onConfirmMultifox={onConfirmMultifox}
                 />
               )}
-
-              {/* Historial */}
-              <div className="bg-white rounded-3xl border border-slate-100 p-6">
-                <h3 className="font-black text-[#004C6C] tracking-tight mb-4">Historial</h3>
-                <ol className="relative border-l-2 border-slate-100 ml-2 space-y-5">
-                  {(corte.history ?? []).map((entry) => {
-                    const action = ACTION_LABELS[entry.action];
-                    return (
-                      <li key={entry.id} className="ml-5">
-                        <span className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-white border-2 border-slate-300" />
-                        <p className="text-sm font-bold text-slate-700">
-                          <span className={`font-black ${action.tone}`}>{action.label}</span>
-                          {entry.stage_label ? ` por ${entry.stage_label}` : ''}
-                          <span className="text-slate-400 font-bold"> · {entry.user ?? '—'}</span>
-                        </p>
-                        <p className="text-[11px] font-bold text-slate-400">
-                          {formatDateTime(entry.created_at)}{entry.file_name ? ` · ${entry.file_name}` : ''}
-                        </p>
-                        {entry.comment && (
-                          <p className="mt-1 text-xs font-medium text-slate-600 bg-slate-50 rounded-xl px-3 py-2 whitespace-pre-line">{entry.comment}</p>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ol>
-              </div>
             </>
           )}
         </div>
       </div>
+
+      {corte && (
+        <HistoryModal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} subtitle={`Corte ${corte.code}`}>
+          <ol className="relative border-l-2 border-slate-100 ml-2 space-y-5">
+            {(corte.history ?? []).map((entry) => {
+              const action = ACTION_LABELS[entry.action];
+              return (
+                <li key={entry.id} className="ml-5">
+                  <span className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-white border-2 border-slate-300" />
+                  <p className="text-sm font-bold text-slate-700">
+                    <span className={`font-black ${action.tone}`}>{action.label}</span>
+                    {entry.stage_label ? ` por ${entry.stage_label}` : ''}
+                    <span className="text-slate-400 font-bold"> · {entry.user ?? '—'}</span>
+                  </p>
+                  <p className="text-[11px] font-bold text-slate-400">
+                    {formatDateTime(entry.created_at)}{entry.file_name ? ` · ${entry.file_name}` : ''}
+                  </p>
+                  {entry.comment && (
+                    <p className="mt-1 text-xs font-medium text-slate-600 bg-slate-50 rounded-xl px-3 py-2 whitespace-pre-line">{entry.comment}</p>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </HistoryModal>
+      )}
     </div>
   );
 };

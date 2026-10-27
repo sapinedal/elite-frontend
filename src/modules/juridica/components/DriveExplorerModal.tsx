@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, FileText, ExternalLink, RefreshCw, Folder, CloudCheck, ShieldAlert } from 'lucide-react';
 import api from '../../../lib/axios';
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 
 interface DriveFile {
   id: string;
@@ -18,6 +19,8 @@ interface DriveExplorerModalProps {
 }
 
 export function DriveExplorerModal({ isOpen, onClose, folderId = '1YIUcRPuGpLlfvX_XSymzjekEy4jAqlwD', contractName }: DriveExplorerModalProps) {
+  useEscapeToClose(isOpen, onClose);
+
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [isConfigured, setIsConfigured] = useState<boolean>(true);

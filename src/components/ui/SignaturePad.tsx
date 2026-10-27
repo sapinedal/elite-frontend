@@ -226,7 +226,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
       )}
 
       {/* Modal de Firma en Portal */}
-      <Portal isOpen={isModalOpen}>
+      <Portal isOpen={isModalOpen} onClose={handleCancel}>
         <div className="fixed inset-0 z-99999 flex items-center justify-center sm:p-4 bg-slate-950/60 sm:backdrop-blur-xs animate-fade-in">
           <div className="bg-[#f8fafc] w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-lg rounded-none sm:rounded-[32px] shadow-2xl overflow-hidden flex flex-col p-6 space-y-4 animate-scale-in">
             

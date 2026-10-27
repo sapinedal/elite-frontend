@@ -19,6 +19,8 @@ import {
     FolderLock,
     FileSignature,
     Scissors,
+    ShoppingCart,
+    Wallet,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo_inver.svg';
@@ -146,6 +148,20 @@ const eliteMenuItems: SidebarItem[] = [
                 icon: <Scissors className="w-4 h-4" />,
                 href: '/app/contratacion/cortes',
                 permission: 'cortes.ver',
+            },
+            {
+                id: 'contratacion-ordenes',
+                label: 'Registro de Orden',
+                icon: <ShoppingCart className="w-4 h-4" />,
+                href: '/app/contratacion/ordenes',
+                permission: 'ordenes.ver',
+            },
+            {
+                id: 'contratacion-pagos',
+                label: 'Cuentas por pagar',
+                icon: <Wallet className="w-4 h-4" />,
+                href: '/app/contratacion/cuentas-por-pagar',
+                permission: 'pagos.ver',
             },
             {
                 id: 'contratacion-contratos',

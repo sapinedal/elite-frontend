@@ -20,7 +20,7 @@ const emptyForm: ContractTypePayload = { name: '', description: '' };
 
 // El contenido se monta en cada apertura (Portal lo desmonta al cerrar), así arranca con la lista fresca
 export const ContractTypesModal: React.FC<ContractTypesModalProps> = ({ isOpen, ...props }) => (
-  <Portal isOpen={isOpen}>
+  <Portal isOpen={isOpen} onClose={props.onClose}>
     <ContractTypesContent {...props} />
   </Portal>
 );

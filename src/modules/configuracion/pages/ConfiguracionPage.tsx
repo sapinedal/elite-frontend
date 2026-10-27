@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 import {
   Building2,
   Briefcase,
@@ -18,6 +19,8 @@ export default function ConfiguracionPage() {
   const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
   const [isPositionModalOpen, setIsPositionModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ type: 'area' | 'position', data: any } | null>(null);
+  useEscapeToClose(isAreaModalOpen, () => setIsAreaModalOpen(false));
+  useEscapeToClose(isPositionModalOpen, () => setIsPositionModalOpen(false));
 
   const fetchAreas = async () => {
     setIsLoading(true);

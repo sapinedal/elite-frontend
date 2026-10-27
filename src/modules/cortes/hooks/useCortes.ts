@@ -11,7 +11,7 @@ const EMPTY_FILTERS: CorteFilters = { search: '', status: '', project_id: '' };
 export function useCortes() {
   const [catalogs, setCatalogs] = useState<CorteCatalogs | null>(null);
   const [cortes, setCortes] = useState<Corte[]>([]);
-  const [counts, setCounts] = useState<CorteCounts>({ mine: 0, pending: 0, billing: 0 });
+  const [counts, setCounts] = useState<CorteCounts>({ mine: 0, pending: 0, billing: 0, multifox: 0 });
   const [scope, setScopeState] = useState<CorteScope>('mine');
   const [filters, setFilters] = useState<CorteFilters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
@@ -112,6 +112,16 @@ export function useCortes() {
     }
   }, [fetchCortes]);
 
+  const confirmMultifox = useCallback(async (invoiceId: number) => {
+    try {
+      const corte = await corteService.confirmMultifox(invoiceId);
+      await fetchCortes();
+      return corte;
+    } catch (err) {
+      throw new Error(getApiErrorMessage(err, 'Error al confirmar la carga en Multifox.'));
+    }
+  }, [fetchCortes]);
+
   return {
     catalogs,
     cortes,
@@ -133,5 +143,6 @@ export function useCortes() {
     resubmitCorte,
     reviewCorte,
     createInvoice,
+    confirmMultifox,
   };
 }

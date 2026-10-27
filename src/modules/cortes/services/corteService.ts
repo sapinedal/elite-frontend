@@ -80,6 +80,12 @@ export const corteService = {
     return data.data;
   },
 
+  /** Confirma que la factura quedó cargada en Multifox: pasa a cuentas por pagar */
+  confirmMultifox: async (invoiceId: number): Promise<Corte> => {
+    const { data } = await api.post(`${BASE}/invoices/${invoiceId}/multifox`);
+    return data.data;
+  },
+
   getInvoiceDownloadUrl: async (invoiceId: number): Promise<string> => {
     const { data } = await api.get(`${BASE}/invoices/${invoiceId}/download`);
     return data.data.download_url;

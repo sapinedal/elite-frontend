@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Edit2, X, Loader2 } from 'lucide-react';
 import { getErrorMessage } from '../../../lib/apiError';
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 
 interface RenameModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ export const RenameModal: React.FC<RenameModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  useEscapeToClose(isOpen, onClose);
+
   const [newName, setNewName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

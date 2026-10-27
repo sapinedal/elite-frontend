@@ -23,6 +23,8 @@ import InterventoriaPage from '../modules/obra/pages/InterventoriaPage';
 import ContratacionPage from '../modules/contratacion/pages/ContratacionPage';
 import CortesPage from '../modules/cortes/pages/CortesPage';
 import CortesRedirect from '../modules/cortes/pages/CortesRedirect';
+import OrdenesPage from '../modules/ordenes/pages/OrdenesPage';
+import PagosPage from '../modules/pagos/pages/PagosPage';
 
 export const router = createBrowserRouter([
   {
@@ -193,6 +195,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permission="cortes.ver">
             <CortesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'contratacion/ordenes',
+        element: (
+          <ProtectedRoute permission="ordenes.ver">
+            <OrdenesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'contratacion/cuentas-por-pagar',
+        element: (
+          <ProtectedRoute permission="pagos.ver">
+            <PagosPage />
           </ProtectedRoute>
         ),
       },

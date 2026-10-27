@@ -410,7 +410,7 @@ export default function AprobacionPage() {
 
       {/* Overlay de Imagen Ampliada */}
       {activePhoto && (
-        <Portal isOpen={true}>
+        <Portal isOpen={true} onClose={() => setActivePhoto(null)}>
           <div
             onClick={() => setActivePhoto(null)}
             className="fixed inset-0 z-99999 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xs cursor-pointer animate-fade-in"

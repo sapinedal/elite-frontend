@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { FolderRoleRule, RestrictedFolder, RoleOption } from '../types/documental.types';
 import { getErrorMessage } from '../../../lib/apiError';
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 
 interface FolderRestrictionsModalProps {
   isOpen: boolean;
@@ -54,6 +55,8 @@ export const FolderRestrictionsModal: React.FC<FolderRestrictionsModalProps> = (
   onSave,
   onNavigate,
 }) => {
+  useEscapeToClose(isOpen, onClose);
+
   const [editingPath, setEditingPath] = useState<string | null>(null);
   const [matrix, setMatrix] = useState<Record<number, FolderRoleRule>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);

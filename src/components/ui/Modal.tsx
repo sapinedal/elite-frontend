@@ -38,7 +38,7 @@ export const Modal: React.FC<ModalProps> = ({
   const styles = getTypeStyles();
 
   return (
-    <Portal isOpen={isOpen}>
+    <Portal isOpen={isOpen} onClose={onClose}>
       <div className="fixed inset-0 z-9999 flex items-center justify-center p-4 bg-slate-900/40 animate-in fade-in duration-200">
         <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
           <div className="p-8">

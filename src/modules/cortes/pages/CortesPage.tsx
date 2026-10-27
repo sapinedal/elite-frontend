@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Scissors, Plus, Search, X, FileText, ClipboardCheck, Layers, Eye, Receipt } from 'lucide-react';
+import { Scissors, Plus, Search, X, FileText, ClipboardCheck, Layers, Eye, Receipt, Database } from 'lucide-react';
 import { DataTable } from '../../../components/ui/DataTable';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
@@ -20,7 +20,7 @@ export default function CortesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     catalogs, cortes, counts, scope, filters, page, perPage, pagination, loading, error,
-    setScope, setFilter, clearFilters, setPage, changePerPage, createCorte, resubmitCorte, reviewCorte, createInvoice,
+    setScope, setFilter, clearFilters, setPage, changePerPage, createCorte, resubmitCorte, reviewCorte, createInvoice, confirmMultifox,
   } = useCortes();
 
   const canCreate = useCan('cortes.crear');
@@ -46,6 +46,7 @@ export default function CortesPage() {
     { id: 'mine', label: 'Mis registros', icon: <FileText size={14} />, count: counts.mine },
     ...(isReviewer ? [{ id: 'pending', label: 'Por revisar', icon: <ClipboardCheck size={14} />, count: counts.pending }] : []),
     ...(catalogs?.can_invoice ? [{ id: 'billing', label: 'Facturación', icon: <Receipt size={14} />, count: counts.billing }] : []),
+    ...(catalogs?.can_confirm_multifox ? [{ id: 'multifox', label: 'Multifox', icon: <Database size={14} />, count: counts.multifox }] : []),
     ...(catalogs?.can_view_all ? [{ id: 'all', label: 'Todos', icon: <Layers size={14} /> }] : []),
   ], [counts, isReviewer, catalogs]);
 
@@ -66,6 +67,12 @@ export default function CortesPage() {
   const handleCreateInvoice = async (corteId: number, payload: Parameters<typeof createInvoice>[1]) => {
     const corte = await createInvoice(corteId, payload);
     showNotification('Documento cargado. Se notificó para su registro en Multifox.', 'success');
+    return corte;
+  };
+
+  const handleConfirmMultifox = async (invoiceId: number) => {
+    const corte = await confirmMultifox(invoiceId);
+    showNotification('Carga en Multifox confirmada. La factura pasó a cuentas por pagar.', 'success');
     return corte;
   };
 
@@ -213,6 +220,7 @@ export default function CortesPage() {
         emptyMessage={
           scope === 'pending' ? 'No tienes cortes pendientes de revisión.'
             : scope === 'billing' ? 'No hay cortes aprobados para facturar.'
+            : scope === 'multifox' ? 'No hay facturas pendientes de cargar en Multifox.'
             : 'Aún no hay cortes registrados.'
         }
       />
@@ -242,6 +250,7 @@ export default function CortesPage() {
         onReview={handleReview}
         onResubmit={openResubmit}
         onCreateInvoice={handleCreateInvoice}
+        onConfirmMultifox={handleConfirmMultifox}
         invoiceDocumentTypes={catalogs?.invoice_document_types ?? []}
         maxUploadMb={catalogs?.max_upload_mb ?? 1024}
       />

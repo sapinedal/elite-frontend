@@ -8,7 +8,7 @@ export type CorteStatus =
 
 export type CorteStageKey = 'interventor' | 'director_obra' | 'gerencia';
 
-export type CorteScope = 'mine' | 'pending' | 'all' | 'billing';
+export type CorteScope = 'mine' | 'pending' | 'all' | 'billing' | 'multifox';
 
 export type InvoiceDocumentType = 'factura_inicial' | 'nota_credito' | 'factura_reemplazo';
 
@@ -36,6 +36,8 @@ export interface CorteCatalogs {
   can_view_all: boolean;
   /** Puede cargar facturas a cortes aprobados (cortes.facturar) */
   can_invoice: boolean;
+  /** Registra las facturas en Multifox y confirma la carga (cargo de Paula) */
+  can_confirm_multifox: boolean;
   invoice_document_types: { key: InvoiceDocumentType; label: string }[];
   stages: { key: CorteStageKey; label: string; status: CorteStatus }[];
   statuses: { key: CorteStatus; label: string }[];
@@ -51,7 +53,7 @@ export interface CorteProgressStep {
 
 export interface CorteHistoryEntry {
   id: number;
-  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'factura';
+  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'factura' | 'multifox';
   stage: CorteStageKey | null;
   stage_label: string | null;
   comment: string | null;
@@ -99,6 +101,10 @@ export interface CorteInvoice {
   document_type_label: string;
   related_document: string | null;
   observation: string | null;
+  amount: number | null;
+  multifox_confirmed_at: string | null;
+  multifox_confirmed_by: string | null;
+  can_confirm_multifox: boolean;
   file_name: string;
   file_size: number;
   uploaded_by: string | null;
@@ -110,6 +116,7 @@ export interface CorteInvoicePayload {
   document_type: InvoiceDocumentType;
   related_document: string | null;
   observation: string | null;
+  amount: number;
   upload_token: string;
 }
 
@@ -143,4 +150,6 @@ export interface CorteCounts {
   pending: number;
   /** Cortes aprobados que aún no tienen factura */
   billing: number;
+  /** Cortes con facturas por confirmar en Multifox */
+  multifox: number;
 }

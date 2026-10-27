@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { documentalService } from '../services/documentalService';
 import type { DocumentActivityLog, DocumentLogFilters } from '../types/documental.types';
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 
 interface DocumentLogsModalProps {
   isOpen: boolean;
@@ -104,6 +105,8 @@ const getDetail = (log: DocumentActivityLog): string | null => {
 };
 
 export const DocumentLogsModal: React.FC<DocumentLogsModalProps> = ({ isOpen, onClose }) => {
+  useEscapeToClose(isOpen, onClose);
+
   const [logs, setLogs] = useState<DocumentActivityLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);

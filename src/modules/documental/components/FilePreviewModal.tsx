@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Download, ExternalLink, FileText, AlertCircle } from 'lucide-react';
 import type { FileItem } from '../types/documental.types';
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 
 interface FilePreviewModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   onClose,
   onDownload,
 }) => {
+  useEscapeToClose(isOpen, onClose);
+
   if (!isOpen || !file) return null;
 
   const ext = file.extension.toLowerCase();

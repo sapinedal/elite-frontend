@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { isCancel } from 'axios';
-import { Receipt, Download, Loader2, UploadCloud, FileText, Send, AlertCircle, Plus, X } from 'lucide-react';
+import { Receipt, Download, Loader2, UploadCloud, FileText, Send, AlertCircle, Plus, X, CheckCircle2, Clock } from 'lucide-react';
 import { formatDateTime } from '../../../utils/dateUtils';
+import { formatMoney, formatMoneyInput, parseMoney } from '../../../utils/money';
 import { corteService, getApiErrorMessage } from '../services/corteService';
 import { formatBytes, formatMaxSize } from '../utils/format';
 import type { Corte, CorteInvoicePayload, InvoiceDocumentType } from '../types';
@@ -12,6 +13,8 @@ interface CorteInvoicesSectionProps {
   maxUploadMb: number;
   onCreate: (corteId: number, payload: CorteInvoicePayload) => Promise<Corte>;
   onCreated: (corte: Corte) => void;
+  /** Paula confirma que la factura quedó cargada en Multifox (pasa a cuentas por pagar) */
+  onConfirmMultifox: (invoiceId: number) => Promise<Corte>;
 }
 
 const inputClass =
@@ -33,10 +36,11 @@ const RELATED_LABELS: Record<InvoiceDocumentType, string> = {
 
 /**
  * Facturas del corte aprobado: listado con descarga y, para quien tiene cortes.facturar, el cargue de una
- * factura inicial, nota crédito o factura de reemplazo. Al cargarla se notifica para su registro en Multifox.
+ * factura inicial, nota crédito o factura de reemplazo. Al cargarla se notifica para su registro en Multifox;
+ * cuando Paula confirma la carga en Multifox, la factura pasa a cuentas por pagar.
  */
 export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
-  corte, documentTypes, maxUploadMb, onCreate, onCreated,
+  corte, documentTypes, maxUploadMb, onCreate, onCreated, onConfirmMultifox,
 }) => {
   const invoices = corte.invoices ?? [];
   const [formOpen, setFormOpen] = useState(invoices.length === 0);
@@ -44,6 +48,8 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [relatedDocument, setRelatedDocument] = useState('');
   const [observation, setObservation] = useState('');
+  const [amount, setAmount] = useState('');
+  const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [file, setFile] = useState<File | null>(null);
   // Si el registro falla por validación no hay que volver a subir el archivo
   const [uploadedToken, setUploadedToken] = useState<string | null>(null);
@@ -59,6 +65,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
     setInvoiceNumber('');
     setRelatedDocument('');
     setObservation('');
+    setAmount('');
     setFile(null);
     setUploadedToken(null);
     setProgress(null);
@@ -92,6 +99,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
     e.preventDefault();
     if (!invoiceNumber.trim()) return setError('Indica el número del documento.');
     if (affectsAnother && !relatedDocument.trim()) return setError('Indica el número de la factura que se afecta o reemplaza.');
+    if (!parseMoney(amount)) return setError('Indica el valor del documento.');
     if (affectsAnother && !observation.trim()) return setError('Indica el motivo del cambio.');
     if (!file) return setError('Adjunta el archivo de la factura.');
 
@@ -109,6 +117,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
         document_type: documentType,
         related_document: affectsAnother ? relatedDocument.trim() : null,
         observation: observation.trim() || null,
+        amount: parseMoney(amount) ?? 0,
         upload_token: token,
       });
       resetForm();
@@ -121,6 +130,18 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
       setError(err instanceof Error ? err.message : 'Error al cargar la factura.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleConfirmMultifox = async (invoiceId: number) => {
+    setConfirmingId(invoiceId);
+    setError(null);
+    try {
+      onCreated(await onConfirmMultifox(invoiceId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al confirmar la carga en Multifox.');
+    } finally {
+      setConfirmingId(null);
     }
   };
 
@@ -160,19 +181,38 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
                     {invoice.document_type_label}
                   </span>
                   <span className="font-black text-slate-700">N.º {invoice.invoice_number}</span>
+                  {invoice.amount !== null && <span className="font-black text-teal-700">{formatMoney(invoice.amount)}</span>}
                   {invoice.related_document && (
                     <span className="text-xs font-bold text-slate-500">→ afecta a {invoice.related_document}</span>
                   )}
                 </div>
+                {invoice.multifox_confirmed_at ? (
+                  <p className="flex items-center gap-1 text-[11px] font-bold text-green-600">
+                    <CheckCircle2 size={13} /> En Multifox y cuentas por pagar · {invoice.multifox_confirmed_by} · {formatDateTime(invoice.multifox_confirmed_at)}
+                  </p>
+                ) : (
+                  <p className="flex items-center gap-1 text-[11px] font-bold text-orange-600">
+                    <Clock size={13} /> Pendiente de cargar en Multifox
+                  </p>
+                )}
                 {invoice.observation && <p className="text-xs font-medium text-slate-600 whitespace-pre-line">{invoice.observation}</p>}
                 <p className="text-[11px] font-bold text-slate-400 truncate">
                   {invoice.file_name} · {formatBytes(invoice.file_size)} · {invoice.uploaded_by ?? '—'} · {formatDateTime(invoice.created_at)}
                 </p>
               </div>
-              <button type="button" onClick={() => handleDownload(invoice.id)} disabled={downloadingId === invoice.id}
-                className="p-2.5 rounded-xl text-[#004C6C] hover:bg-blue-50 shrink-0" title="Descargar">
-                {downloadingId === invoice.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                {invoice.can_confirm_multifox && (
+                  <button type="button" onClick={() => handleConfirmMultifox(invoice.id)} disabled={confirmingId !== null}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#EE9D4C] hover:bg-[#e08a35] text-white text-xs font-bold whitespace-nowrap disabled:opacity-60"
+                    title="Confirma que ya registraste el documento en Multifox">
+                    {confirmingId === invoice.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Cargada en Multifox
+                  </button>
+                )}
+                <button type="button" onClick={() => handleDownload(invoice.id)} disabled={downloadingId === invoice.id}
+                  className="p-2.5 rounded-xl text-[#004C6C] hover:bg-blue-50" title="Descargar">
+                  {downloadingId === invoice.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -194,7 +234,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className={labelClass}>Número de factura *</label>
               <input disabled={submitting} className={inputClass} placeholder="Ej: FE-1045"
@@ -209,6 +249,14 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
               <datalist id={`invoices-${corte.id}`}>
                 {invoices.map((inv) => <option key={inv.id} value={inv.invoice_number}>{inv.document_type_label}</option>)}
               </datalist>
+            </div>
+            <div className="space-y-2">
+              <label className={labelClass}>{documentType === 'nota_credito' ? 'Valor que descuenta *' : 'Valor *'}</label>
+              <div className="relative">
+                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
+                <input disabled={submitting} inputMode="numeric" className={`${inputClass} pl-9`} placeholder="0"
+                  value={amount} onChange={(e) => setAmount(formatMoneyInput(e.target.value))} />
+              </div>
             </div>
           </div>
 

@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { isAxiosError, isCancel } from 'axios';
 import { X, Send, Scissors, AlertCircle, Loader2, UploadCloud, FileText, RotateCcw } from 'lucide-react';
 import { Portal } from '../../../components/ui/Portal';
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { corteService, getApiErrorMessage } from '../services/corteService';
 import { formatBytes, formatMaxSize } from '../utils/format';
@@ -27,8 +28,8 @@ interface FormState {
 const emptyForm: FormState = { code: '', location: '', contractor_id: null, contract_id: null, comment: '' };
 
 const inputClass =
-  'w-full bg-white border border-slate-100 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none transition-all shadow-sm placeholder:text-slate-300 disabled:opacity-60';
-const labelClass = 'text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1';
+  'w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-700 outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:bg-white focus:border-[#004C6C] focus:ring-4 focus:ring-blue-50 disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed';
+const labelClass = 'text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1';
 
 const initialForm = (corte: Corte | null): FormState => (corte
   ? {
@@ -111,6 +112,8 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
     abortRef.current?.abort();
     onClose();
   };
+  // Escape cierra igual que la X: cancela la subida en curso
+  useEscapeToClose(true, handleClose);
 
   const uploadSelectedFile = async (selected: File): Promise<string> => {
     abortRef.current = new AbortController();
@@ -215,6 +218,7 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
           </div>
 
           <CustomSelect
+            pyClass="py-3.5"
             label="Proyecto / Presupuesto *"
             placeholder="Selecciona el proyecto y la torre"
             searchPlaceholder="Buscar proyecto o torre..."
@@ -226,6 +230,7 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <CustomSelect
+              pyClass="py-3.5"
               label="Proveedor *"
               placeholder="Selecciona el proveedor"
               disabled={submitting}
@@ -234,6 +239,7 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
               onChange={(v) => set('contractor_id', Number(v))}
             />
             <CustomSelect
+              pyClass="py-3.5"
               label="Contrato relacionado *"
               placeholder={projectId ? (contractOptions.length ? 'Selecciona el contrato' : 'El proyecto no tiene contratos') : 'Primero elige el proyecto'}
               disabled={submitting || !projectId || contractOptions.length === 0}
@@ -257,7 +263,7 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
                 setDragging(false);
                 if (!submitting) selectFile(e.dataTransfer.files[0]);
               }}
-              className={`border-2 border-dashed rounded-3xl p-6 flex flex-col items-center justify-center gap-2 text-center cursor-pointer transition-all ${dragging ? 'border-[#004C6C] bg-blue-50/50' : 'border-slate-200 bg-white hover:border-[#004C6C]/40'}`}
+              className={`border-2 border-dashed rounded-3xl p-6 flex flex-col items-center justify-center gap-2 text-center cursor-pointer transition-all ${dragging ? 'border-[#004C6C] bg-blue-50/50' : 'border-slate-300 bg-slate-50 hover:border-[#004C6C]/40 hover:bg-blue-50/30'}`}
             >
               <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => { selectFile(e.target.files?.[0]); e.target.value = ''; }} />
               {file ? (
@@ -268,7 +274,7 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
                 </>
               ) : (
                 <>
-                  <UploadCloud size={28} className="text-slate-300" />
+                  <UploadCloud size={28} className="text-slate-400" />
                   <p className="text-sm font-bold text-slate-500">Arrastra el archivo o haz clic para seleccionarlo</p>
                   <p className="text-[11px] font-bold text-slate-400">
                     Máximo {formatMaxSize(maxMb)}

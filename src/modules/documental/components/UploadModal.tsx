@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { UploadCloud, X, File, Trash2, Loader2, CheckCircle2 } from 'lucide-react';
 import type { DocumentalSettings } from '../types/documental.types';
 import { getErrorMessage } from '../../../lib/apiError';
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -41,6 +42,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   onSubmit,
   settings,
 }) => {
+  useEscapeToClose(isOpen, onClose);
+
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);

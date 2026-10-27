@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FolderPlus, X, Loader2 } from 'lucide-react';
 import { getErrorMessage } from '../../../lib/apiError';
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 
 interface CreateFolderModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  useEscapeToClose(isOpen, onClose);
+
   const [folderName, setFolderName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -21,7 +21,7 @@ export const EvaluationViewModal: React.FC<EvaluationViewModalProps> = ({ isOpen
   };
 
   return (
-    <Portal isOpen={isOpen}>
+    <Portal isOpen={isOpen} onClose={onClose}>
       <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 transition-opacity duration-300">
         <div className={`bg-[#f8fafc] w-full max-w-5xl max-h-[90vh] rounded-[40px] shadow-2xl overflow-hidden flex flex-col transition-transform duration-300 ${isOpen ? 'scale-100' : 'scale-95'}`}>
 

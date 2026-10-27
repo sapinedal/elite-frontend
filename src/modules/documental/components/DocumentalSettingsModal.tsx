@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Settings, X, Check, Loader2, AlertTriangle, Ban, ShieldCheck } from 'lucide-react';
 import type { DocumentalSettings, DocumentalSettingsInput, ExtensionMode } from '../types/documental.types';
 import { getErrorMessage } from '../../../lib/apiError';
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 
 interface DocumentalSettingsModalProps {
   isOpen: boolean;
@@ -102,6 +103,8 @@ export const DocumentalSettingsModal: React.FC<DocumentalSettingsModalProps> = (
   onClose,
   onSave,
 }) => {
+  useEscapeToClose(isOpen, onClose);
+
   const [maxUploadMb, setMaxUploadMb] = useState<string>('100');
   const [mode, setMode] = useState<ExtensionMode>('blocklist');
   const [blocked, setBlocked] = useState<string[]>([]);
