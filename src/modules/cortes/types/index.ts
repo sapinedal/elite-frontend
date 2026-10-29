@@ -34,7 +34,7 @@ export interface CorteCatalogs {
   /** Etapas que el usuario puede revisar */
   review_stages: CorteStageKey[];
   can_view_all: boolean;
-  /** Puede cargar facturas a cortes aprobados (cortes.facturar) */
+  /** Contabilidad (cortes.facturar): ve los cortes aprobados que esperan factura */
   can_invoice: boolean;
   /** Registra las facturas en Multifox y confirma la carga (cargo de Paula) */
   can_confirm_multifox: boolean;
@@ -111,15 +111,6 @@ export interface CorteInvoice {
   created_at: string;
 }
 
-export interface CorteInvoicePayload {
-  invoice_number: string;
-  document_type: InvoiceDocumentType;
-  related_document: string | null;
-  observation: string | null;
-  amount: number;
-  upload_token: string;
-}
-
 export interface CortePayload {
   code: string;
   project_id: number;
@@ -148,7 +139,7 @@ export interface CortePage {
 export interface CorteCounts {
   mine: number;
   pending: number;
-  /** Cortes aprobados que aún no tienen factura */
+  /** Cortes aprobados que aún no tienen factura asociada */
   billing: number;
   /** Cortes con facturas por confirmar en Multifox */
   multifox: number;

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import api from '../../../lib/axios';
-import type { Corte, CorteCatalogs, CorteCounts, CorteInvoicePayload, CortePage, CortePayload, CorteScope } from '../types';
+import type { Corte, CorteCatalogs, CorteCounts, CortePage, CortePayload, CorteScope } from '../types';
 
 const BASE = '/v1/cortes';
 
@@ -71,12 +71,6 @@ export const corteService = {
 
   resubmitCorte: async (id: number, payload: CortePayload): Promise<Corte> => {
     const { data } = await api.post(`${BASE}/${id}/resubmit`, payload);
-    return data.data;
-  },
-
-  /** Carga una factura (el archivo ya se subió con uploadFile) y devuelve el corte actualizado */
-  createInvoice: async (corteId: number, payload: CorteInvoicePayload): Promise<Corte> => {
-    const { data } = await api.post(`${BASE}/${corteId}/invoices`, payload);
     return data.data;
   },
 

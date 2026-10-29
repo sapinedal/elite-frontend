@@ -3,23 +3,21 @@ import {
   X, Scissors, Download, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, FileText,
 } from 'lucide-react';
 import { Portal } from '../../../components/ui/Portal';
+import { useAuth } from '../../../context/AuthContext';
 import { HistoryButton, HistoryModal } from '../../../components/ui/HistoryModal';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { corteService, getApiErrorMessage } from '../services/corteService';
 import { CorteStatusBadge } from './CorteStatusBadge';
 import { CorteInvoicesSection } from './CorteInvoicesSection';
 import { formatBytes } from '../utils/format';
-import type { Corte, CorteHistoryEntry, CorteInvoicePayload, CorteProgressStep, InvoiceDocumentType } from '../types';
+import type { Corte, CorteHistoryEntry, CorteProgressStep } from '../types';
 
 interface CorteDetailModalProps {
   corteId: number | null;
   onClose: () => void;
   onReview: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Corte>;
   onResubmit: (corte: Corte) => void;
-  onCreateInvoice: (corteId: number, payload: CorteInvoicePayload) => Promise<Corte>;
   onConfirmMultifox: (invoiceId: number) => Promise<Corte>;
-  invoiceDocumentTypes: { key: InvoiceDocumentType; label: string }[];
-  maxUploadMb: number;
 }
 
 const STEP_STYLES: Record<CorteProgressStep['state'], { icon: React.ReactNode; tone: string; text: string }> = {
@@ -46,8 +44,9 @@ export const CorteDetailModal: React.FC<CorteDetailModalProps> = ({ corteId, ...
 );
 
 const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { corteId: number }> = ({
-  corteId, onClose, onReview, onResubmit, onCreateInvoice, onConfirmMultifox, invoiceDocumentTypes, maxUploadMb,
+  corteId, onClose, onReview, onResubmit, onConfirmMultifox,
 }) => {
+  const { user } = useAuth();
   const [corte, setCorte] = useState<Corte | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -94,6 +93,9 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
       setSaving(false);
     }
   };
+
+  // Con las tres aprobaciones el corte admite facturas
+  const isInvoiceable = corte?.status === 'aprobado' || corte?.status === 'facturado';
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
@@ -223,13 +225,11 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
                 </div>
               )}
 
-              {/* Facturación: con las tres aprobaciones */}
-              {(corte.can_invoice || (corte.invoices?.length ?? 0) > 0) && (
+              {/* Facturación: con las tres aprobaciones (las facturas se asocian desde Facturas del mes) */}
+              {(isInvoiceable || (corte.invoices?.length ?? 0) > 0) && (
                 <CorteInvoicesSection
                   corte={corte}
-                  documentTypes={invoiceDocumentTypes}
-                  maxUploadMb={maxUploadMb}
-                  onCreate={onCreateInvoice}
+                  canAssociate={isInvoiceable && corte.created_by?.id === user?.id}
                   onCreated={setCorte}
                   onConfirmMultifox={onConfirmMultifox}
                 />

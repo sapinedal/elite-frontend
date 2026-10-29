@@ -15,12 +15,12 @@ import { CorteStatusBadge } from '../components/CorteStatusBadge';
 import type { Corte, CortePayload, CorteScope } from '../types';
 
 export default function CortesPage() {
-  const { useCan } = useAuth();
+  const { useCan, user } = useAuth();
   const { showNotification } = useNotification();
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     catalogs, cortes, counts, scope, filters, page, perPage, pagination, loading, error,
-    setScope, setFilter, clearFilters, setPage, changePerPage, createCorte, resubmitCorte, reviewCorte, createInvoice, confirmMultifox,
+    setScope, setFilter, clearFilters, setPage, changePerPage, createCorte, resubmitCorte, reviewCorte, confirmMultifox,
   } = useCortes();
 
   const canCreate = useCan('cortes.crear');
@@ -61,12 +61,6 @@ export default function CortesPage() {
   const handleReview = async (id: number, decision: 'aprobar' | 'devolver', comment?: string) => {
     const corte = await reviewCorte(id, decision, comment);
     showNotification(decision === 'aprobar' ? 'Corte aprobado.' : 'Corte devuelto al residente.', 'success');
-    return corte;
-  };
-
-  const handleCreateInvoice = async (corteId: number, payload: Parameters<typeof createInvoice>[1]) => {
-    const corte = await createInvoice(corteId, payload);
-    showNotification('Documento cargado. Se notificó para su registro en Multifox.', 'success');
     return corte;
   };
 
@@ -128,9 +122,10 @@ export default function CortesPage() {
       className: 'text-right',
       accessor: (c: Corte) => {
         // Acción principal según lo que el usuario puede hacer con el corte
-        const pendingInvoice = c.can_invoice && c.status === 'aprobado';
+        // Corte aprobado sin factura: el residente responsable la asocia desde Facturas del mes
+        const pendingInvoice = c.status === 'aprobado' && c.created_by?.id === user?.id;
         const highlighted = c.can_review || c.can_resubmit || pendingInvoice;
-        const label = c.can_review ? 'Revisar' : c.can_resubmit ? 'Corregir' : pendingInvoice ? 'Facturar' : 'Ver';
+        const label = c.can_review ? 'Revisar' : c.can_resubmit ? 'Corregir' : pendingInvoice ? 'Asociar factura' : 'Ver';
         return (
           <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setDetailId(c.id)}
@@ -219,7 +214,7 @@ export default function CortesPage() {
         onRowClick={(c) => setDetailId(c.id)}
         emptyMessage={
           scope === 'pending' ? 'No tienes cortes pendientes de revisión.'
-            : scope === 'billing' ? 'No hay cortes aprobados para facturar.'
+            : scope === 'billing' ? 'No hay cortes aprobados esperando factura.'
             : scope === 'multifox' ? 'No hay facturas pendientes de cargar en Multifox.'
             : 'Aún no hay cortes registrados.'
         }
@@ -249,10 +244,7 @@ export default function CortesPage() {
         onClose={closeDetail}
         onReview={handleReview}
         onResubmit={openResubmit}
-        onCreateInvoice={handleCreateInvoice}
         onConfirmMultifox={handleConfirmMultifox}
-        invoiceDocumentTypes={catalogs?.invoice_document_types ?? []}
-        maxUploadMb={catalogs?.max_upload_mb ?? 1024}
       />
     </div>
   );

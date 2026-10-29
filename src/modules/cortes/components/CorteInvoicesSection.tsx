@@ -1,25 +1,20 @@
-import React, { useRef, useState } from 'react';
-import { isCancel } from 'axios';
-import { Receipt, Download, Loader2, UploadCloud, FileText, Send, AlertCircle, Plus, X, CheckCircle2, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Receipt, Download, Loader2, AlertCircle, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
 import { formatDateTime } from '../../../utils/dateUtils';
-import { formatMoney, formatMoneyInput, parseMoney } from '../../../utils/money';
+import { formatMoney } from '../../../utils/money';
 import { corteService, getApiErrorMessage } from '../services/corteService';
-import { formatBytes, formatMaxSize } from '../utils/format';
-import type { Corte, CorteInvoicePayload, InvoiceDocumentType } from '../types';
+import { formatBytes } from '../utils/format';
+import type { Corte, InvoiceDocumentType } from '../types';
 
 interface CorteInvoicesSectionProps {
   corte: Corte;
-  documentTypes: { key: InvoiceDocumentType; label: string }[];
-  maxUploadMb: number;
-  onCreate: (corteId: number, payload: CorteInvoicePayload) => Promise<Corte>;
+  /** El residente responsable puede asociarle facturas desde Facturas del mes */
+  canAssociate: boolean;
   onCreated: (corte: Corte) => void;
   /** Paula confirma que la factura quedó cargada en Multifox (pasa a cuentas por pagar) */
   onConfirmMultifox: (invoiceId: number) => Promise<Corte>;
 }
-
-const inputClass =
-  'w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-700 outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:bg-white focus:border-[#004C6C] focus:ring-4 focus:ring-blue-50 disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed';
-const labelClass = 'text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1';
 
 const TYPE_STYLES: Record<InvoiceDocumentType, string> = {
   factura_inicial: 'bg-blue-50 text-[#004C6C]',
@@ -27,62 +22,16 @@ const TYPE_STYLES: Record<InvoiceDocumentType, string> = {
   factura_reemplazo: 'bg-purple-50 text-purple-700',
 };
 
-// Texto del campo "documento que reemplaza o afecta" según el tipo
-const RELATED_LABELS: Record<InvoiceDocumentType, string> = {
-  factura_inicial: 'Documento que reemplaza o afecta',
-  nota_credito: 'Factura que afecta *',
-  factura_reemplazo: 'Factura anterior que se reemplaza *',
-};
-
 /**
- * Facturas del corte aprobado: listado con descarga y, para quien tiene cortes.facturar, el cargue de una
- * factura inicial, nota crédito o factura de reemplazo. Al cargarla se notifica para su registro en Multifox;
- * cuando Paula confirma la carga en Multifox, la factura pasa a cuentas por pagar.
+ * Facturas del corte aprobado: listado con descarga y confirmación de Multifox. Las facturas no se cargan aquí:
+ * Contabilidad las sube en Facturas del mes y el residente responsable las asocia a su corte con los soportes.
+ * Cuando Paula confirma la carga en Multifox, la factura pasa a cuentas por pagar.
  */
-export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
-  corte, documentTypes, maxUploadMb, onCreate, onCreated, onConfirmMultifox,
-}) => {
+export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ corte, canAssociate, onCreated, onConfirmMultifox }) => {
   const invoices = corte.invoices ?? [];
-  const [formOpen, setFormOpen] = useState(invoices.length === 0);
-  const [documentType, setDocumentType] = useState<InvoiceDocumentType>(invoices.length ? 'nota_credito' : 'factura_inicial');
-  const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [relatedDocument, setRelatedDocument] = useState('');
-  const [observation, setObservation] = useState('');
-  const [amount, setAmount] = useState('');
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  // Si el registro falla por validación no hay que volver a subir el archivo
-  const [uploadedToken, setUploadedToken] = useState<string | null>(null);
-  const [progress, setProgress] = useState<number | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const affectsAnother = documentType !== 'factura_inicial';
-
-  const resetForm = () => {
-    setInvoiceNumber('');
-    setRelatedDocument('');
-    setObservation('');
-    setAmount('');
-    setFile(null);
-    setUploadedToken(null);
-    setProgress(null);
-    setError(null);
-  };
-
-  const selectFile = (selected: File | undefined) => {
-    if (!selected) return;
-    if (selected.size > maxUploadMb * 1024 * 1024) {
-      setError(`El archivo pesa ${formatBytes(selected.size)} y supera el máximo de ${formatMaxSize(maxUploadMb)}.`);
-      return;
-    }
-    setError(null);
-    setFile(selected);
-    setUploadedToken(null);
-    setProgress(null);
-  };
 
   const handleDownload = async (invoiceId: number) => {
     setDownloadingId(invoiceId);
@@ -92,44 +41,6 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
       setError(getApiErrorMessage(err, 'Error al descargar la factura.'));
     } finally {
       setDownloadingId(null);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!invoiceNumber.trim()) return setError('Indica el número del documento.');
-    if (affectsAnother && !relatedDocument.trim()) return setError('Indica el número de la factura que se afecta o reemplaza.');
-    if (!parseMoney(amount)) return setError('Indica el valor del documento.');
-    if (affectsAnother && !observation.trim()) return setError('Indica el motivo del cambio.');
-    if (!file) return setError('Adjunta el archivo de la factura.');
-
-    setSubmitting(true);
-    setError(null);
-    try {
-      let token = uploadedToken;
-      if (!token) {
-        setProgress(0);
-        token = await corteService.uploadFile(file, setProgress);
-        setUploadedToken(token);
-      }
-      const updated = await onCreate(corte.id, {
-        invoice_number: invoiceNumber.trim(),
-        document_type: documentType,
-        related_document: affectsAnother ? relatedDocument.trim() : null,
-        observation: observation.trim() || null,
-        amount: parseMoney(amount) ?? 0,
-        upload_token: token,
-      });
-      resetForm();
-      setFormOpen(false);
-      setDocumentType('nota_credito');
-      onCreated(updated);
-    } catch (err) {
-      if (isCancel(err)) return;
-      setProgress(null);
-      setError(err instanceof Error ? err.message : 'Error al cargar la factura.');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -155,11 +66,11 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
             {invoices.length ? `${invoices.length} documento(s)` : 'Sin facturas'}
           </span>
         </div>
-        {corte.can_invoice && !formOpen && (
-          <button type="button" onClick={() => { resetForm(); setFormOpen(true); }}
+        {canAssociate && (
+          <Link to="/app/contratacion/facturas"
             className="flex items-center gap-1 text-xs font-bold text-white bg-[#EE9D4C] hover:bg-[#e08a35] px-3 py-2 rounded-xl transition-all">
-            <Plus size={14} /> Cargar documento
-          </button>
+            Asociar factura <ArrowRight size={14} />
+          </Link>
         )}
       </div>
 
@@ -218,97 +129,10 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({
         </ul>
       )}
 
-      {/* Cargue */}
-      {corte.can_invoice && formOpen && (
-        <form onSubmit={handleSubmit} className="space-y-4 border-t border-slate-100 pt-5">
-          <div className="space-y-2">
-            <label className={labelClass}>Tipo de documento *</label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {documentTypes.map((type) => (
-                <button key={type.key} type="button" disabled={submitting}
-                  onClick={() => { setDocumentType(type.key); if (type.key === 'factura_inicial') setRelatedDocument(''); }}
-                  className={`px-4 py-3 rounded-2xl border text-sm font-bold transition-all ${documentType === type.key ? 'bg-[#004C6C] border-[#004C6C] text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-[#004C6C]/40 hover:bg-slate-50'}`}>
-                  {type.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className={labelClass}>Número de factura *</label>
-              <input disabled={submitting} className={inputClass} placeholder="Ej: FE-1045"
-                value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <label className={labelClass}>{RELATED_LABELS[documentType]}</label>
-              <input disabled={submitting || !affectsAnother} className={inputClass} list={`invoices-${corte.id}`}
-                placeholder={affectsAnother ? 'Número de la factura anterior' : 'No aplica para factura inicial'}
-                value={relatedDocument} onChange={(e) => setRelatedDocument(e.target.value)} />
-              {/* Sugiere las facturas ya cargadas al corte */}
-              <datalist id={`invoices-${corte.id}`}>
-                {invoices.map((inv) => <option key={inv.id} value={inv.invoice_number}>{inv.document_type_label}</option>)}
-              </datalist>
-            </div>
-            <div className="space-y-2">
-              <label className={labelClass}>{documentType === 'nota_credito' ? 'Valor que descuenta *' : 'Valor *'}</label>
-              <div className="relative">
-                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
-                <input disabled={submitting} inputMode="numeric" className={`${inputClass} pl-9`} placeholder="0"
-                  value={amount} onChange={(e) => setAmount(formatMoneyInput(e.target.value))} />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className={labelClass}>Motivo / observación del cambio {affectsAnother ? '*' : ''}</label>
-            <textarea rows={2} disabled={submitting} className={`${inputClass} resize-none`}
-              placeholder={affectsAnother ? 'Explica por qué se emite este documento' : 'Opcional'}
-              value={observation} onChange={(e) => setObservation(e.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <label className={labelClass}>Archivo de la factura *</label>
-            <div onClick={() => !submitting && fileInputRef.current?.click()}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => { e.preventDefault(); if (!submitting) selectFile(e.dataTransfer.files[0]); }}
-              className="border-2 border-dashed border-slate-300 hover:border-[#004C6C]/60 hover:bg-blue-50/30 rounded-3xl p-5 flex flex-col items-center justify-center gap-1.5 text-center cursor-pointer bg-slate-50 transition-all">
-              <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.xml,.zip,.png,.jpg,.jpeg"
-                onChange={(e) => { selectFile(e.target.files?.[0]); e.target.value = ''; }} />
-              {file ? (
-                <>
-                  <FileText size={24} className="text-[#004C6C]" />
-                  <p className="text-sm font-black text-slate-700 break-all">{file.name}</p>
-                  <p className="text-[11px] font-bold text-slate-400">{formatBytes(file.size)} · clic para cambiar</p>
-                </>
-              ) : (
-                <>
-                  <UploadCloud size={24} className="text-slate-400" />
-                  <p className="text-sm font-bold text-slate-500">Arrastra la factura o haz clic (PDF, XML o ZIP)</p>
-                </>
-              )}
-            </div>
-            {progress !== null && (
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-[#004C6C] transition-all" style={{ width: `${progress}%` }} />
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-3">
-            {invoices.length > 0 && (
-              <button type="button" onClick={() => { resetForm(); setFormOpen(false); }} disabled={submitting}
-                className="px-5 py-3.5 bg-slate-50 text-slate-500 rounded-2xl font-bold hover:bg-slate-100 flex items-center gap-2">
-                <X size={16} /> Cancelar
-              </button>
-            )}
-            <button type="submit" disabled={submitting}
-              className="flex-1 px-6 py-3.5 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 disabled:opacity-60">
-              {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-              {submitting && progress !== null && progress < 100 ? `Subiendo archivo... ${progress}%` : 'Cargar y notificar para Multifox'}
-            </button>
-          </div>
-        </form>
+      {invoices.length === 0 && (
+        <p className="text-xs font-bold text-slate-400">
+          Contabilidad carga las facturas en Facturas del mes y el residente responsable las asocia a este corte.
+        </p>
       )}
     </div>
   );

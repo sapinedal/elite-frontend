@@ -23,6 +23,7 @@ import InterventoriaPage from '../modules/obra/pages/InterventoriaPage';
 import ContratacionPage from '../modules/contratacion/pages/ContratacionPage';
 import CortesPage from '../modules/cortes/pages/CortesPage';
 import CortesRedirect from '../modules/cortes/pages/CortesRedirect';
+import FacturacionPage from '../modules/facturacion/pages/FacturacionPage';
 import OrdenesPage from '../modules/ordenes/pages/OrdenesPage';
 import PagosPage from '../modules/pagos/pages/PagosPage';
 
@@ -203,6 +204,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permission="ordenes.ver">
             <OrdenesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'contratacion/facturas',
+        element: (
+          <ProtectedRoute permissions={['cortes.facturar', 'cortes.crear', 'ordenes.crear']}>
+            <FacturacionPage />
           </ProtectedRoute>
         ),
       },

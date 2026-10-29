@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { corteService, getApiErrorMessage } from '../services/corteService';
-import type { Corte, CorteCatalogs, CorteCounts, CorteFilters, CorteInvoicePayload, CortePayload, CorteScope } from '../types';
+import type { Corte, CorteCatalogs, CorteCounts, CorteFilters, CortePayload, CorteScope } from '../types';
 
 const EMPTY_FILTERS: CorteFilters = { search: '', status: '', project_id: '' };
 
@@ -102,16 +102,6 @@ export function useCortes() {
     }
   }, [fetchCortes]);
 
-  const createInvoice = useCallback(async (corteId: number, payload: CorteInvoicePayload) => {
-    try {
-      const corte = await corteService.createInvoice(corteId, payload);
-      await fetchCortes();
-      return corte;
-    } catch (err) {
-      throw new Error(getApiErrorMessage(err, 'Error al cargar la factura.'));
-    }
-  }, [fetchCortes]);
-
   const confirmMultifox = useCallback(async (invoiceId: number) => {
     try {
       const corte = await corteService.confirmMultifox(invoiceId);
@@ -142,7 +132,6 @@ export function useCortes() {
     createCorte,
     resubmitCorte,
     reviewCorte,
-    createInvoice,
     confirmMultifox,
   };
 }

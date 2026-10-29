@@ -21,6 +21,7 @@ import {
     Scissors,
     ShoppingCart,
     Wallet,
+    Receipt,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo_inver.svg';
@@ -32,6 +33,8 @@ interface SidebarItem {
     href?: string;
     children?: SidebarItem[];
     permission?: string;
+    /** Se muestra si el usuario tiene al menos uno de estos permisos */
+    permissions?: string[];
 }
 
 interface SidebarProps {
@@ -157,6 +160,13 @@ const eliteMenuItems: SidebarItem[] = [
                 permission: 'ordenes.ver',
             },
             {
+                id: 'contratacion-facturas',
+                label: 'Facturas del mes',
+                icon: <Receipt className="w-4 h-4" />,
+                href: '/app/contratacion/facturas',
+                permissions: ['cortes.facturar', 'cortes.crear', 'ordenes.crear'],
+            },
+            {
                 id: 'contratacion-pagos',
                 label: 'Cuentas por pagar',
                 icon: <Wallet className="w-4 h-4" />,
@@ -249,14 +259,17 @@ const SidebarItemComponent: React.FC<{
     currentPath: string;
     userPermissions: string[];
 }> = ({ item, isExpanded, expandedItems, onToggle, onNavigate, currentPath, userPermissions }) => {
-    const visibleChildren = item.children?.filter(child => !child.permission || userPermissions.includes(child.permission)) || [];
+    const canSee = (entry: SidebarItem) =>
+        (!entry.permission || userPermissions.includes(entry.permission))
+        && (!entry.permissions || entry.permissions.some(p => userPermissions.includes(p)));
+    const visibleChildren = item.children?.filter(canSee) || [];
     const hasChildren = visibleChildren.length > 0;
     const isItemExpanded = expandedItems.includes(item.id);
     const isAnyChildActive = visibleChildren.some(child => isChildActiveCheck(child, currentPath));
     const isMainActive = item.href === currentPath || isAnyChildActive;
 
     // Si tiene permiso asignado directamente al item, se valida
-    const hasParentPermission = !item.permission || userPermissions.includes(item.permission);
+    const hasParentPermission = canSee(item);
     // Si tiene hijos declarados, debe tener al menos un hijo visible con permiso
     const hasPermission = hasParentPermission && (!item.children || hasChildren);
 
