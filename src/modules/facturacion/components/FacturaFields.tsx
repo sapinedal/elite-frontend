@@ -2,7 +2,7 @@ import React from 'react';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { formatMoneyInput } from '../../../utils/money';
 import { affectsAnother, type FacturaDraft } from '../utils/draft';
-import { inputClass, labelClass } from './ModalShell';
+import { inputClass, labelClass } from '../../../components/ui/ModalShell';
 import type { FacturacionCatalogs, FacturaDocumentType } from '../types';
 
 interface FacturaFieldsProps {

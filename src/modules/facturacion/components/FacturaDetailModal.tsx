@@ -6,7 +6,7 @@ import { formatMoney } from '../../../utils/money';
 import { formatBytes } from '../../cortes/utils/format';
 import { facturacionService, getApiErrorMessage } from '../services/facturacionService';
 import { FacturaStatusBadge } from './FacturaStatusBadge';
-import { ModalShell } from './ModalShell';
+import { ModalShell } from '../../../components/ui/ModalShell';
 import type { Factura } from '../types';
 
 interface FacturaDetailModalProps {

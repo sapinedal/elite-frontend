@@ -41,6 +41,15 @@ const initialForm = (corte: Corte | null): FormState => (corte
     }
   : emptyForm);
 
+// Números del corte: se ofrecen los libres hasta varios después del último radicado (la lista nunca se acaba)
+const CODE_PREFIX = 'CORTE';
+const EXTRA_NUMBERS = 20;
+const codeFor = (n: number) => `${CODE_PREFIX} ${n}`;
+const numberOf = (code: string) => {
+  const match = code.trim().match(/^(?:corte\s*)?(\d+)$/i);
+  return match ? Number(match[1]) : null;
+};
+
 const parseLocation = (location: string) => {
   const [projectId, towerId] = location.split(':');
   return { projectId: projectId ? Number(projectId) : null, towerId: towerId ? Number(towerId) : null };
@@ -87,12 +96,50 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  // Números ya radicados en un contrato, sin contar el corte que se está corrigiendo
+  const usedNumbers = (contractId: number | null) => {
+    const used = catalogs?.contracts.find((c) => c.id === contractId)?.corte_numbers ?? [];
+    const own = corte && corte.contract_id === contractId ? numberOf(corte.code) : null;
+    return used.filter((n) => n !== own);
+  };
+
+  const nextCode = (contractId: number | null) => codeFor(Math.max(0, ...usedNumbers(contractId)) + 1);
+
+  // CORTE 1, CORTE 2...: los libres del contrato elegido; el siguiente al último radicado va marcado
+  const codeOptions = useMemo(() => {
+    if (!form.contract_id) return [];
+    const used = new Set(usedNumbers(form.contract_id));
+    const last = Math.max(0, ...used);
+    const options = Array.from({ length: last + EXTRA_NUMBERS }, (_, i) => i + 1)
+      .filter((n) => !used.has(n))
+      .map((n) => ({
+        value: codeFor(n),
+        label: codeFor(n),
+        sublabel: n === last + 1 ? 'Siguiente corte del contrato' : n < last ? 'Número libre (no radicado)' : undefined,
+      }));
+    // Un corte anterior a la numeración conserva su código al reenviarse
+    if (corte && numberOf(corte.code) === null) options.unshift({ value: corte.code, label: corte.code, sublabel: 'Código actual' });
+    return options;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogs, form.contract_id, corte]);
+
+  // Al elegir el contrato se propone el siguiente número, salvo que el elegido siga libre en ese contrato
+  const handleContractChange = (contractId: number) => {
+    setForm((prev) => {
+      const current = numberOf(prev.code);
+      const keep = (current !== null && !usedNumbers(contractId).includes(current)) || (corte && prev.code === corte.code && corte.contract_id === contractId);
+      return { ...prev, contract_id: contractId, code: keep ? prev.code : nextCode(contractId) };
+    });
+  };
+
   const handleLocationChange = (value: string) => {
     const nextProject = parseLocation(value).projectId;
     setForm((prev) => {
       const contract = catalogs?.contracts.find((c) => c.id === prev.contract_id);
-      // Si el contrato elegido es de otro proyecto se limpia
-      return { ...prev, location: value, contract_id: contract?.project_id === nextProject ? prev.contract_id : null };
+      // Si el contrato elegido es de otro proyecto se limpia (y con él el número del corte)
+      return contract?.project_id === nextProject
+        ? { ...prev, location: value }
+        : { ...prev, location: value, contract_id: null, code: '' };
     });
   };
 
@@ -139,6 +186,10 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
       setLocalError('Selecciona el proyecto / torre, el proveedor y el contrato relacionado.');
       return;
     }
+    if (!form.code) {
+      setLocalError('Elige el número del corte.');
+      return;
+    }
     if (!isResubmit && !file) {
       setLocalError('Adjunta el archivo del corte.');
       return;
@@ -150,7 +201,7 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
       const token = file ? (uploadedToken ?? await uploadSelectedFile(file)) : null;
       await onSave(
         {
-          code: form.code.trim(),
+          code: form.code,
           project_id: projectId,
           tower_id: towerId,
           contractor_id: form.contractor_id,
@@ -185,7 +236,7 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
                 {isResubmit ? 'Corregir y reenviar corte' : 'Registrar corte'}
               </h2>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                {isResubmit ? `Corte ${corte.code}` : 'Registro de Corte'}
+                {isResubmit ? corte.label : 'Registro de Corte'}
               </p>
             </div>
           </div>
@@ -210,12 +261,6 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
               <p className="font-bold whitespace-pre-line">{lastReturn.comment}</p>
             </div>
           )}
-
-          <div className="space-y-2">
-            <label className={labelClass}>Código del corte *</label>
-            <input required disabled={submitting} className={inputClass} placeholder="Ej: CORTE-T1-005"
-              value={form.code} onChange={(e) => set('code', e.target.value)} />
-          </div>
 
           <CustomSelect
             pyClass="py-3.5"
@@ -245,8 +290,24 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
               disabled={submitting || !projectId || contractOptions.length === 0}
               options={contractOptions}
               value={form.contract_id}
-              onChange={(v) => set('contract_id', Number(v))}
+              onChange={(v) => handleContractChange(Number(v))}
             />
+          </div>
+
+          <div className="space-y-2">
+            <CustomSelect
+              pyClass="py-3.5"
+              label="Código del corte *"
+              placeholder={form.contract_id ? 'Selecciona el número del corte' : 'Primero elige el contrato'}
+              searchPlaceholder="Buscar número..."
+              disabled={submitting || !form.contract_id}
+              options={codeOptions}
+              value={form.code}
+              onChange={(v) => set('code', String(v))}
+            />
+            <p className="text-[11px] font-bold text-slate-400 ml-1">
+              La numeración es por contrato. Se guarda en la carpeta 05 CORTES del contrato.
+            </p>
           </div>
 
           {/* Archivo */}

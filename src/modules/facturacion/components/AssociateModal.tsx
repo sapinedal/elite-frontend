@@ -5,7 +5,7 @@ import { formatMoney, formatMoneyInput, parseMoney } from '../../../utils/money'
 import { formatDate } from '../../../utils/dateUtils';
 import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { facturacionService, getApiErrorMessage } from '../services/facturacionService';
-import { ModalShell, inputClass, labelClass } from './ModalShell';
+import { ModalShell, inputClass, labelClass } from '../../../components/ui/ModalShell';
 import type { Factura, FacturacionCatalogs, FacturaTargets } from '../types';
 
 interface AssociateModalProps {
@@ -165,7 +165,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
               {cortes.map((c) => option(
                 c.id,
                 targetId === c.id,
-                <><span className="font-black text-[#004C6C]">Corte {c.code}</span><span className="text-xs font-bold text-slate-500">{c.contractor ?? 'Sin proveedor'}</span></>,
+                <><span className="font-black text-[#004C6C]">{c.label}</span><span className="text-xs font-bold text-slate-500">{c.contractor ?? 'Sin proveedor'}</span></>,
                 [c.project, c.tower, c.contract_code && `Contrato ${c.contract_code}`, c.approved_at && `Aprobado ${formatDate(c.approved_at)}`,
                   c.invoices_count ? `${c.invoices_count} factura(s) ya asociada(s)` : 'Sin factura'].filter(Boolean).join(' · '),
                 factura.contractor && c.contractor_id === factura.contractor.id
@@ -255,11 +255,11 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
 
         {targetType === 'corte' && (
           <p className="text-[11px] font-bold text-slate-400">
-            Al asociarla, el corte pasa a Facturado y se avisa para el registro en Multifox y cuentas por pagar.
+            Al asociarla, la factura se copia a la carpeta del corte (05 CORTES), el corte pasa a Facturado y se avisa para el registro en Multifox y cuentas por pagar.
           </p>
         )}
         {targetType === 'orden' && (
-          <p className="text-[11px] font-bold text-slate-400">Al asociarla, la orden pasa a la entrada de almacén.</p>
+          <p className="text-[11px] font-bold text-slate-400">Al asociarla, la factura se copia a la carpeta de la orden y la orden pasa a la entrada de almacén.</p>
         )}
       </div>
     </ModalShell>

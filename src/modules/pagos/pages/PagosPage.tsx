@@ -5,6 +5,7 @@ import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
 import { Tabs } from '../../../components/ui/Tabs';
 import { useNotification } from '../../../context/NotificationContext';
+import { useNewFromQuery } from '../../../hooks/useNewFromQuery';
 import { formatMoney } from '../../../utils/money';
 import { usePagos } from '../hooks/usePagos';
 import { pagoService, getApiErrorMessage } from '../services/pagoService';
@@ -29,6 +30,8 @@ export default function PagosPage() {
   const [prioritizing, setPrioritizing] = useState<PagoCuenta[] | null>(null);
   const [paying, setPaying] = useState<PagoCuenta | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  // Registro desde el Sidebar: ?nuevo=1 abre el registro de una cuenta por pagar
+  const [wantsNew, clearNew] = useNewFromQuery();
   const [exporting, setExporting] = useState(false);
 
   // Paula selecciona varias cuentas para programarlas juntas
@@ -312,7 +315,8 @@ export default function PagosPage() {
       />
       <PrioritizeModal cuentas={prioritizing} catalogs={catalogs} onClose={() => setPrioritizing(null)} onConfirm={handlePrioritize} />
       <PayModal cuenta={paying} maxUploadMb={catalogs?.max_upload_mb ?? 50} onClose={() => setPaying(null)} onConfirm={handlePay} />
-      <PagoFormModal isOpen={formOpen} catalogs={catalogs} onClose={() => setFormOpen(false)} onSave={handleCreate} />
+      <PagoFormModal isOpen={formOpen || (wantsNew && Boolean(catalogs?.can_register))} catalogs={catalogs}
+        onClose={() => { setFormOpen(false); clearNew(); }} onSave={handleCreate} />
     </div>
   );
 }

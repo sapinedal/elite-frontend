@@ -8,6 +8,7 @@ import { Modal } from '../../../components/ui/Modal';
 import { Pagination } from '../../../components/ui/Pagination';
 import { useAuth } from '../../../context/AuthContext';
 import { useNotification } from '../../../context/NotificationContext';
+import { useNewFromQuery } from '../../../hooks/useNewFromQuery';
 import { useContracts } from '../hooks/useContracts';
 import { ContractFormModal } from '../components/ContractFormModal';
 import { ContractDocumentsModal } from '../components/ContractDocumentsModal';
@@ -40,6 +41,9 @@ export default function ContratacionPage() {
   const canCreate = useCan('contratacion.crear');
   const canEdit = useCan('contratacion.editar');
   const canDelete = useCan('contratacion.eliminar');
+  // Registro desde el Sidebar: ?nuevo=1 abre el formulario de contrato nuevo
+  const [wantsNew, clearNew] = useNewFromQuery();
+  const newRequested = wantsNew && canCreate;
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
@@ -305,11 +309,11 @@ export default function ContratacionPage() {
       )}
 
       <ContractFormModal
-        isOpen={formOpen}
-        onClose={() => setFormOpen(false)}
+        isOpen={formOpen || newRequested}
+        onClose={() => { setFormOpen(false); clearNew(); }}
         onSave={handleSave}
         onCreateTower={(name) => createTower(name)}
-        contract={editingContract}
+        contract={newRequested ? null : editingContract}
         catalogs={catalogs}
         projectName={activeProject.name}
       />

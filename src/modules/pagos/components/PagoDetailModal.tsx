@@ -79,7 +79,9 @@ const PagoDetailContent: React.FC<Omit<PagoDetailModalProps, 'cuentaId' | 'versi
   };
 
   const sourceLink = cuenta?.corte_id ? `/app/contratacion/cortes?corte=${cuenta.corte_id}`
-    : cuenta?.orden_id ? `/app/contratacion/ordenes?orden=${cuenta.orden_id}` : null;
+    : cuenta?.orden_id ? `/app/contratacion/ordenes?orden=${cuenta.orden_id}`
+    : cuenta?.anticipo_id ? `/app/contratacion/anticipos?anticipo=${cuenta.anticipo_id}`
+    : cuenta?.cuenta_cobro_id ? `/app/contratacion/cuentas-cobro?cuenta=${cuenta.cuenta_cobro_id}` : null;
 
   return (
     <PagoModalShell isOpen onClose={onClose} size="lg" icon={<Wallet size={24} />}

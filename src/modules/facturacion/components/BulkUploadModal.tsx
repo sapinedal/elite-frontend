@@ -6,7 +6,7 @@ import { matchContractor, parseInvoiceFileName } from '../utils/fileName';
 import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { FacturaFields } from './FacturaFields';
 import { draftError, draftToPayload, type FacturaDraft } from '../utils/draft';
-import { ModalShell, labelClass } from './ModalShell';
+import { ModalShell, labelClass } from '../../../components/ui/ModalShell';
 import type { FacturacionCatalogs } from '../types';
 
 interface BulkUploadModalProps {

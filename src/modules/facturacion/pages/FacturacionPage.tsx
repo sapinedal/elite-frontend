@@ -6,6 +6,7 @@ import { Pagination } from '../../../components/ui/Pagination';
 import { Tabs } from '../../../components/ui/Tabs';
 import { Modal } from '../../../components/ui/Modal';
 import { useNotification } from '../../../context/NotificationContext';
+import { useNewFromQuery } from '../../../hooks/useNewFromQuery';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { formatMoney } from '../../../utils/money';
 import { useFacturas } from '../hooks/useFacturas';
@@ -41,6 +42,8 @@ export default function FacturacionPage() {
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   const canManage = catalogs?.can_manage ?? false;
+  // Registro desde el Sidebar: ?nuevo=1 abre el cargue de facturas
+  const [wantsNew, clearNew] = useNewFromQuery();
   const canAssociate = catalogs?.can_associate ?? false;
   const currentPeriod = catalogs?.current_period ?? '';
 
@@ -267,8 +270,8 @@ export default function FacturacionPage() {
       {catalogs && (
         <>
           <BulkUploadModal
-            isOpen={uploadOpen}
-            onClose={() => setUploadOpen(false)}
+            isOpen={uploadOpen || (wantsNew && canManage)}
+            onClose={() => { setUploadOpen(false); clearNew(); }}
             catalogs={catalogs}
             defaultPeriod={currentPeriod}
             onUploaded={(count) => { showNotification(`${count} factura(s) cargada(s). Quedan pendientes de obra.`, 'success'); refresh(); }}

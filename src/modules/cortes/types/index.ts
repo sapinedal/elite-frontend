@@ -24,6 +24,8 @@ export interface CorteContractOption {
   tower_id: number | null;
   contract_code: string;
   contractor_name: string;
+  /** Números de corte ya radicados en el contrato (CORTE 1, CORTE 3 -> [1, 3]) */
+  corte_numbers: number[];
 }
 
 export interface CorteCatalogs {
@@ -64,7 +66,10 @@ export interface CorteHistoryEntry {
 
 export interface Corte {
   id: number;
+  /** "CORTE 3" (los cortes anteriores a la numeración conservan su código libre) */
   code: string;
+  /** Nombre para mostrar: "CORTE 3" o "Corte 6634" */
+  label: string;
   project_id: number;
   project: { id: number; name: string } | null;
   tower_id: number | null;

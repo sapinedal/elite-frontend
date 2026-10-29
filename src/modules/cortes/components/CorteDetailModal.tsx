@@ -107,7 +107,7 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
               <Scissors size={24} />
             </div>
             <div className="min-w-0">
-              <h2 className="text-2xl font-black text-[#004C6C] tracking-tight truncate">{corte ? `Corte ${corte.code}` : 'Corte'}</h2>
+              <h2 className="text-2xl font-black text-[#004C6C] tracking-tight truncate">{corte ? corte.label : 'Corte'}</h2>
               {corte && (
                 <div className="mt-1"><CorteStatusBadge status={corte.status} label={corte.status_label} /></div>
               )}
@@ -240,7 +240,7 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
       </div>
 
       {corte && (
-        <HistoryModal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} subtitle={`Corte ${corte.code}`}>
+        <HistoryModal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} subtitle={corte.contract ? `${corte.label} · Contrato ${corte.contract.contract_code}` : corte.label}>
           <ol className="relative border-l-2 border-slate-100 ml-2 space-y-5">
             {(corte.history ?? []).map((entry) => {
               const action = ACTION_LABELS[entry.action];

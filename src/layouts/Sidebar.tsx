@@ -18,12 +18,12 @@ import {
     FileText,
     FolderLock,
     FileSignature,
-    Scissors,
-    ShoppingCart,
     Wallet,
     Receipt,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { REGISTRO_ACTIONS } from '../config/registroActions';
+import { RegistroMenu } from './RegistroMenu';
 import logo from '../assets/logo_inver.svg';
 
 interface SidebarItem {
@@ -35,6 +35,8 @@ interface SidebarItem {
     permission?: string;
     /** Se muestra si el usuario tiene al menos uno de estos permisos */
     permissions?: string[];
+    /** Submódulo Registro: abre la ventana emergente con los registros de los módulos (RegistroMenu) */
+    registro?: boolean;
 }
 
 interface SidebarProps {
@@ -146,18 +148,12 @@ const eliteMenuItems: SidebarItem[] = [
         // Sin permiso en el grupo: se muestra si el usuario ve al menos una de sus opciones
         children: [
             {
-                id: 'contratacion-cortes',
-                label: 'Registro de Corte',
-                icon: <Scissors className="w-4 h-4" />,
-                href: '/app/contratacion/cortes',
-                permission: 'cortes.ver',
-            },
-            {
-                id: 'contratacion-ordenes',
-                label: 'Registro de Orden',
-                icon: <ShoppingCart className="w-4 h-4" />,
-                href: '/app/contratacion/ordenes',
-                permission: 'ordenes.ver',
+                id: 'contratacion-registro',
+                label: 'Registro',
+                icon: <PlusCircle className="w-4 h-4" />,
+                // Corte, Entrada, Anticipo y Cuenta de cobro solo se acceden desde aquí: visible si ve al menos uno
+                permissions: REGISTRO_ACTIONS.map((action) => action.viewPermission),
+                registro: true,
             },
             {
                 id: 'contratacion-facturas',
@@ -242,6 +238,8 @@ const eliteMenuItems: SidebarItem[] = [
 ];
 
 const isChildActiveCheck = (child: SidebarItem, path: string) => {
+    // Registro agrupa las páginas de Corte, Entrada, Anticipo y Cuenta de cobro
+    if (child.registro) return REGISTRO_ACTIONS.some((action) => action.href === path);
     if (!child.href) return false;
     if (child.href === path) return true;
     if (child.id === 'ftra-seguimiento' && (path.startsWith('/app/ftra/revision') || path.startsWith('/app/ftra/aprobacion'))) {
@@ -321,11 +319,14 @@ const SidebarItemComponent: React.FC<{
             <div
                 className={`
           overflow-hidden transition-all duration-300 ease-in-out
-          ${(hasChildren && isExpanded && isItemExpanded) ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
+          ${(hasChildren && isExpanded && isItemExpanded) ? 'max-h-[40rem] opacity-100' : 'max-h-0 opacity-0'}
         `}
             >
                 <div className="space-y-1 mt-1">
                     {visibleChildren.map((child) => {
+                        if (child.registro) {
+                            return <RegistroMenu key={child.id} userPermissions={userPermissions} onNavigate={() => onNavigate('#')} />;
+                        }
                         const isChildActive = isChildActiveCheck(child, currentPath);
                         return (
                             <div
@@ -377,9 +378,9 @@ export default function Sidebar({ isExpanded, onToggle, isMobileOpen = false, on
         );
     };
 
+    // '#' solo cierra el menú móvil (la navegación ya la hizo el submódulo, ej. Registro)
     const handleNavigate = (href: string) => {
-        if (href === '#') return;
-        navigate(href);
+        if (href !== '#') navigate(href);
         if (onMobileClose) onMobileClose();
     };
 
@@ -397,7 +398,7 @@ export default function Sidebar({ isExpanded, onToggle, isMobileOpen = false, on
                 className={`
           fixed lg:sticky top-0 left-0 bg-[#004C6C] h-screen z-30 transition-all duration-300 ease-in-out shadow-2xl flex flex-col
           ${isExpanded ? 'w-64' : 'w-20'}
-          ${isMobileOpen ? 'translate-x-0 w-64 z-60' : '-translate-x-full lg:translate-x-0'}
+          ${isMobileOpen ? 'translate-x-0 w-64 max-lg:w-full max-lg:h-dvh z-60' : '-translate-x-full lg:translate-x-0'}
         `}
             >
                 {/* Header */}

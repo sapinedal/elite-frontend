@@ -24,6 +24,8 @@ import ContratacionPage from '../modules/contratacion/pages/ContratacionPage';
 import CortesPage from '../modules/cortes/pages/CortesPage';
 import CortesRedirect from '../modules/cortes/pages/CortesRedirect';
 import FacturacionPage from '../modules/facturacion/pages/FacturacionPage';
+import AnticiposPage from '../modules/anticipos/pages/AnticiposPage';
+import CuentasCobroPage from '../modules/cuentas-cobro/pages/CuentasCobroPage';
 import OrdenesPage from '../modules/ordenes/pages/OrdenesPage';
 import PagosPage from '../modules/pagos/pages/PagosPage';
 
@@ -212,6 +214,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permissions={['cortes.facturar', 'cortes.crear', 'ordenes.crear']}>
             <FacturacionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'contratacion/anticipos',
+        element: (
+          <ProtectedRoute permission="anticipos.ver">
+            <AnticiposPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'contratacion/cuentas-cobro',
+        element: (
+          <ProtectedRoute permission="cuentas_cobro.ver">
+            <CuentasCobroPage />
           </ProtectedRoute>
         ),
       },

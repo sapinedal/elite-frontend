@@ -104,8 +104,8 @@ export const FacturacionPanel: React.FC<FacturacionPanelProps> = ({ period }) =>
                       <li key={`c${c.id}`} className="flex items-center justify-between gap-3 py-2">
                         <Link to={`/app/contratacion/cortes?corte=${c.id}`} className="flex items-center gap-2 min-w-0 group">
                           <Scissors size={14} className="text-slate-400 shrink-0" />
-                          <span className="text-sm font-black text-[#004C6C] group-hover:underline shrink-0">Corte {c.code}</span>
-                          <span className="text-xs font-bold text-slate-500 truncate">{c.contractor ?? '—'} · {c.project ?? ''}</span>
+                          <span className="text-sm font-black text-[#004C6C] group-hover:underline shrink-0">{c.label}</span>
+                          <span className="text-xs font-bold text-slate-500 truncate">{c.contractor ?? '—'}{c.contract_code ? ` · Contrato ${c.contract_code}` : ''}</span>
                         </Link>
                         <Days days={c.days_waiting} />
                       </li>

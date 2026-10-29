@@ -4,7 +4,7 @@ import { formatMoneyInput } from '../../../utils/money';
 import { facturacionService, getApiErrorMessage } from '../services/facturacionService';
 import { FacturaFields } from './FacturaFields';
 import { draftError, draftToPayload, type FacturaDraft } from '../utils/draft';
-import { ModalShell } from './ModalShell';
+import { ModalShell } from '../../../components/ui/ModalShell';
 import type { Factura, FacturacionCatalogs } from '../types';
 
 interface FacturaEditModalProps {

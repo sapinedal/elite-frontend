@@ -72,6 +72,8 @@ export interface FacturaPayload {
 export interface CorteTarget {
   id: number;
   code: string;
+  /** "CORTE 3" o "Corte 6634" */
+  label: string;
   status: string;
   status_label: string;
   project: string | null;
@@ -148,7 +150,7 @@ export interface FacturacionPanelData {
     name: string;
     email: string;
     processed_in_period: number;
-    cortes: (PanelWaitingItem & { contractor: string | null })[];
+    cortes: (PanelWaitingItem & { label: string; contractor: string | null; contract_code: string | null })[];
     ordenes: (PanelWaitingItem & { description: string })[];
   }[];
 }

@@ -6,6 +6,7 @@ import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
 import { Tabs } from '../../../components/ui/Tabs';
 import { useNotification } from '../../../context/NotificationContext';
+import { useNewFromQuery } from '../../../hooks/useNewFromQuery';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { useOrdenes } from '../hooks/useOrdenes';
 import { OrdenFormModal } from '../components/OrdenFormModal';
@@ -22,6 +23,9 @@ export default function OrdenesPage() {
   } = useOrdenes();
 
   const isReviewer = (catalogs?.review_stages.length ?? 0) > 0;
+  // Registro desde el Sidebar: ?nuevo=1 abre el formulario
+  const [wantsNew, clearNew] = useNewFromQuery();
+  const newRequested = wantsNew && Boolean(catalogs?.can_create);
   const hasTasks = (catalogs?.task_steps.length ?? 0) > 0;
 
   const [formOpen, setFormOpen] = useState(false);
@@ -226,11 +230,11 @@ export default function OrdenesPage() {
       )}
 
       <OrdenFormModal
-        isOpen={formOpen}
-        onClose={() => setFormOpen(false)}
+        isOpen={formOpen || newRequested}
+        onClose={() => { setFormOpen(false); clearNew(); }}
         onSave={handleSave}
         catalogs={catalogs}
-        orden={resubmitting}
+        orden={newRequested ? null : resubmitting}
       />
 
       <OrdenDetailModal

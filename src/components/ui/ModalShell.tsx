@@ -1,6 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { Portal } from '../../../components/ui/Portal';
+import { Portal } from './Portal';
 
 export const inputClass =
   'w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:bg-white focus:border-[#004C6C] focus:ring-4 focus:ring-blue-50 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed';
@@ -18,7 +18,7 @@ interface ModalShellProps {
 }
 
 /**
- * Marco de los modales del módulo (mismo estilo que el detalle de cortes): encabezado, cuerpo con scroll y pie fijo.
+ * Marco de modal con el estilo de los módulos de Contratación (detalle de cortes): encabezado, cuerpo con scroll y pie fijo.
  */
 export const ModalShell: React.FC<ModalShellProps> = ({ isOpen, onClose, icon, title, subtitle, maxWidth = 'max-w-3xl', children, footer }) => (
   <Portal isOpen={isOpen} onClose={onClose}>

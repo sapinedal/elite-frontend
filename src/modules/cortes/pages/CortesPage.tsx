@@ -6,6 +6,7 @@ import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
 import { Tabs } from '../../../components/ui/Tabs';
 import { useAuth } from '../../../context/AuthContext';
+import { useNewFromQuery } from '../../../hooks/useNewFromQuery';
 import { useNotification } from '../../../context/NotificationContext';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { useCortes } from '../hooks/useCortes';
@@ -24,6 +25,9 @@ export default function CortesPage() {
   } = useCortes();
 
   const canCreate = useCan('cortes.crear');
+  // Registro desde el Sidebar: /app/contratacion/cortes?nuevo=1 abre el formulario
+  const [wantsNew, clearNew] = useNewFromQuery();
+  const newRequested = wantsNew && canCreate;
   const isReviewer = (catalogs?.review_stages.length ?? 0) > 0;
 
   const [formOpen, setFormOpen] = useState(false);
@@ -81,7 +85,7 @@ export default function CortesPage() {
       header: 'Corte',
       accessor: (c: Corte) => (
         <div className="min-w-[140px]">
-          <p className="font-black text-[#004C6C]">{c.code}</p>
+          <p className="font-black text-[#004C6C] whitespace-nowrap">{c.label}</p>
           <p className="text-[11px] text-slate-400 truncate max-w-[220px]" title={c.file_name}>{c.file_name}</p>
         </div>
       ),
@@ -232,11 +236,11 @@ export default function CortesPage() {
       )}
 
       <CorteFormModal
-        isOpen={formOpen}
-        onClose={() => setFormOpen(false)}
+        isOpen={formOpen || newRequested}
+        onClose={() => { setFormOpen(false); clearNew(); }}
         onSave={handleSave}
         catalogs={catalogs}
-        corte={resubmitting}
+        corte={newRequested ? null : resubmitting}
       />
 
       <CorteDetailModal
