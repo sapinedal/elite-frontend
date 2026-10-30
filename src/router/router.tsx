@@ -1,5 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import LoginPage from '../modules/auth/pages/LoginPage';
+import ForgotPasswordPage from '../modules/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from '../modules/auth/pages/ResetPasswordPage';
 import DashboardPage from '../modules/dashboard/pages/DashboardPage';
 import PlantillasPage from '../modules/plantillas/pages/PlantillasPage';
 import NuevaEvaluacionPage from '../modules/evaluacion/pages/NuevaEvaluacionPage';
@@ -37,6 +39,15 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  // Restablecer la contraseña (el enlace del correo lleva a /restablecer-clave?token=...&email=...)
+  {
+    path: '/recuperar-clave',
+    element: <ForgotPasswordPage />,
+  },
+  {
+    path: '/restablecer-clave',
+    element: <ResetPasswordPage />,
   },
   {
     path: '/app',

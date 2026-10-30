@@ -24,7 +24,8 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isPostLoginLoading: boolean;
-  login: (data: { token: string; password_changed?: boolean }) => Promise<void>;
+  /** Guarda la sesión y devuelve el usuario con sus permisos */
+  login: (data: { token: string; password_changed?: boolean }) => Promise<AuthUser>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
@@ -80,7 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loadUser();
   }, []);
 
-  const login = async (data: { token: string; password_changed?: boolean }) => {
+  const login = async (data: { token: string; password_changed?: boolean }): Promise<AuthUser> => {
     setIsPostLoginLoading(true);
     try {
       localStorage.setItem("token", data.token);
@@ -96,6 +97,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       localStorage.setItem("userName", userData.nombre);
       setUser(userData);
+      return userData;
     } catch (error) {
       console.error("Error en login:", error);
       throw error;
