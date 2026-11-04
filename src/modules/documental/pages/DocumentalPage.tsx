@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   FolderPlus,
   UploadCloud,
@@ -14,6 +14,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { useNotification } from '../../../context/NotificationContext';
+import { useProject } from '../../../context/ProjectContext';
 import { documentalService } from '../services/documentalService';
 import type {
   BrowseData,
@@ -22,6 +23,8 @@ import type {
   FolderRoleRule,
   RestrictedFolder,
   RoleOption,
+  ProjectFolderTag,
+  ProjectSummary,
   DocumentalSettings,
   DocumentalSettingsInput,
 } from '../types/documental.types';
@@ -78,6 +81,14 @@ export default function DocumentalPage() {
   // Admin: restricciones de carpetas por rol
   const [restrictedFolders, setRestrictedFolders] = useState<RestrictedFolder[]>([]);
   const [rolesList, setRolesList] = useState<RoleOption[]>([]);
+  // Admin: carpetas asignadas a proyectos
+  const [projectFolders, setProjectFolders] = useState<ProjectFolderTag[]>([]);
+  const [projectsList, setProjectsList] = useState<ProjectSummary[]>([]);
+
+  // Las carpetas de otros proyectos se ocultan según el proyecto activo del header
+  const { activeProject } = useProject();
+  const activeProjectId = activeProject?.id ?? null;
+  const previousProjectId = useRef(activeProjectId);
 
   const loadDirectory = useCallback(
     async (path = currentPath, search = searchQuery, refresh = false, recursive = searchInSubfolders) => {
@@ -103,6 +114,8 @@ export default function DocumentalPage() {
       const res = await documentalService.getPermissions(currentPath);
       setRestrictedFolders(res.restricted_folders || []);
       setRolesList(res.roles || []);
+      setProjectFolders(res.project_folders || []);
+      setProjectsList(res.projects || []);
     } catch (err) {
       console.error('Error al cargar restricciones de carpetas:', err);
     }
@@ -125,6 +138,19 @@ export default function DocumentalPage() {
   useEffect(() => {
     loadDirectory(currentPath, searchQuery);
   }, [currentPath]);
+
+  // Al cambiar de proyecto se vuelve a la raíz: la carpeta actual puede pertenecer al proyecto anterior
+  useEffect(() => {
+    if (previousProjectId.current === activeProjectId) return;
+    previousProjectId.current = activeProjectId;
+    setSearchQuery('');
+    if (currentPath === '') {
+      loadDirectory('', '');
+    } else {
+      setCurrentPath('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProjectId]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,6 +231,13 @@ export default function DocumentalPage() {
 
   const handleSaveRestriction = async (folderPath: string, rules: FolderRoleRule[]) => {
     const res = await documentalService.syncFolderRules(folderPath, rules);
+    showNotification(res.message, 'success');
+    await loadAdminRules();
+    loadDirectory(currentPath);
+  };
+
+  const handleSaveFolderProject = async (folderPath: string, projectId: number | null) => {
+    const res = await documentalService.setFolderProject(folderPath, projectId);
     showNotification(res.message, 'success');
     await loadAdminRules();
     loadDirectory(currentPath);
@@ -591,6 +624,9 @@ export default function DocumentalPage() {
         currentPath={currentPath}
         restrictedFolders={restrictedFolders}
         roles={rolesList}
+        projectFolders={projectFolders}
+        projects={projectsList}
+        onSaveProject={handleSaveFolderProject}
         onClose={() => setIsPermissionsOpen(false)}
         onSave={handleSaveRestriction}
         onNavigate={handleNavigate}

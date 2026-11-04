@@ -5,8 +5,13 @@ import { contractorService } from '../services/contractorService';
 import { residenteService } from '../services/residenteService';
 import type { FtraRecord, FtraFormat, FtraContractor, Residente, FtraRecordStatus } from '../types';
 import { getErrorMessage } from '../../../lib/apiError';
+import { useProject } from '../../../context/ProjectContext';
 
 export function useFtraRecords() {
+  // Los registros se filtran por el proyecto activo (header X-Project-Id); al cambiarlo se recargan
+  const { activeProject, isLoading: isLoadingProjects } = useProject();
+  const activeProjectId = activeProject?.id ?? null;
+
   const [records, setRecords] = useState<FtraRecord[]>([]);
   const [formats, setFormats] = useState<FtraFormat[]>([]);
   const [contractors, setContractors] = useState<FtraContractor[]>([]);
@@ -29,6 +34,7 @@ export function useFtraRecords() {
   });
 
   const fetchRecords = useCallback(async () => {
+    if (isLoadingProjects) return;
     setLoading(true);
     setError(null);
     try {
@@ -52,7 +58,7 @@ export function useFtraRecords() {
     } finally {
       setLoading(false);
     }
-  }, [filters, currentPage, perPage]);
+  }, [filters, currentPage, perPage, activeProjectId, isLoadingProjects]);
 
   // Carga catálogos de formatos y contratistas activos para formularios
   const fetchCatalogs = useCallback(async () => {
@@ -78,10 +84,10 @@ export function useFtraRecords() {
     fetchCatalogs();
   }, [fetchCatalogs]);
 
-  // Reiniciar paginación al cambiar filtros
+  // Reiniciar paginación al cambiar filtros o de proyecto
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters]);
+  }, [filters, activeProjectId]);
 
   const setFilter = useCallback((key: keyof typeof filters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));

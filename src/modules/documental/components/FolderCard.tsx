@@ -2,6 +2,7 @@ import React from 'react';
 import { Folder, MoreVertical, Edit2, Trash2, Lock } from 'lucide-react';
 import type { FolderItem, EffectivePermissions } from '../types/documental.types';
 import { ItemLocation } from './ItemLocation';
+import { useProject } from '../../../context/ProjectContext';
 
 interface FolderCardProps {
   folder: FolderItem;
@@ -21,6 +22,8 @@ export const FolderCard: React.FC<FolderCardProps> = ({
   onRestrict,
 }) => {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const { projects } = useProject();
+  const projectName = folder.project_id ? projects.find((p) => p.id === folder.project_id)?.name : null;
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -64,6 +67,7 @@ export const FolderCard: React.FC<FolderCardProps> = ({
             <ItemLocation location={folder.location} onOpen={onOpen} />
             <span className="text-[11px] font-medium text-slate-400">
               {folder.restricted ? 'Carpeta restringida' : 'Carpeta'}
+              {projectName && <span className="text-[#004C6C] font-semibold"> · {projectName}</span>}
             </span>
           </div>
         </div>

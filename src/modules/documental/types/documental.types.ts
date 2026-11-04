@@ -9,6 +9,8 @@ export interface FolderItem {
   type: 'folder';
   /** La carpeta tiene restricciones por rol */
   restricted?: boolean;
+  /** Proyecto al que está asignada la carpeta (null = transversal) */
+  project_id?: number | null;
   /** Carpeta contenedora; solo en resultados de búsqueda en subcarpetas */
   location?: string;
 }
@@ -75,6 +77,19 @@ export interface RestrictedFolder {
   rules: FolderRoleRule[];
 }
 
+export interface ProjectFolderTag {
+  folder_path: string;
+  project_id: number;
+  project_code: string | null;
+  project_name: string | null;
+}
+
+export interface ProjectSummary {
+  id: number;
+  code: string;
+  name: string;
+}
+
 export interface RoleOption {
   id: number;
   name: string;
@@ -105,6 +120,8 @@ export interface PermissionsResponse {
   };
   restricted_folders: RestrictedFolder[];
   roles: RoleOption[];
+  project_folders: ProjectFolderTag[];
+  projects: ProjectSummary[];
 }
 
 export interface DocumentLogFilters {

@@ -107,6 +107,17 @@ export const documentalService = {
   },
 
   /**
+   * Asigna una carpeta (y su contenido) a un proyecto; null la vuelve transversal.
+   */
+  async setFolderProject(folderPath: string, projectId: number | null): Promise<{ message: string; project_id: number | null }> {
+    const response = await api.put('/v1/documental/project-folders', {
+      folder_path: folderPath,
+      project_id: projectId,
+    });
+    return response.data.data;
+  },
+
+  /**
    * Obtiene los registros de auditoría con filtros opcionales.
    */
   async getLogs(page = 1, perPage = 25, filters: DocumentLogFilters = {}): Promise<DocumentLogsResponse> {

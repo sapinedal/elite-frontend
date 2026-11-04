@@ -11,8 +11,15 @@ import {
   Loader2,
   FolderLock,
   Info,
+  Building2,
 } from 'lucide-react';
-import type { FolderRoleRule, RestrictedFolder, RoleOption } from '../types/documental.types';
+import type {
+  FolderRoleRule,
+  ProjectFolderTag,
+  ProjectSummary,
+  RestrictedFolder,
+  RoleOption,
+} from '../types/documental.types';
 import { getErrorMessage } from '../../../lib/apiError';
 import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 
@@ -23,6 +30,9 @@ interface FolderRestrictionsModalProps {
   currentPath: string;
   restrictedFolders: RestrictedFolder[];
   roles: RoleOption[];
+  projectFolders: ProjectFolderTag[];
+  projects: ProjectSummary[];
+  onSaveProject: (folderPath: string, projectId: number | null) => Promise<void>;
   onClose: () => void;
   onSave: (folderPath: string, rules: FolderRoleRule[]) => Promise<void>;
   onNavigate: (path: string) => void;
@@ -51,6 +61,9 @@ export const FolderRestrictionsModal: React.FC<FolderRestrictionsModalProps> = (
   currentPath,
   restrictedFolders,
   roles,
+  projectFolders,
+  projects,
+  onSaveProject,
   onClose,
   onSave,
   onNavigate,
@@ -62,6 +75,11 @@ export const FolderRestrictionsModal: React.FC<FolderRestrictionsModalProps> = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmRemovePath, setConfirmRemovePath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Proyecto de la carpeta en edición ('' = transversal)
+  const [projectChoice, setProjectChoice] = useState<string>('');
+  const [isSavingProject, setIsSavingProject] = useState(false);
+
+  const projectOf = (path: string) => projectFolders.find((f) => f.folder_path === path);
 
   const openEditor = (path: string) => {
     const existing = restrictedFolders.find((f) => f.folder_path === path);
@@ -72,7 +90,20 @@ export const FolderRestrictionsModal: React.FC<FolderRestrictionsModalProps> = (
     });
     setMatrix(next);
     setEditingPath(path);
+    setProjectChoice(String(projectOf(path)?.project_id ?? ''));
     setError(null);
+  };
+
+  const saveProject = async (path: string) => {
+    try {
+      setIsSavingProject(true);
+      setError(null);
+      await onSaveProject(path, projectChoice === '' ? null : Number(projectChoice));
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Error al asignar el proyecto'));
+    } finally {
+      setIsSavingProject(false);
+    }
   };
 
   useEffect(() => {
@@ -85,7 +116,7 @@ export const FolderRestrictionsModal: React.FC<FolderRestrictionsModalProps> = (
       setEditingPath(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, initialFolderPath, roles.length]);
+  }, [isOpen, initialFolderPath, roles.length, projectFolders.length]);
 
   if (!isOpen) return null;
 
@@ -162,6 +193,41 @@ export const FolderRestrictionsModal: React.FC<FolderRestrictionsModalProps> = (
           {editingPath ? (
             /* Editor de una carpeta */
             <>
+              <div className="border border-slate-200 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-[#004C6C]" />
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Proyecto</h4>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Una carpeta asignada a un proyecto (con todo su contenido) solo se ve cuando ese proyecto está
+                  activo en el encabezado. Las carpetas transversales se ven en todos los proyectos.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <select
+                    value={projectChoice}
+                    onChange={(e) => setProjectChoice(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#EE9D4C]/40"
+                    aria-label="Proyecto de la carpeta"
+                  >
+                    <option value="">Transversal (todos los proyectos)</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={isSavingProject || projectChoice === String(projectOf(editingPath)?.project_id ?? '')}
+                    onClick={() => saveProject(editingPath)}
+                    className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#004C6C] hover:bg-[#003952] disabled:opacity-50 transition-colors"
+                  >
+                    {isSavingProject ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    <span>Guardar proyecto</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="p-3 px-4 bg-sky-50 border border-sky-100 rounded-2xl flex items-start gap-3 text-xs text-sky-800 font-medium">
                 <Info className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
                 <span>

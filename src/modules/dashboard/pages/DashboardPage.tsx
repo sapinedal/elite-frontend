@@ -28,7 +28,7 @@ import {
 import { useUsers } from '../../users/hooks/useUsers';
 import { evaluationService } from '../../evaluacion/services/evaluationService';
 import type { User } from '../../users/types';
-import type { Evaluation } from '../../evaluacion/types';
+import type { AreaDashboardReport, Evaluation } from '../../evaluacion/types';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 
@@ -105,7 +105,7 @@ const CustomKPITooltip = ({ active, payload }: any) => {
     const data = payload[0].payload;
     return (
       <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xl space-y-1 z-50">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{data.role}</p>
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{data.collaborator}</p>
         <p className="text-xs font-black text-[#004C6C]">{data.category}</p>
         <div className="flex gap-4 pt-2 text-xs font-bold">
           <span className="text-[#004C6C]">Incidencia: {payload[0].value}%</span>
@@ -189,222 +189,50 @@ export default function DashboardPage() {
     return acc;
   }, {} as Record<string, { user: User, evaluation?: Evaluation }[]>);
 
-  const getCargoLabel = (user: User) => {
-    const posName = (typeof user.position === 'object' ? user.position?.name : user.position) || '';
-    const posUpper = posName.toUpperCase();
-    
-    const firstName = user.first_name ? user.first_name.split(' ')[0].toUpperCase() : user.name.split(' ')[0].toUpperCase();
-    const lastName = user.last_name ? user.last_name.split(' ')[0].toUpperCase() : '';
-    const shortName = lastName ? `${firstName} ${lastName}` : firstName;
+  // Detalle del área: todo se calcula en el backend (KpiDashboardService), igual que el PDF
+  const [areaReport, setAreaReport] = useState<AreaDashboardReport | null>(null);
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
 
-    if (posUpper.includes('DIRECTORA COMERCIAL') || posUpper.includes('DIRECTOR COMERCIAL')) {
-      return `DIRECTORA COMERCIAL - ${shortName}`;
+  useEffect(() => {
+    if (!selectedArea) {
+      setAreaReport(null);
+      return;
     }
-    if (posUpper.includes('LÍDER DE SALA') || posUpper.includes('LIDER DE SALA') || posUpper.includes('SALA DE VENTAS')) {
-      return `LIDER SALA DE VENTAS - ${shortName}`;
-    }
-    if (posUpper.includes('ASESORA COMERCIAL') || posUpper.includes('ASESOR COMERCIAL')) {
-      return `ASESORA COMERCIAL - ${shortName}`;
-    }
-    return `${posUpper} - ${shortName}` || user.name.toUpperCase();
-  };
-
-  // Construct comparison data dynamically for the selected area
-  const rawComparisonData = (groupedData[selectedArea || ''] || []).map(({ user }) => {
-    const userEvals = allEvaluations.filter(e => e.user_id === user.id);
-    
-    const findScore = (month: number, year: number) => {
-      const evalObj = userEvals.find(e => Number(e.month) === month && Number(e.year) === year);
-      return evalObj ? Number(evalObj.total_score) : undefined;
-    };
-
-    return {
-      cargo: getCargoLabel(user),
-      "Agosto": findScore(8, 2025),
-      "Septiembre": findScore(9, 2025),
-      "Octubre": findScore(10, 2025),
-      "Noviembre": findScore(11, 2025),
-      "Diciembre-Enero": findScore(12, 2025) ?? findScore(1, 2026),
-      "Febrero": findScore(2, 2026),
-      "Marzo": findScore(3, 2026),
-      "Abril": findScore(4, 2026),
-      "Mayo": findScore(5, 2026)
-    };
-  });
-
-  const cargoOrder = [
-    'ASESORA COMERCIAL - PAOLA ARENAS',
-    'ASESORA COMERCIAL - NATALIA POSADA',
-    'LIDER SALA DE VENTAS - INGRID OSPICIO',
-    'DIRECTORA COMERCIAL - SARA MORENO'
-  ];
-
-  const monthsConfig = [
-    { key: 'Agosto', label: 'Ago', color: '#1a5b78' },
-    { key: 'Septiembre', label: 'Sep', color: '#e65f2b' },
-    { key: 'Octubre', label: 'Oct', color: '#1b5e20' },
-    { key: 'Noviembre', label: 'Nov', color: '#0288d1' },
-    { key: 'Diciembre-Enero', label: 'Dic-Ene', color: '#9c27b0' },
-    { key: 'Febrero', label: 'Feb', color: '#55a630' },
-    { key: 'Marzo', label: 'Mar', color: '#0b2c3d' },
-    { key: 'Abril', label: 'Abr', color: '#7209b7' },
-    { key: 'Mayo', label: 'May', color: '#f72585' },
-  ];
-
-  const comparisonData = selectedArea === 'Comercial'
-    ? rawComparisonData.sort((a, b) => {
-        return cargoOrder.indexOf(a.cargo) - cargoOrder.indexOf(b.cargo);
+    let cancelled = false;
+    setIsLoadingReport(true);
+    evaluationService
+      .getAreaDashboard(selectedArea, currentMonth, currentYear)
+      .then((report) => { if (!cancelled) setAreaReport(report); })
+      .catch((error) => {
+        console.error('Error fetching area dashboard:', error);
+        if (!cancelled) setAreaReport(null);
       })
-    : rawComparisonData.sort((a, b) => {
-        return a.cargo.localeCompare(b.cargo);
-      });
+      .finally(() => { if (!cancelled) setIsLoadingReport(false); });
+    return () => { cancelled = true; };
+  }, [selectedArea, currentMonth, currentYear]);
 
-  // Dynamic monthly evolution averages for the selected area
-  const getEvolutionData = () => {
-    const areaEvaluations = allEvaluations.filter(e => {
-      const userObj = users.find(u => u.id === e.user_id);
-      const areaName = userObj ? (typeof userObj.area === 'object' ? userObj.area?.name : userObj.area) : null;
-      return areaName === selectedArea;
-    });
-
-    const monthNamesShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    
-    // Group evaluations by year and month
-    const grouped: Record<string, { sum: number; count: number; year: number; month: number }> = {};
-    
-    areaEvaluations.forEach(e => {
-      const key = `${e.year}-${String(e.month).padStart(2, '0')}`;
-      if (!grouped[key]) {
-        grouped[key] = { sum: 0, count: 0, year: e.year, month: e.month };
-      }
-      grouped[key].sum += Number(e.total_score || 0);
-      grouped[key].count += 1;
-    });
-    
-    // Sort chronologically
-    const sortedKeys = Object.keys(grouped).sort();
-    
-    if (sortedKeys.length === 0) {
-      return [
-        { name: 'Ago', score: 0 },
-        { name: 'Sep', score: 0 },
-        { name: 'Oct', score: 0 },
-        { name: 'Nov', score: 0 },
-        { name: 'Dic', score: 0 },
-        { name: 'Ene', score: 0 },
-        { name: 'Feb', score: 0 },
-        { name: 'Mar', score: 0 }
-      ];
-    }
-    
-    return sortedKeys.map(key => {
-      const item = grouped[key];
-      const avg = item.sum / item.count;
-      return {
-        name: `${monthNamesShort[item.month - 1]}-${String(item.year).substring(2)}`,
-        score: Number(avg.toFixed(1))
-      };
-    });
-  };
-
-  const evolutionData = getEvolutionData();
-
-  // Find users dynamically by matching position and name
-  const userSaraObj = users.find(u => {
-    const posName = ((typeof u.position === 'object' ? u.position?.name : u.position) || '').toLowerCase();
-    return posName.includes('directora comercial') || posName.includes('director comercial');
-  });
-
-  const userIngridObj = users.find(u => {
-    const posName = ((typeof u.position === 'object' ? u.position?.name : u.position) || '').toLowerCase();
-    return posName.includes('lider de sala') || posName.includes('líder de sala') || posName.includes('sala de ventas');
-  });
-
-  const userNataliaObj = users.find(u => {
-    const posName = ((typeof u.position === 'object' ? u.position?.name : u.position) || '').toLowerCase();
-    const fullName = (u.name || '').toLowerCase();
-    return (posName.includes('asesora comercial') || posName.includes('asesor comercial')) && 
-           (fullName.includes('natalia') || fullName.includes('posada'));
-  });
-
-  const userPaolaObj = users.find(u => {
-    const posName = ((typeof u.position === 'object' ? u.position?.name : u.position) || '').toLowerCase();
-    const fullName = (u.name || '').toLowerCase();
-    return (posName.includes('asesora comercial') || posName.includes('asesor comercial')) && 
-           (fullName.includes('paola') || fullName.includes('arenas'));
-  });
-
-  const evalSara = userSaraObj ? monthEvaluations.find(e => e.user_id === userSaraObj.id) : undefined;
-  const evalIngrid = userIngridObj ? monthEvaluations.find(e => e.user_id === userIngridObj.id) : undefined;
-  const evalPaola = userPaolaObj ? monthEvaluations.find(e => e.user_id === userPaolaObj.id) : undefined;
-  const evalNatalia = userNataliaObj ? monthEvaluations.find(e => e.user_id === userNataliaObj.id) : undefined;
-
-  const scoreSara = evalSara ? Number(evalSara.total_score) : 0;
-  const scoreIngrid = evalIngrid ? Number(evalIngrid.total_score) : 0;
-  const scorePaola = evalPaola ? Number(evalPaola.total_score) : 0;
-  const scoreNatalia = evalNatalia ? Number(evalNatalia.total_score) : 0;
-
-  const kpiBreakdownData = [
-    { role: 'ASESORA COMERCIAL', category: 'Gestión de Clientes y Leads', incid: 70, calif: 70 * (scoreNatalia / 100) },
-    { role: 'ASESORA COMERCIAL', category: 'Gestión Operativa y Control de Ventas', incid: 25, calif: 25 * (scoreNatalia / 100) },
-    { role: 'ASESORA COMERCIAL', category: 'Relaciones y Servicio', incid: 5, calif: 5 * (scoreNatalia / 100) },
-    
-    { role: 'ASESORA COMERCIAL ADMIN', category: 'Gestión de Clientes y Leads', incid: 60, calif: 60 * (scorePaola / 100) },
-    { role: 'ASESORA COMERCIAL ADMIN', category: 'Gestión Operativa y Control de Ventas', incid: 40, calif: 40 * (scorePaola / 100) },
-    { role: 'ASESORA COMERCIAL ADMIN', category: 'Relaciones y Servicio', incid: 0, calif: 0 },
-    
-    { role: 'DIRECTORA COMERCIAL', category: 'Estrategia y Planificación Comercial', incid: 30, calif: 30 * (scoreSara / 100) },
-    { role: 'DIRECTORA COMERCIAL', category: 'Gestión Documental y Procesos Legales/Internos', incid: 10, calif: 10 * (scoreSara / 100) },
-    { role: 'DIRECTORA COMERCIAL', category: 'Gestión Operativa y Control de Ventas', incid: 30, calif: 30 * (scoreSara / 100) },
-    { role: 'DIRECTORA COMERCIAL', category: 'Liderazgo y Gestión del Equipo Comercial', incid: 30, calif: 30 * (scoreSara / 100) },
-    
-    { role: 'LIDER SALA DE VENTAS', category: 'Gestión de Clientes y Leads', incid: 70, calif: 70 * (scoreIngrid / 100) },
-    { role: 'LIDER SALA DE VENTAS', category: 'Gestión Operativa y Control de Ventas', incid: 25, calif: 25 * (scoreIngrid / 100) },
-    { role: 'LIDER SALA DE VENTAS', category: 'Relaciones y Servicio', incid: 5, calif: 5 * (scoreIngrid / 100) },
-  ].map(d => ({
-    ...d,
-    displayLabel: `${d.role === 'ASESORA COMERCIAL' ? 'Asesora' : d.role === 'ASESORA COMERCIAL ADMIN' ? 'Admin' : d.role === 'DIRECTORA COMERCIAL' ? 'Directora' : 'Líder'} - ${d.category.substring(0, 16)}`,
-    "Suma de INCIDENCIA": Number(d.incid.toFixed(1)),
-    "Suma de CALIFICACIÓN": Number(d.calif.toFixed(1))
+  const monthPalette = ['#1a5b78', '#e65f2b', '#1b5e20', '#0288d1', '#9c27b0', '#55a630', '#0b2c3d', '#7209b7', '#f72585'];
+  const monthsConfig = (areaReport?.months ?? []).map((m, i) => ({
+    key: m.key,
+    label: m.label,
+    color: monthPalette[i % monthPalette.length],
   }));
 
-  // Dynamic KPI Breakdown for other areas
-  const getDynamicKpiBreakdown = () => {
-    const results = monthEvaluations
-      .filter(e => {
-        const userObj = users.find(u => u.id === e.user_id);
-        const areaName = userObj ? (typeof userObj.area === 'object' ? userObj.area?.name : userObj.area) : null;
-        return areaName === selectedArea;
-      })
-      .flatMap(e => e.results || []);
-      
-    if (results.length === 0) return [];
-    
-    // Group by kpi_name
-    const grouped: Record<string, { name: string; weightSum: number; scoreSum: number; count: number }> = {};
-    results.forEach(r => {
-      const name = r.kpi_name || 'Sin Nombre';
-      if (!grouped[name]) {
-        grouped[name] = { name, weightSum: 0, scoreSum: 0, count: 0 };
-      }
-      grouped[name].weightSum += Number(r.kpi_weight || 0);
-      grouped[name].scoreSum += Number(r.score || 0);
-      grouped[name].count += 1;
-    });
-    
-    return Object.values(grouped).map(item => ({
-      displayLabel: item.name.length > 25 ? item.name.substring(0, 22) + '...' : item.name,
-      role: selectedArea || '',
-      category: item.name,
-      "Suma de INCIDENCIA": Number((item.weightSum / item.count).toFixed(1)),
-      "Suma de CALIFICACIÓN": Number((item.scoreSum / item.count).toFixed(1))
-    }));
-  };
+  const comparisonData = areaReport?.comparison ?? [];
 
-  const dynamicKpiBreakdown = getDynamicKpiBreakdown();
-  
-  // Decide which breakdown to show
-  const activeKpiBreakdownData = selectedArea === 'Comercial' ? kpiBreakdownData : dynamicKpiBreakdown;
+  const evolutionData = (areaReport?.evolution ?? []).map((m) => ({ name: m.label, score: m.average }));
+
+  // Incidencia (peso) vs calificación (aporte a la nota final) por colaborador y categoría
+  const activeKpiBreakdownData = (areaReport?.breakdown ?? []).map((r) => {
+    const firstName = r.short_name.split(' ')[0];
+    return {
+      displayLabel: `${firstName} - ${r.category.substring(0, 16)}`,
+      collaborator: `${r.short_name}${r.position ? ` · ${r.position}` : ''}`,
+      category: r.category,
+      "Suma de INCIDENCIA": r.incidence,
+      "Suma de CALIFICACIÓN": r.contribution,
+    };
+  });
 
 
   const handleAreaClick = (areaName: string) => {
@@ -604,56 +432,54 @@ export default function DashboardPage() {
                 {/* Visual Employee Columns (The Excel Core) - Full Width */}
                 <div className="overflow-x-auto pb-4 w-full">
                   <div className="flex gap-6 min-w-max">
-                    {groupedData[selectedArea]?.map(({ user, evaluation }, idx) => {
-                      // Use real KPIs from database if available, otherwise use fallback stages
-                      const hasRealResults = evaluation && evaluation.results && evaluation.results.length > 0;
-                      const stages = hasRealResults
-                        ? evaluation.results.map((res: any, idx: number) => ({
-                            id: String.fromCharCode(65 + idx), // A, B, C, D...
-                            name: res.kpi_name,
-                            incid: Number(res.kpi_weight),
-                            calif: Number(res.score)
-                          }))
-                        : [
-                            { id: 'A', name: 'Estrategia y Planificación', incid: 30, calif: evaluation ? Number(evaluation.total_score) * 0.8 : 0 },
-                            { id: 'B', name: 'Liderazgo y Gestión', incid: 30, calif: evaluation ? Number(evaluation.total_score) * 0.9 : 0 },
-                            { id: 'C', name: 'Gestión Operativa', incid: 30, calif: evaluation ? Number(evaluation.total_score) * 0.95 : 0 },
-                            { id: 'D', name: 'Gestión Documental', incid: 10, calif: evaluation ? Number(evaluation.total_score) * 1 : 0 },
-                          ];
-
+                    {isLoadingReport && !areaReport && (
+                      [1, 2, 3].map(i => <Skeleton key={i} className="w-72 h-[520px] rounded-[32px]" />)
+                    )}
+                    {areaReport?.collaborators.map((collab, idx) => {
+                      const stages = collab.categories;
                       return (
                         <motion.div
-                          key={user.id}
+                          key={collab.user_id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx * 0.1 }}
                           className="w-72 bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden"
                         >
                           <div className="p-6 bg-slate-50 border-b border-slate-100">
-                            <h4 className="font-black text-[#004C6C] truncate">{user.name}</h4>
+                            <h4 className="font-black text-[#004C6C] truncate">{collab.name}</h4>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
-                              {typeof user.position === 'object' ? user.position?.name : user.position}
+                              {collab.position}
                             </p>
                           </div>
 
                           <div className="p-6 space-y-6">
+                            {stages.length === 0 && (
+                              <p className="text-xs text-slate-400 font-semibold text-center">Sin KPIs configurados</p>
+                            )}
                             {stages.map(stage => (
-                              <div key={stage.id} className="space-y-3">
+                              <div key={stage.name} className="space-y-3">
                                 <h5 className="text-[9px] font-black text-slate-500 uppercase tracking-tight leading-tight">
-                                  {stage.id}. {stage.name}
+                                  {stage.name}
                                 </h5>
                                 <div className="flex justify-around items-center bg-slate-50/50 p-2 rounded-2xl">
-                                  <CircularProgress value={stage.incid} label="Incidencia" color="#3B82F6" />
-                                  <CircularProgress value={stage.calif} label="Calificación" color="#F97316" />
+                                  <CircularProgress value={stage.incidence} label="Incidencia" color="#3B82F6" />
+                                  <CircularProgress
+                                    value={stage.score ?? 0}
+                                    label={stage.score === null ? 'Sin evaluar' : 'Calificación'}
+                                    color={stage.score === null ? '#CBD5E1' : '#F97316'}
+                                  />
                                 </div>
                               </div>
                             ))}
 
                             <div className="pt-4 border-t border-slate-100 flex flex-col items-center">
-                              <GaugeChart
-                                value={evaluation ? Number(evaluation.total_score) : 0}
-                                label="Calificación Final"
-                              />
+                              {collab.total_score === null ? (
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest py-6">
+                                  Sin evaluación en el periodo
+                                </p>
+                              ) : (
+                                <GaugeChart value={collab.total_score} label="Calificación Final" />
+                              )}
                             </div>
                           </div>
                         </motion.div>
@@ -701,14 +527,13 @@ export default function DashboardPage() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {comparisonData.map((collab) => {
-                      const parts = collab.cargo.split(' - ');
-                      const cargoName = parts[0] || '';
-                      const name = parts[1] || '';
+                      const cargoName = collab.position || '';
+                      const name = collab.short_name;
 
                       const collabData = monthsConfig
                         .map(m => ({
                           name: m.label,
-                          score: collab[m.key as keyof typeof collab] as number | undefined,
+                          score: collab.scores[m.key] ?? undefined,
                           color: m.color
                         }))
                         .filter(item => item.score !== undefined && item.score !== null);
@@ -716,7 +541,7 @@ export default function DashboardPage() {
                       if (collabData.length === 0) return null;
 
                       return (
-                        <div key={collab.cargo} className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                        <div key={collab.user_id} className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 flex flex-col justify-between">
                           <div className="mb-4">
                             <div className="text-sm font-black text-slate-800 tracking-tight leading-tight">{name}</div>
                             <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">{cargoName}</div>

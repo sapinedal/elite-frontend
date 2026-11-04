@@ -1,5 +1,5 @@
 import api from '../../../lib/axios';
-import type { Evaluation } from '../types';
+import type { AreaDashboardReport, Evaluation } from '../types';
 
 export const evaluationService = {
   getEvaluation: async (userId: number, month: number, year: number): Promise<Evaluation | null> => {
@@ -37,6 +37,11 @@ export const evaluationService = {
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     window.open(url, '_blank');
+  },
+
+  getAreaDashboard: async (area: string, month: number, year: number): Promise<AreaDashboardReport> => {
+    const { data } = await api.get('/v1/dashboard/area', { params: { area, month, year } });
+    return data;
   },
 
   exportDashboardPdf: async (month: number, year: number, area: string): Promise<void> => {

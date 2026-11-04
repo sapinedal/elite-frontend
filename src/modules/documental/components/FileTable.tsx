@@ -10,6 +10,7 @@ import {
   Lock,
 } from 'lucide-react';
 import type { FolderItem, FileItem, EffectivePermissions } from '../types/documental.types';
+import { useProject } from '../../../context/ProjectContext';
 import { getFileIconConfig } from '../utils/fileIcons';
 import { ItemLocation } from './ItemLocation';
 
@@ -42,6 +43,9 @@ export const FileTable: React.FC<FileTableProps> = ({
   onDeleteFile,
   onRestrictFolder,
 }) => {
+  const { projects } = useProject();
+  const projectName = (id?: number | null) => (id ? projects.find((p) => p.id === id)?.name : null);
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
@@ -84,7 +88,12 @@ export const FileTable: React.FC<FileTableProps> = ({
                     <ItemLocation location={folder.location} onOpen={onOpenFolder} />
                   </div>
                 </td>
-                <td className="py-3 px-4 text-xs text-slate-400">Carpeta</td>
+                <td className="py-3 px-4 text-xs text-slate-400">
+                  Carpeta
+                  {projectName(folder.project_id) && (
+                    <span className="text-[#004C6C] font-semibold"> · {projectName(folder.project_id)}</span>
+                  )}
+                </td>
                 <td className="py-3 px-4 text-xs text-slate-400">—</td>
                 <td className="py-3 px-4 text-xs text-slate-400">—</td>
                 <td className="py-3 px-4 text-right">
