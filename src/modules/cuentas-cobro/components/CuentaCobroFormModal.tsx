@@ -7,6 +7,7 @@ import { formatMoneyInput, parseMoney } from '../../../utils/money';
 import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { cuentaCobroService, getApiErrorMessage } from '../services/cuentaCobroService';
 import { AttachmentsInput } from './AttachmentsInput';
+import { useContractorContracts } from '../../contratacion/hooks/useContractorContracts';
 import type { CuentaCobro, CuentaCobroCatalogs, CuentaCobroPayload } from '../types';
 
 interface CuentaCobroFormModalProps {
@@ -53,9 +54,25 @@ const FormContent: React.FC<Omit<CuentaCobroFormModalProps, 'isOpen'>> = ({ onCl
     ? [{ value: `${p.id}:`, label: 'General / Indirectos', sublabel: p.name }, ...p.towers.map((t) => ({ value: `${p.id}:${t.id}`, label: t.name, sublabel: p.name }))]
     : [{ value: `${p.id}:`, label: 'General / Indirectos', sublabel: p.name }]), [catalogs]);
 
-  const contractOptions = useMemo(() => (catalogs?.contracts ?? [])
-    .filter((c) => c.project_id === projectId)
-    .map((c) => ({ value: c.id, label: c.contract_code, sublabel: c.contractor_name })), [catalogs, projectId]);
+  // Contratos del proveedor elegido en el proyecto elegido (los filtra el backend). Al corregir una cuenta devuelta
+  // se conserva su contrato aunque todavía no tenga proveedor asignado.
+  const { contracts: contractorContracts, loading: loadingContracts, error: contractsError } =
+    useContractorContracts(projectId ? contractorId : null, projectId);
+  const contractOptions = useMemo(() => {
+    const options = contractorContracts.map((c) => ({ value: c.id, label: c.contract_code, sublabel: [c.tower, c.object].filter(Boolean).join(' · ') }));
+    const current = catalogs?.contracts.find((c) => c.id === cuenta?.contract_id);
+    return current && current.project_id === projectId && contractorId === cuenta?.contractor_id && !options.some((o) => o.value === current.id)
+      ? [{ value: current.id, label: current.contract_code, sublabel: current.contractor_name }, ...options]
+      : options;
+  }, [contractorContracts, catalogs, cuenta, projectId, contractorId]);
+
+  const contractPlaceholder = !projectId
+    ? 'Primero elige el proyecto'
+    : !contractorId
+      ? 'Primero elige el proveedor'
+      : loadingContracts
+        ? 'Cargando contratos...'
+        : contractOptions.length ? 'Sin contrato' : 'El proveedor no tiene contratos en este proyecto';
 
   const selectFile = (selected: File) => {
     if (selected.size > maxMb * 1024 * 1024) {
@@ -178,13 +195,18 @@ const FormContent: React.FC<Omit<CuentaCobroFormModalProps, 'isOpen'>> = ({ onCl
           disabled={submitting}
           options={(catalogs?.contractors ?? []).map((c) => ({ value: c.id, label: c.name, sublabel: c.nit ? `NIT ${c.nit}` : undefined }))}
           value={contractorId}
-          onChange={(v) => setContractorId(Number(v))}
+          onChange={(v) => {
+            const id = Number(v);
+            // Otro proveedor: el contrato elegido ya no aplica
+            if (id !== contractorId) setContractId(null);
+            setContractorId(id);
+          }}
         />
         <CustomSelect
           pyClass="py-3.5"
           label="Contrato (opcional)"
-          placeholder={projectId ? (contractOptions.length ? 'Sin contrato' : 'El proyecto no tiene contratos') : 'Primero elige el proyecto'}
-          disabled={submitting || !projectId || contractOptions.length === 0}
+          placeholder={contractPlaceholder}
+          disabled={submitting || !projectId || !contractorId || loadingContracts || contractOptions.length === 0}
           clearable
           onClear={() => setContractId(null)}
           options={contractOptions}
@@ -192,6 +214,7 @@ const FormContent: React.FC<Omit<CuentaCobroFormModalProps, 'isOpen'>> = ({ onCl
           onChange={(v) => setContractId(Number(v))}
         />
       </div>
+      {contractsError && <p className="text-[11px] font-bold text-red-500 -mt-3 ml-1">{contractsError}</p>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">

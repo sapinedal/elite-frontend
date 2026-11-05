@@ -68,8 +68,8 @@ export default function CortesPage() {
     return corte;
   };
 
-  const handleConfirmMultifox = async (invoiceId: number) => {
-    const corte = await confirmMultifox(invoiceId);
+  const handleConfirmMultifox = async (invoiceId: number, file: File, onProgress?: (percent: number) => void) => {
+    const corte = await confirmMultifox(invoiceId, file, onProgress);
     showNotification('Carga en Multifox confirmada. La factura pasó a cuentas por pagar.', 'success');
     return corte;
   };

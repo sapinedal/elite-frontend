@@ -7,6 +7,9 @@ import type {
   DocumentLogsResponse,
   DocumentalSettings,
   DocumentalSettingsInput,
+  EditorInfo,
+  EditorSession,
+  OfficeFileType,
 } from '../types/documental.types';
 
 export const documentalService = {
@@ -114,6 +117,30 @@ export const documentalService = {
       folder_path: folderPath,
       project_id: projectId,
     });
+    return response.data.data;
+  },
+
+  /**
+   * Disponibilidad del editor en el navegador y formatos soportados.
+   */
+  async getEditorInfo(): Promise<EditorInfo> {
+    const response = await api.get('/v1/documental/editor/info');
+    return response.data.data;
+  },
+
+  /**
+   * Configuración firmada para abrir un archivo en el editor.
+   */
+  async getEditorSession(path: string): Promise<EditorSession> {
+    const response = await api.get('/v1/documental/editor/config', { params: { path } });
+    return response.data.data;
+  },
+
+  /**
+   * Crea una hoja de cálculo, documento o presentación en blanco en la carpeta.
+   */
+  async createOfficeFile(parentPath: string, name: string, type: OfficeFileType): Promise<{ name: string; path: string }> {
+    const response = await api.post('/v1/documental/editor/new', { parent_path: parentPath, name, type });
     return response.data.data;
   },
 

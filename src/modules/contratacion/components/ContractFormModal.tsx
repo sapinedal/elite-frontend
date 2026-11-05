@@ -19,6 +19,7 @@ const emptyForm = (status = ''): ContractPayload => ({
   contract_type_id: null,
   contract_code: '',
   consecutive: '',
+  contractor_id: null,
   contractor_name: '',
   object: '',
   signed_at: null,
@@ -55,6 +56,7 @@ export const ContractFormModal: React.FC<ContractFormModalProps> = ({
         contract_type_id: contract.contract_type_id,
         contract_code: contract.contract_code,
         consecutive: contract.consecutive,
+        contractor_id: contract.contractor_id,
         contractor_name: contract.contractor_name,
         object: contract.object,
         signed_at: contract.signed_at,
@@ -109,6 +111,10 @@ export const ContractFormModal: React.FC<ContractFormModalProps> = ({
     e.preventDefault();
     if (!form.tower_id || !form.contract_type_id) {
       setLocalError('Selecciona el frente de obra y el tipo de contrato.');
+      return;
+    }
+    if (!form.contractor_id) {
+      setLocalError('Selecciona el proveedor del contrato.');
       return;
     }
     if (form.policies.some((p) => !p.expires_at)) {
@@ -264,11 +270,32 @@ export const ContractFormModal: React.FC<ContractFormModalProps> = ({
               />
             </div>
 
-            <div className="space-y-2">
-              <label className={labelClass}>Nombre del contratista *</label>
-              <input required disabled={submitting} className={inputClass} placeholder="Ej: Interlift S.A.S"
-                value={form.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CustomSelect
+                label="Proveedor *"
+                placeholder="Selecciona el proveedor"
+                searchPlaceholder="Buscar proveedor o NIT..."
+                disabled={submitting}
+                options={(catalogs?.contractors ?? []).map((c) => ({ value: c.id, label: c.name, sublabel: c.nit ? `NIT ${c.nit}` : undefined }))}
+                value={form.contractor_id}
+                onChange={(v) => {
+                  const id = Number(v);
+                  const name = catalogs?.contractors.find((c) => c.id === id)?.name ?? '';
+                  // El nombre del contratista se propone con el del proveedor si aún está vacío
+                  setForm((prev) => ({ ...prev, contractor_id: id, contractor_name: prev.contractor_name.trim() ? prev.contractor_name : name }));
+                }}
+              />
+              <div className="space-y-2">
+                <label className={labelClass}>Nombre del contratista *</label>
+                <input required disabled={submitting} className={inputClass} placeholder="Ej: Interlift S.A.S"
+                  value={form.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} />
+              </div>
             </div>
+            {contract && !contract.contractor_id && (
+              <p className="text-[11px] font-bold text-amber-600 -mt-3 ml-1">
+                Este contrato aún no tiene proveedor: asígnalo para que aparezca al registrar cortes, anticipos y cuentas de cobro.
+              </p>
+            )}
 
             <div className="space-y-2">
               <label className={labelClass}>Objeto del contrato *</label>

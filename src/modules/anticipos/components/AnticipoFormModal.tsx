@@ -6,6 +6,7 @@ import { formatMoneyInput, parseMoney } from '../../../utils/money';
 import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { anticipoService, getApiErrorMessage } from '../services/anticipoService';
 import { FileDrop } from '../../../components/ui/FileDrop';
+import { useContractorContracts } from '../../contratacion/hooks/useContractorContracts';
 import type { Anticipo, AnticipoCatalogs, AnticipoPayload } from '../types';
 
 interface AnticipoFormModalProps {
@@ -16,8 +17,6 @@ interface AnticipoFormModalProps {
   /** Anticipo devuelto que se corrige y reenvía; null para radicar uno nuevo */
   anticipo: Anticipo | null;
 }
-
-const normalize = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
 
 /**
  * El residente radica la cuenta de cobro del anticipo y elige el contrato al que se aplica.
@@ -44,22 +43,34 @@ const FormContent: React.FC<Omit<AnticipoFormModalProps, 'isOpen'>> = ({ onClose
 
   const isResubmit = anticipo !== null;
   const maxMb = catalogs?.max_upload_mb ?? 100;
-  const contract = catalogs?.contracts.find((c) => c.id === contractId) ?? null;
+  // Contratos del proveedor elegido (los filtra el backend). Al corregir uno devuelto se conserva su contrato
+  // aunque todavía no tenga proveedor asignado.
+  const { contracts: contractorContracts, loading: loadingContracts, error: contractsError } = useContractorContracts(contractorId);
+  const contracts = useMemo(() => {
+    const current = catalogs?.contracts.find((c) => c.id === anticipo?.contract_id);
+    return current && contractorId === anticipo?.contractor_id && !contractorContracts.some((c) => c.id === current.id)
+      ? [current, ...contractorContracts]
+      : contractorContracts;
+  }, [catalogs, anticipo, contractorId, contractorContracts]);
+  const contract = contracts.find((c) => c.id === contractId) ?? null;
 
-  const contractOptions = useMemo(() => (catalogs?.contracts ?? []).map((c) => ({
+  const contractOptions = useMemo(() => contracts.map((c) => ({
     value: c.id,
-    label: `${c.contract_code} · ${c.contractor_name}`,
+    label: c.contract_code,
     sublabel: [c.project, c.tower].filter(Boolean).join(' · '),
-  })), [catalogs]);
+  })), [contracts]);
 
-  // Al elegir el contrato se propone el proveedor cuyo nombre coincide con el contratista del contrato
-  const handleContractChange = (id: number) => {
-    setContractId(id);
-    const selected = catalogs?.contracts.find((c) => c.id === id);
-    if (!selected || contractorId) return;
-    const name = normalize(selected.contractor_name.split(' - ')[0]).trim();
-    const match = catalogs?.contractors.find((c) => normalize(c.name).startsWith(name) || name.startsWith(normalize(c.name)));
-    if (match) setContractorId(match.id);
+  const contractPlaceholder = !contractorId
+    ? 'Primero elige el proveedor'
+    : loadingContracts
+      ? 'Cargando contratos...'
+      : contractOptions.length ? 'Selecciona el contrato' : 'El proveedor no tiene contratos disponibles';
+
+  // Otro proveedor: el contrato elegido ya no aplica
+  const handleContractorChange = (id: number) => {
+    if (id === contractorId) return;
+    setContractorId(id);
+    setContractId(null);
   };
 
   const selectFile = (selected: File) => {
@@ -137,14 +148,26 @@ const FormContent: React.FC<Omit<AnticipoFormModalProps, 'isOpen'>> = ({ onClose
 
       <CustomSelect
         pyClass="py-3.5"
+        label="Proveedor *"
+        placeholder="Selecciona el proveedor"
+        searchPlaceholder="Buscar proveedor o NIT..."
+        disabled={submitting}
+        options={(catalogs?.contractors ?? []).map((c) => ({ value: c.id, label: c.name, sublabel: c.nit ? `NIT ${c.nit}` : undefined }))}
+        value={contractorId}
+        onChange={(v) => handleContractorChange(Number(v))}
+      />
+
+      <CustomSelect
+        pyClass="py-3.5"
         label="Contrato al que se aplica el anticipo *"
-        placeholder={contractOptions.length ? 'Selecciona el contrato' : 'No tienes contratos disponibles'}
-        searchPlaceholder="Buscar por código o contratista..."
-        disabled={submitting || contractOptions.length === 0}
+        placeholder={contractPlaceholder}
+        searchPlaceholder="Buscar por código..."
+        disabled={submitting || !contractorId || loadingContracts || contractOptions.length === 0}
         options={contractOptions}
         value={contractId}
-        onChange={(v) => handleContractChange(Number(v))}
+        onChange={(v) => setContractId(Number(v))}
       />
+      {contractsError && <p className="text-[11px] font-bold text-red-500 -mt-3 ml-1">{contractsError}</p>}
       {contract && (
         <p className="text-[11px] font-bold text-slate-400 -mt-3 ml-1">
           {contract.project}{contract.tower ? ` · ${contract.tower}` : ''} · {contract.object}
@@ -152,15 +175,6 @@ const FormContent: React.FC<Omit<AnticipoFormModalProps, 'isOpen'>> = ({ onClose
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <CustomSelect
-          pyClass="py-3.5"
-          label="Proveedor *"
-          placeholder="Selecciona el proveedor"
-          disabled={submitting}
-          options={(catalogs?.contractors ?? []).map((c) => ({ value: c.id, label: c.name, sublabel: c.nit ? `NIT ${c.nit}` : undefined }))}
-          value={contractorId}
-          onChange={(v) => setContractorId(Number(v))}
-        />
         <div className="space-y-2">
           <label className={labelClass}>N.º cuenta de cobro *</label>
           <input disabled={submitting} className={inputClass} placeholder="Ej: C-C 45"

@@ -5,6 +5,7 @@ import { Portal } from '../../../components/ui/Portal';
 import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { corteService, getApiErrorMessage } from '../services/corteService';
+import { useContractorContracts } from '../../contratacion/hooks/useContractorContracts';
 import { formatBytes, formatMaxSize } from '../utils/format';
 import type { Corte, CorteCatalogs, CortePayload } from '../types';
 
@@ -43,7 +44,6 @@ const initialForm = (corte: Corte | null): FormState => (corte
 
 // Números del corte: se ofrecen los libres hasta varios después del último radicado (la lista nunca se acaba)
 const CODE_PREFIX = 'CORTE';
-const EXTRA_NUMBERS = 20;
 const codeFor = (n: number) => `${CODE_PREFIX} ${n}`;
 const numberOf = (code: string) => {
   const match = code.trim().match(/^(?:corte\s*)?(\d+)$/i);
@@ -87,12 +87,21 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
 
   const { projectId, towerId } = parseLocation(form.location);
 
-  // Solo los contratos del proyecto elegido; primero los de la misma torre
-  const contractOptions = useMemo(() => (catalogs?.contracts ?? [])
-    .filter((c) => c.project_id === projectId)
+  // Contratos del proveedor elegido en el proyecto elegido (los filtra el backend); primero los de la misma torre
+  const { contracts: contractorContracts, loading: loadingContracts, error: contractsError } =
+    useContractorContracts(form.contractor_id, projectId);
+  const contractOptions = useMemo(() => [...contractorContracts]
     .sort((a, b) => Number(b.tower_id === towerId) - Number(a.tower_id === towerId))
-    .map((c) => ({ value: c.id, label: c.contract_code, sublabel: c.contractor_name })),
-  [catalogs, projectId, towerId]);
+    .map((c) => ({ value: c.id, label: c.contract_code, sublabel: [c.tower, c.object].filter(Boolean).join(' · ') })),
+  [contractorContracts, towerId]);
+
+  const contractPlaceholder = !projectId
+    ? 'Primero elige el proyecto'
+    : !form.contractor_id
+      ? 'Primero elige el proveedor'
+      : loadingContracts
+        ? 'Cargando contratos...'
+        : contractOptions.length ? 'Selecciona el contrato' : 'El proveedor no tiene contratos en este proyecto';
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -105,23 +114,16 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
 
   const nextCode = (contractId: number | null) => codeFor(Math.max(0, ...usedNumbers(contractId)) + 1);
 
-  // CORTE 1, CORTE 2...: los libres del contrato elegido; el siguiente al último radicado va marcado
-  const codeOptions = useMemo(() => {
-    if (!form.contract_id) return [];
-    const used = new Set(usedNumbers(form.contract_id));
-    const last = Math.max(0, ...used);
-    const options = Array.from({ length: last + EXTRA_NUMBERS }, (_, i) => i + 1)
-      .filter((n) => !used.has(n))
-      .map((n) => ({
-        value: codeFor(n),
-        label: codeFor(n),
-        sublabel: n === last + 1 ? 'Siguiente corte del contrato' : n < last ? 'Número libre (no radicado)' : undefined,
-      }));
-    // Un corte anterior a la numeración conserva su código al reenviarse
-    if (corte && numberOf(corte.code) === null) options.unshift({ value: corte.code, label: corte.code, sublabel: 'Código actual' });
-    return options;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catalogs, form.contract_id, corte]);
+  // CORTE N sin tope: se propone el siguiente al último radicado y se avisa si el número ya está usado
+  const contractUsedNumbers = form.contract_id ? [...usedNumbers(form.contract_id)].sort((a, b) => a - b) : [];
+  const codeNumber = numberOf(form.code);
+  const codeTaken = codeNumber !== null && contractUsedNumbers.includes(codeNumber);
+  // Un corte anterior a la numeración conserva su código al reenviarse mientras no se escriba otro número
+  const keepsLegacyCode = corte !== null && numberOf(corte.code) === null && form.code === corte.code;
+  const nextNumber = Math.max(0, ...contractUsedNumbers) + 1;
+  const usedLabel = contractUsedNumbers.length > 8
+    ? `${contractUsedNumbers.slice(0, 3).join(', ')} … ${contractUsedNumbers.slice(-3).join(', ')}`
+    : contractUsedNumbers.join(', ');
 
   // Al elegir el contrato se propone el siguiente número, salvo que el elegido siga libre en ese contrato
   const handleContractChange = (contractId: number) => {
@@ -130,6 +132,13 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
       const keep = (current !== null && !usedNumbers(contractId).includes(current)) || (corte && prev.code === corte.code && corte.contract_id === contractId);
       return { ...prev, contract_id: contractId, code: keep ? prev.code : nextCode(contractId) };
     });
+  };
+
+  // Otro proveedor: el contrato elegido ya no aplica (y con él el número del corte)
+  const handleContractorChange = (contractorId: number) => {
+    setForm((prev) => (prev.contractor_id === contractorId
+      ? prev
+      : { ...prev, contractor_id: contractorId, contract_id: null, code: '' }));
   };
 
   const handleLocationChange = (value: string) => {
@@ -186,8 +195,12 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
       setLocalError('Selecciona el proyecto / torre, el proveedor y el contrato relacionado.');
       return;
     }
-    if (!form.code) {
-      setLocalError('Elige el número del corte.');
+    if (!form.code || (codeNumber === null && !keepsLegacyCode)) {
+      setLocalError('Escribe el número del corte.');
+      return;
+    }
+    if (codeTaken) {
+      setLocalError(`El ${form.code} ya está radicado en este contrato. El siguiente libre es el ${codeFor(nextNumber)}.`);
       return;
     }
     if (!isResubmit && !file) {
@@ -281,33 +294,51 @@ const CorteFormContent: React.FC<Omit<CorteFormModalProps, 'isOpen'>> = ({ onClo
               disabled={submitting}
               options={(catalogs?.contractors ?? []).map((c) => ({ value: c.id, label: c.name, sublabel: c.nit ? `NIT ${c.nit}` : undefined }))}
               value={form.contractor_id}
-              onChange={(v) => set('contractor_id', Number(v))}
+              onChange={(v) => handleContractorChange(Number(v))}
             />
             <CustomSelect
               pyClass="py-3.5"
               label="Contrato relacionado *"
-              placeholder={projectId ? (contractOptions.length ? 'Selecciona el contrato' : 'El proyecto no tiene contratos') : 'Primero elige el proyecto'}
-              disabled={submitting || !projectId || contractOptions.length === 0}
+              placeholder={contractPlaceholder}
+              disabled={submitting || !projectId || !form.contractor_id || loadingContracts || contractOptions.length === 0}
               options={contractOptions}
               value={form.contract_id}
               onChange={(v) => handleContractChange(Number(v))}
             />
           </div>
+          {contractsError && <p className="text-[11px] font-bold text-red-500 -mt-3 ml-1">{contractsError}</p>}
 
           <div className="space-y-2">
-            <CustomSelect
-              pyClass="py-3.5"
-              label="Código del corte *"
-              placeholder={form.contract_id ? 'Selecciona el número del corte' : 'Primero elige el contrato'}
-              searchPlaceholder="Buscar número..."
-              disabled={submitting || !form.contract_id}
-              options={codeOptions}
-              value={form.code}
-              onChange={(v) => set('code', String(v))}
-            />
-            <p className="text-[11px] font-bold text-slate-400 ml-1">
-              La numeración es por contrato. Se guarda en la carpeta 05 CORTES del contrato.
-            </p>
+            <label className={labelClass} htmlFor="corte-number">Código del corte *</label>
+            <div className="relative">
+              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400 pointer-events-none">CORTE</span>
+              <input
+                id="corte-number"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={999999}
+                step={1}
+                disabled={submitting || !form.contract_id}
+                className={`${inputClass} pl-20 ${codeTaken ? 'border-red-300 focus:border-red-400 focus:ring-red-50' : ''}`}
+                placeholder={!form.contract_id ? 'Primero elige el contrato' : keepsLegacyCode ? `Actual: ${corte?.code}` : String(nextNumber)}
+                value={codeNumber ?? ''}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  set('code', Number.isInteger(n) && n > 0 ? codeFor(Math.min(n, 999999)) : (corte && numberOf(corte.code) === null ? corte.code : ''));
+                }}
+              />
+            </div>
+            {codeTaken ? (
+              <p className="text-[11px] font-bold text-red-500 ml-1">
+                Ese número ya está radicado en el contrato. El siguiente libre es el {codeFor(nextNumber)}.
+              </p>
+            ) : (
+              <p className="text-[11px] font-bold text-slate-400 ml-1">
+                {form.contract_id && contractUsedNumbers.length > 0 && `Ya radicados: ${usedLabel}. `}
+                La numeración es por contrato y no tiene tope. Se guarda en la carpeta 05 CORTES del contrato.
+              </p>
+            )}
           </div>
 
           {/* Archivo */}

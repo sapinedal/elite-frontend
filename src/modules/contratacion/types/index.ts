@@ -51,6 +51,8 @@ export interface Contract {
   contract_type: ContractTypeOption | null;
   contract_code: string;
   consecutive: string;
+  contractor_id: number | null;
+  contractor: ContractorOption | null;
   contractor_name: string;
   object: string;
   signed_at: string | null;
@@ -73,6 +75,7 @@ export interface ContractPayload {
   contract_type_id: number | null;
   contract_code: string;
   consecutive: string;
+  contractor_id: number | null;
   contractor_name: string;
   object: string;
   signed_at: string | null;
@@ -80,6 +83,27 @@ export interface ContractPayload {
   estimated_end_date: string | null;
   status: string;
   policies: ContractPolicy[];
+}
+
+/** Proveedor (ftra_contractors) */
+export interface ContractorOption {
+  id: number;
+  name: string;
+  nit: string | null;
+}
+
+/** Contrato de un proveedor, para los selectores de cortes, anticipos y cuentas de cobro */
+export interface ContractorContract {
+  id: number;
+  project_id: number;
+  tower_id: number | null;
+  contractor_id: number;
+  contract_code: string;
+  contractor_name: string;
+  object: string;
+  status: string;
+  project: string | null;
+  tower: string | null;
 }
 
 export interface CatalogFolder {
@@ -90,6 +114,7 @@ export interface CatalogFolder {
 export interface ContratacionCatalogs {
   towers: ContractTower[];
   contract_types: ContractTypeOption[];
+  contractors: ContractorOption[];
   statuses: string[];
   policy_types: string[];
   policy_alert_days: number;

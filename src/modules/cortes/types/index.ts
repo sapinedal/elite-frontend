@@ -110,6 +110,9 @@ export interface CorteInvoice {
   multifox_confirmed_at: string | null;
   multifox_confirmed_by: string | null;
   can_confirm_multifox: boolean;
+  /** Soporte de Multifox que cargó Paula al confirmar (queda en la carpeta del corte) */
+  multifox_file_name: string | null;
+  multifox_file_size: number | null;
   file_name: string;
   file_size: number;
   uploaded_by: string | null;

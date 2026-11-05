@@ -14,6 +14,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  PencilLine,
+  Eye,
+  FilePlus2,
+  Building2,
 } from 'lucide-react';
 import { documentalService } from '../services/documentalService';
 import type { DocumentActivityLog, DocumentLogFilters } from '../types/documental.types';
@@ -31,6 +35,10 @@ const ACTION_OPTIONS = [
   { value: 'denied', label: 'Intentos negados' },
   { value: 'upload', label: 'Subidas' },
   { value: 'download', label: 'Descargas' },
+  { value: 'edit', label: 'Ediciones en línea' },
+  { value: 'open_editor', label: 'Aperturas en el editor' },
+  { value: 'create_file', label: 'Archivos creados' },
+  { value: 'project_tag', label: 'Asignación de proyecto' },
   { value: 'create_folder', label: 'Carpetas creadas' },
   { value: 'rename', label: 'Renombrados' },
   { value: 'delete', label: 'Eliminaciones' },
@@ -43,6 +51,9 @@ const ATTEMPTED_LABELS: Record<string, string> = {
   upload: 'subir archivos',
   download: 'descargar',
   create_folder: 'crear carpeta',
+  create_file: 'crear archivo',
+  open_editor: 'abrir en el editor',
+  edit: 'guardar edición',
   rename: 'renombrar',
   delete: 'eliminar',
 };
@@ -54,11 +65,19 @@ const getActionBadge = (action: string) => {
     case 'upload':
       return <span className={`${badgeBase} bg-emerald-50 text-emerald-700 border-emerald-100`}><ArrowUpRight className="w-3 h-3" /> Subida</span>;
     case 'download':
-      return <span className={`${badgeBase} bg-blue-50 text-blue-700 border-blue-100`}><ArrowDownLeft className="w-3 h-3" /> Descarga</span>;
+      return <span className={`${badgeBase} bg-sky-50 text-[#004C6C] border-sky-100`}><ArrowDownLeft className="w-3 h-3" /> Descarga</span>;
+    case 'edit':
+      return <span className={`${badgeBase} bg-[#004C6C] text-white border-[#004C6C]`}><PencilLine className="w-3 h-3" /> Editado</span>;
+    case 'open_editor':
+      return <span className={`${badgeBase} bg-slate-50 text-slate-600 border-slate-200`}><Eye className="w-3 h-3" /> Abierto</span>;
+    case 'create_file':
+      return <span className={`${badgeBase} bg-emerald-50 text-emerald-700 border-emerald-100`}><FilePlus2 className="w-3 h-3" /> Creado</span>;
+    case 'project_tag':
+      return <span className={`${badgeBase} bg-sky-50 text-[#004C6C] border-sky-100`}><Building2 className="w-3 h-3" /> Proyecto</span>;
     case 'create_folder':
-      return <span className={`${badgeBase} bg-amber-50 text-amber-700 border-amber-100`}><FolderPlus className="w-3 h-3" /> Carpeta</span>;
+      return <span className={`${badgeBase} bg-orange-50 text-[#D97F2A] border-orange-100`}><FolderPlus className="w-3 h-3" /> Carpeta</span>;
     case 'rename':
-      return <span className={`${badgeBase} bg-indigo-50 text-indigo-700 border-indigo-100`}><Edit2 className="w-3 h-3" /> Renombrado</span>;
+      return <span className={`${badgeBase} bg-violet-50 text-violet-700 border-violet-100`}><Edit2 className="w-3 h-3" /> Renombrado</span>;
     case 'delete':
       return <span className={`${badgeBase} bg-rose-50 text-rose-700 border-rose-100`}><Trash2 className="w-3 h-3" /> Eliminado</span>;
     case 'denied':
@@ -87,6 +106,18 @@ const getDetail = (log: DocumentActivityLog): string | null => {
     return rules.length === 0
       ? 'Se quitó la restricción'
       : `Roles con acceso: ${rules.map((r) => r.role_name).filter(Boolean).join(', ')}`;
+  }
+  if (log.action === 'edit') {
+    const parts = [d.forced ? 'Guardado manual con el archivo abierto' : 'Guardado al cerrar el editor'];
+    if (d.previous_version) parts.push('versión anterior conservada');
+    if (d.recreated) parts.push('el archivo se había movido o eliminado y se volvió a crear');
+    return parts.join(' · ');
+  }
+  if (log.action === 'open_editor') {
+    return d.mode === 'edit' ? 'Abierto para editar' : 'Abierto en modo lectura';
+  }
+  if (log.action === 'project_tag') {
+    return d.to_project_name ? `Asignada a ${String(d.to_project_name)}` : 'Quedó como transversal';
   }
   if (log.action === 'settings') {
     const changes = (d.changes ?? {}) as Record<string, { from: unknown; to: unknown }>;
@@ -160,11 +191,11 @@ export const DocumentLogsModal: React.FC<DocumentLogsModalProps> = ({ isOpen, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0 bg-slate-50/50">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100">
+            <div className="p-2.5 rounded-2xl bg-orange-50 text-[#EE9D4C] border border-orange-100">
               <History className="w-5 h-5" />
             </div>
             <div>

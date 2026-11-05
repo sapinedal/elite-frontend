@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Receipt, Download, Loader2, AlertCircle, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
+import { Receipt, Download, Loader2, AlertCircle, CheckCircle2, Clock, ArrowRight, Paperclip } from 'lucide-react';
+import { FileDrop } from '../../../components/ui/FileDrop';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { formatMoney } from '../../../utils/money';
 import { corteService, getApiErrorMessage } from '../services/corteService';
@@ -12,8 +13,8 @@ interface CorteInvoicesSectionProps {
   /** El residente responsable puede asociarle facturas desde Facturas del mes */
   canAssociate: boolean;
   onCreated: (corte: Corte) => void;
-  /** Paula confirma que la factura quedó cargada en Multifox (pasa a cuentas por pagar) */
-  onConfirmMultifox: (invoiceId: number) => Promise<Corte>;
+  /** Paula confirma que la factura quedó cargada en Multifox con su soporte (pasa a cuentas por pagar) */
+  onConfirmMultifox: (invoiceId: number, file: File, onProgress?: (percent: number) => void) => Promise<Corte>;
 }
 
 const TYPE_STYLES: Record<InvoiceDocumentType, string> = {
@@ -24,35 +25,52 @@ const TYPE_STYLES: Record<InvoiceDocumentType, string> = {
 
 /**
  * Facturas del corte aprobado: listado con descarga y confirmación de Multifox. Las facturas no se cargan aquí:
- * Contabilidad las sube en Facturas del mes y el residente responsable las asocia a su corte con los soportes.
- * Cuando Paula confirma la carga en Multifox, la factura pasa a cuentas por pagar.
+ * Contabilidad las sube en Facturas del mes y el residente responsable solo las asocia a su corte.
+ * Paula confirma la carga en Multifox adjuntando el soporte, que queda en la carpeta del corte
+ * (05 CORTES/CORTE N), y la factura pasa a cuentas por pagar.
  */
 export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ corte, canAssociate, onCreated, onConfirmMultifox }) => {
   const invoices = corte.invoices ?? [];
-  const [confirmingId, setConfirmingId] = useState<number | null>(null);
+  // Factura cuyo soporte de Multifox se está adjuntando
+  const [multifoxId, setMultifoxId] = useState<number | null>(null);
+  const [multifoxFile, setMultifoxFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const handleDownload = async (invoiceId: number) => {
-    setDownloadingId(invoiceId);
+  const handleDownload = async (invoiceId: number, multifox = false) => {
+    const key = `${invoiceId}:${multifox}`;
+    setDownloadingId(key);
     try {
-      window.open(await corteService.getInvoiceDownloadUrl(invoiceId), '_blank', 'noopener');
+      window.open(await corteService.getInvoiceDownloadUrl(invoiceId, multifox), '_blank', 'noopener');
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Error al descargar la factura.'));
+      setError(getApiErrorMessage(err, multifox ? 'Error al descargar el soporte de Multifox.' : 'Error al descargar la factura.'));
     } finally {
       setDownloadingId(null);
     }
   };
 
+  const openMultifox = (invoiceId: number) => {
+    setMultifoxId((current) => (current === invoiceId ? null : invoiceId));
+    setMultifoxFile(null);
+    setProgress(null);
+    setError(null);
+  };
+
   const handleConfirmMultifox = async (invoiceId: number) => {
-    setConfirmingId(invoiceId);
+    if (!multifoxFile) return setError('Adjunta el soporte de Multifox para confirmar la carga.');
+    setConfirming(true);
     setError(null);
     try {
-      onCreated(await onConfirmMultifox(invoiceId));
+      onCreated(await onConfirmMultifox(invoiceId, multifoxFile, setProgress));
+      setMultifoxId(null);
+      setMultifoxFile(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al confirmar la carga en Multifox.');
     } finally {
-      setConfirmingId(null);
+      setConfirming(false);
+      setProgress(null);
     }
   };
 
@@ -85,7 +103,8 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
       {invoices.length > 0 && (
         <ul className="space-y-2">
           {invoices.map((invoice) => (
-            <li key={invoice.id} className="flex items-start justify-between gap-3 bg-slate-50 rounded-2xl p-4">
+            <li key={invoice.id} className="bg-slate-50 rounded-2xl p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${TYPE_STYLES[invoice.document_type]}`}>
@@ -110,20 +129,50 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                 <p className="text-[11px] font-bold text-slate-400 truncate">
                   {invoice.file_name} · {formatBytes(invoice.file_size)} · {invoice.uploaded_by ?? '—'} · {formatDateTime(invoice.created_at)}
                 </p>
+                {invoice.multifox_file_name && (
+                  <button type="button" onClick={() => handleDownload(invoice.id, true)} disabled={downloadingId === `${invoice.id}:true`}
+                    className="flex items-center gap-1 text-[11px] font-bold text-[#004C6C] hover:underline max-w-full" title="Descargar el soporte de Multifox">
+                    {downloadingId === `${invoice.id}:true` ? <Loader2 size={12} className="animate-spin shrink-0" /> : <Paperclip size={12} className="shrink-0" />}
+                    <span className="truncate">Soporte Multifox: {invoice.multifox_file_name}</span>
+                    {invoice.multifox_file_size !== null && <span className="text-slate-400 shrink-0">· {formatBytes(invoice.multifox_file_size)}</span>}
+                  </button>
+                )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {invoice.can_confirm_multifox && (
-                  <button type="button" onClick={() => handleConfirmMultifox(invoice.id)} disabled={confirmingId !== null}
+                  <button type="button" onClick={() => openMultifox(invoice.id)} disabled={confirming}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#EE9D4C] hover:bg-[#e08a35] text-white text-xs font-bold whitespace-nowrap disabled:opacity-60"
-                    title="Confirma que ya registraste el documento en Multifox">
-                    {confirmingId === invoice.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Cargada en Multifox
+                    title="Adjunta el soporte y confirma que ya registraste el documento en Multifox">
+                    <CheckCircle2 size={14} /> Cargada en Multifox
                   </button>
                 )}
-                <button type="button" onClick={() => handleDownload(invoice.id)} disabled={downloadingId === invoice.id}
-                  className="p-2.5 rounded-xl text-[#004C6C] hover:bg-blue-50" title="Descargar">
-                  {downloadingId === invoice.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                <button type="button" onClick={() => handleDownload(invoice.id)} disabled={downloadingId === `${invoice.id}:false`}
+                  className="p-2.5 rounded-xl text-[#004C6C] hover:bg-blue-50" title="Descargar factura">
+                  {downloadingId === `${invoice.id}:false` ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                 </button>
               </div>
+            </div>
+
+            {multifoxId === invoice.id && invoice.can_confirm_multifox && (
+              <div className="border-t border-slate-200 pt-3 space-y-3">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+                  Soporte de Multifox * (corte generado en Multifox y capturas de aprobaciones)
+                </p>
+                <FileDrop file={multifoxFile} onSelect={(f) => { setMultifoxFile(f); setError(null); }} disabled={confirming} progress={progress}
+                  hint="Arrastra el soporte o haz clic. Queda en la carpeta 05 CORTES del corte" />
+                <div className="flex items-center justify-end gap-2">
+                  <button type="button" onClick={() => openMultifox(invoice.id)} disabled={confirming}
+                    className="px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 disabled:opacity-60">
+                    Cancelar
+                  </button>
+                  <button type="button" onClick={() => handleConfirmMultifox(invoice.id)} disabled={confirming || !multifoxFile}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#004C6C] hover:bg-[#003a53] text-white text-xs font-bold disabled:opacity-60">
+                    {confirming ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                    {confirming && progress !== null && progress < 100 ? `Subiendo... ${progress}%` : 'Confirmar y pasar a cuentas por pagar'}
+                  </button>
+                </div>
+              </div>
+            )}
             </li>
           ))}
         </ul>

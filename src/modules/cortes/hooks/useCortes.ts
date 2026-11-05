@@ -102,9 +102,9 @@ export function useCortes() {
     }
   }, [fetchCortes]);
 
-  const confirmMultifox = useCallback(async (invoiceId: number) => {
+  const confirmMultifox = useCallback(async (invoiceId: number, file: File, onProgress?: (percent: number) => void) => {
     try {
-      const corte = await corteService.confirmMultifox(invoiceId);
+      const corte = await corteService.confirmMultifox(invoiceId, file, onProgress);
       await fetchCortes();
       return corte;
     } catch (err) {

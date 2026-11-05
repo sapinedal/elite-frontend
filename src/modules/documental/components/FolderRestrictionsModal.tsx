@@ -156,11 +156,11 @@ export const FolderRestrictionsModal: React.FC<FolderRestrictionsModalProps> = (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0 bg-slate-50/50">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2.5 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+            <div className="p-2.5 rounded-2xl bg-sky-50 text-[#004C6C] border border-sky-100 shrink-0">
               <Shield className="w-5 h-5" />
             </div>
             <div className="min-w-0">
@@ -321,7 +321,7 @@ export const FolderRestrictionsModal: React.FC<FolderRestrictionsModalProps> = (
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 min-w-0">
-                          <Lock className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          <Lock className="w-3.5 h-3.5 text-[#004C6C] shrink-0" />
                           <span className="font-mono text-[11px] font-semibold text-slate-700 truncate" title={folder.folder_path}>
                             {folder.folder_path}
                           </span>
@@ -330,7 +330,7 @@ export const FolderRestrictionsModal: React.FC<FolderRestrictionsModalProps> = (
                           {folder.rules.map((rule) => (
                             <span
                               key={rule.role_id}
-                              className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 capitalize"
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-[#004C6C] border border-sky-100 capitalize"
                               title={[
                                 'Acceso',
                                 rule.can_upload && 'Subir',

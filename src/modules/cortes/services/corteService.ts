@@ -74,14 +74,19 @@ export const corteService = {
     return data.data;
   },
 
-  /** Confirma que la factura quedó cargada en Multifox: pasa a cuentas por pagar */
-  confirmMultifox: async (invoiceId: number): Promise<Corte> => {
-    const { data } = await api.post(`${BASE}/invoices/${invoiceId}/multifox`);
+  /**
+   * Paula confirma que la factura quedó cargada en Multifox y adjunta el soporte, que queda en la carpeta
+   * del corte. La factura pasa a cuentas por pagar.
+   */
+  confirmMultifox: async (invoiceId: number, file: File, onProgress?: (percent: number) => void): Promise<Corte> => {
+    const uploadToken = await corteService.uploadFile(file, onProgress);
+    const { data } = await api.post(`${BASE}/invoices/${invoiceId}/multifox`, { upload_token: uploadToken });
     return data.data;
   },
 
-  getInvoiceDownloadUrl: async (invoiceId: number): Promise<string> => {
-    const { data } = await api.get(`${BASE}/invoices/${invoiceId}/download`);
+  /** URL de descarga de la factura, o de su soporte de Multifox con `multifox` */
+  getInvoiceDownloadUrl: async (invoiceId: number, multifox = false): Promise<string> => {
+    const { data } = await api.get(`${BASE}/invoices/${invoiceId}/download`, { params: multifox ? { multifox: 1 } : {} });
     return data.data.download_url;
   },
 

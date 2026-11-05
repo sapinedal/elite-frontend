@@ -159,3 +159,32 @@ export type DocumentalSettingsInput = Pick<
   DocumentalSettings,
   'max_upload_mb' | 'extension_mode' | 'blocked_extensions' | 'allowed_extensions' | 'max_folder_operation_files'
 >;
+
+/** Editor de documentos en el navegador (ONLYOFFICE) */
+export type OfficeFileType = 'xlsx' | 'docx' | 'pptx';
+
+export interface EditorInfo {
+  enabled: boolean;
+  /** Extensiones que se editan */
+  editable: string[];
+  /** Extensiones que se abren en modo lectura */
+  viewable: string[];
+  new_file_types: Record<OfficeFileType, string>;
+}
+
+export interface EditorSession {
+  document_server_url: string;
+  /** Configuración firmada que se pasa tal cual a DocsAPI.DocEditor */
+  config: Record<string, unknown> & { documentType: string };
+  file: {
+    name: string;
+    path: string;
+    location: string;
+    size: number;
+    last_modified: string | null;
+    extension: string;
+    document_type: 'cell' | 'word' | 'slide' | 'pdf';
+  };
+  can_edit: boolean;
+  read_only_reason: string | null;
+}

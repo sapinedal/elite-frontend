@@ -18,6 +18,7 @@ import SeguimientoPage from '../modules/ftra/pages/SeguimientoPage';
 import RevisionPage from '../modules/ftra/pages/RevisionPage';
 import AprobacionPage from '../modules/ftra/pages/AprobacionPage';
 import DocumentalPage from '../modules/documental/pages/DocumentalPage';
+import DocumentEditorPage from '../modules/documental/pages/DocumentEditorPage';
 import ProyectosPage from '../modules/admin/pages/ProyectosPage';
 import RolesPage from '../modules/admin/pages/RolesPage';
 import PermisosPage from '../modules/admin/pages/PermisosPage';
@@ -48,6 +49,15 @@ export const router = createBrowserRouter([
   {
     path: '/restablecer-clave',
     element: <ResetPasswordPage />,
+  },
+  // Editor de documentos a pantalla completa (fuera del layout, se abre en una pestaña nueva)
+  {
+    path: '/documental/editor',
+    element: (
+      <ProtectedRoute permission="documental.ver">
+        <DocumentEditorPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/app',

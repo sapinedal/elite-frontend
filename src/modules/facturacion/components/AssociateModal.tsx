@@ -18,8 +18,9 @@ interface AssociateModalProps {
 type TargetType = 'corte' | 'orden';
 
 /**
- * El residente asocia la factura a su corte (con las tres aprobaciones) o a su orden pendiente de factura,
- * y adjunta los soportes: capturas de las aprobaciones y el corte o entrada generado en Multifox.
+ * El residente asocia la factura a su corte (con las tres aprobaciones) o a su orden pendiente de factura.
+ * Al corte solo se asocia: el soporte de Multifox lo carga Paula al confirmar y queda en la carpeta del corte.
+ * A la orden se adjuntan los soportes: capturas de las aprobaciones y la entrada generada en Multifox.
  * Reemplaza el cambio de nombre que hacían en Drive para indicar que la factura quedó procesada por obra.
  */
 export const AssociateModal: React.FC<AssociateModalProps> = ({ factura, ...props }) => (
@@ -68,6 +69,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
 
   // Pegar capturas con Ctrl+V
   const handlePaste = (e: React.ClipboardEvent) => {
+    if (targetType !== 'orden') return;
     const images = Array.from(e.clipboardData.files);
     if (!images.length) return;
     const dt = new DataTransfer();
@@ -79,14 +81,16 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
     if (!targetId) return setError(targetType === 'corte' ? 'Elige el corte de la factura.' : 'Elige la orden de la factura.');
     if (factura.amount === null && !parseMoney(amount)) return setError('Indica el valor de la factura.');
     if (targetType === 'orden' && !factura.contractor && !contractorId) return setError('Indica el proveedor de la factura.');
-    if (!files.length) return setError('Adjunta los soportes: capturas de las aprobaciones y el corte o entrada de Multifox.');
+    // Solo la orden lleva soportes al asociar; el del corte lo carga Paula en el paso de Multifox
+    const uploads = targetType === 'orden' ? files : [];
+    if (targetType === 'orden' && !uploads.length) return setError('Adjunta los soportes: capturas de las aprobaciones y la entrada de Multifox.');
 
     setSubmitting(true);
     setError(null);
     try {
       const tokens: string[] = [];
-      for (const [i, file] of files.entries()) {
-        setProgress(`Subiendo soporte ${i + 1} de ${files.length}...`);
+      for (const [i, file] of uploads.entries()) {
+        setProgress(`Subiendo soporte ${i + 1} de ${uploads.length}...`);
         tokens.push(await facturacionService.uploadFile(file));
       }
       setProgress('Asociando...');
@@ -216,8 +220,10 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
           </div>
         )}
 
+        {/* Al corte solo se asocia: el soporte de Multifox lo carga Paula al confirmar y queda en la carpeta del corte */}
+        {targetType === 'orden' && (
         <div className="space-y-2">
-          <label className={labelClass}>Soportes * (aprobaciones y corte o entrada de Multifox)</label>
+          <label className={labelClass}>Soportes * (aprobaciones y entrada de Multifox)</label>
           <div onClick={() => !submitting && fileInputRef.current?.click()}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); if (!submitting) addFiles(e.dataTransfer.files); }}
@@ -245,6 +251,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
             </ul>
           )}
         </div>
+        )}
 
         <div className="space-y-1.5">
           <label className={labelClass}>Observación</label>

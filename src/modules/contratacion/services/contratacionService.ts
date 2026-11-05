@@ -9,6 +9,7 @@ import type {
   ContractTypePayload,
   ContratacionAlerts,
   ContratacionCatalogs,
+  ContractorContract,
 } from '../types';
 
 const BASE = '/v1/contratacion';
@@ -16,6 +17,14 @@ const BASE = '/v1/contratacion';
 export const contratacionService = {
   getCatalogs: async (): Promise<ContratacionCatalogs> => {
     const { data } = await api.get(`${BASE}/catalogs`);
+    return data.data;
+  },
+
+  /** Contratos del proveedor (opcionalmente de un proyecto), filtrados en el backend */
+  getContractsByContractor: async (contractorId: number, projectId?: number | null): Promise<ContractorContract[]> => {
+    const { data } = await api.get(`${BASE}/contractors/${contractorId}/contracts`, {
+      params: projectId ? { project_id: projectId } : {},
+    });
     return data.data;
   },
 

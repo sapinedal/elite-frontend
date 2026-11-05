@@ -61,10 +61,10 @@ export const RenameModal: React.FC<RenameModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100">
+            <div className="p-2.5 rounded-2xl bg-sky-50 text-[#004C6C] border border-sky-100">
               <Edit2 className="w-5 h-5" />
             </div>
             <div>
