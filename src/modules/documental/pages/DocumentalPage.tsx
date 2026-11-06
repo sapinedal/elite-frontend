@@ -6,7 +6,6 @@ import {
   FileText,
   FolderOpen,
   FolderPlus,
-  HardDrive,
   History,
   Info,
   LayoutGrid,
@@ -359,18 +358,6 @@ export default function DocumentalPage() {
     setIsPreviewOpen(true);
   };
 
-  const stats = [
-    { label: 'Carpetas', value: browseData?.total_folders ?? 0, icon: <FolderOpen size={20} />, tone: 'text-[#D97F2A] bg-orange-50' },
-    { label: 'Archivos', value: browseData?.total_files ?? 0, icon: <FileText size={20} />, tone: 'text-[#004C6C] bg-blue-50' },
-    { label: 'Tamaño en esta carpeta', value: browseData?.total_size_formatted ?? '—', icon: <HardDrive size={20} />, tone: 'text-emerald-600 bg-emerald-50' },
-    {
-      label: 'Tu acceso',
-      value: isReadOnly ? 'Lectura' : 'Edición',
-      icon: isReadOnly ? <Info size={20} /> : <Shield size={20} />,
-      tone: isReadOnly ? 'text-slate-500 bg-slate-100' : 'text-violet-600 bg-violet-50',
-    },
-  ];
-
   const toolButton = 'h-11 px-3.5 flex items-center gap-2 rounded-2xl text-xs font-bold transition-colors';
 
   return (
@@ -389,7 +376,6 @@ export default function DocumentalPage() {
             <h1 className="text-2xl md:text-3xl font-black tracking-tight">Gestión Documental</h1>
             <p className="text-xs font-bold text-white/60 uppercase tracking-widest mt-1 truncate">
               {activeProject ? activeProject.name : 'Repositorio en la nube'}
-              {editorInfo?.enabled && <span className="text-[#EE9D4C]"> · Edición en el navegador</span>}
             </p>
           </div>
         </div>
@@ -451,19 +437,6 @@ export default function DocumentalPage() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Indicadores */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <div key={s.label} className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4 min-w-0">
-            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 ${s.tone}`}>{s.icon}</div>
-            <div className="min-w-0">
-              <p className="text-xl md:text-2xl font-black text-slate-800 truncate">{loading && !browseData ? '—' : s.value}</p>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{s.label}</p>
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Explorador */}

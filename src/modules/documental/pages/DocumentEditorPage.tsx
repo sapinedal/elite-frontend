@@ -135,7 +135,7 @@ export default function DocumentEditorPage() {
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-100 overflow-hidden">
       {/* Barra superior */}
-      <header className="shrink-0 bg-gradient-to-r from-[#004C6C] via-[#005981] to-[#003850] text-white shadow-lg relative z-10">
+      <header className="shrink-0 bg-[#004C6C] text-white relative z-10">
         <div className="flex items-center gap-3 px-3 md:px-5 h-16">
           <Link
             to={backUrl}
@@ -201,7 +201,7 @@ export default function DocumentEditorPage() {
         </div>
 
         {session && !session.can_edit && session.read_only_reason && (
-          <div className="flex items-center gap-2 px-5 py-2 bg-[#003850] border-t border-white/10 text-[11px] font-semibold text-white/80">
+          <div className="flex items-center gap-2 px-5 py-2 bg-[#004C6C] border-t border-white/10 text-[11px] font-semibold text-white/80">
             <PencilLine size={14} className="text-[#EE9D4C] shrink-0" />
             <span className="truncate">{session.read_only_reason}</span>
           </div>
