@@ -3,6 +3,7 @@ import { FileSpreadsheet, FileText, Loader2, Presentation, Sparkles, X } from 'l
 import type { OfficeFileType } from '../types/documental.types';
 import { getErrorMessage } from '../../../lib/apiError';
 import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
+import { Portal } from '../../../components/ui/Portal';
 
 interface NewOfficeFileModalProps {
   isOpen: boolean;
@@ -60,88 +61,90 @@ export const NewOfficeFileModal: React.FC<NewOfficeFileModalProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between p-6 bg-gradient-to-r from-[#004C6C] via-[#005981] to-[#003850] text-white">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-11 w-11 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
-              <Sparkles size={20} className="text-[#EE9D4C]" />
+    <Portal isOpen>
+      <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-between p-6 bg-gradient-to-r from-[#004C6C] via-[#005981] to-[#003850] text-white">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-11 w-11 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
+                <Sparkles size={20} className="text-[#EE9D4C]" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base font-black tracking-tight">Nuevo archivo</h3>
+                <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest truncate">
+                  En: {parentPath || 'Raíz del repositorio'}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h3 className="text-base font-black tracking-tight">Nuevo archivo</h3>
-              <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest truncate">
-                En: {parentPath || 'Raíz del repositorio'}
-              </p>
-            </div>
+            <button onClick={onClose} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button onClick={onClose} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+
+          <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            {error && (
+              <div className="p-3 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl">{error}</div>
+            )}
+
+            <div className="grid grid-cols-3 gap-3">
+              {TYPES.map((t) => {
+                const Icon = t.icon;
+                const selected = t.type === type;
+                return (
+                  <button
+                    key={t.type}
+                    type="button"
+                    onClick={() => setType(t.type)}
+                    className={`p-4 rounded-2xl border text-center transition-all ${
+                      selected ? `ring-2 ${t.ring} bg-white shadow-md` : 'border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200'
+                    }`}
+                  >
+                    <div className={`h-12 w-12 mx-auto rounded-2xl border flex items-center justify-center ${t.tone}`}>
+                      <Icon size={24} />
+                    </div>
+                    <p className="mt-2 text-xs font-black text-slate-800 leading-tight">{t.label}</p>
+                    <p className="text-[10px] font-semibold text-slate-400">{t.hint}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nombre</label>
+              <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl focus-within:border-[#004C6C] focus-within:bg-white transition-colors">
+                <input
+                  type="text"
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ej: Seguimiento de obra Torre 2"
+                  className="flex-1 min-w-0 bg-transparent px-4 py-3.5 text-sm font-bold text-slate-700 placeholder:text-slate-300 outline-none"
+                />
+                <span className="pr-4 text-xs font-black text-slate-400">.{type}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="px-5 py-3 rounded-2xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !name.trim()}
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-bold text-white bg-[#EE9D4C] hover:bg-[#e08a35] disabled:opacity-50 shadow-lg transition-all"
+              >
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>{isSubmitting ? 'Creando…' : 'Crear y abrir'}</span>
+              </button>
+            </div>
+          </form>
         </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {error && (
-            <div className="p-3 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl">{error}</div>
-          )}
-
-          <div className="grid grid-cols-3 gap-3">
-            {TYPES.map((t) => {
-              const Icon = t.icon;
-              const selected = t.type === type;
-              return (
-                <button
-                  key={t.type}
-                  type="button"
-                  onClick={() => setType(t.type)}
-                  className={`p-4 rounded-2xl border text-center transition-all ${
-                    selected ? `ring-2 ${t.ring} bg-white shadow-md` : 'border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200'
-                  }`}
-                >
-                  <div className={`h-12 w-12 mx-auto rounded-2xl border flex items-center justify-center ${t.tone}`}>
-                    <Icon size={24} />
-                  </div>
-                  <p className="mt-2 text-xs font-black text-slate-800 leading-tight">{t.label}</p>
-                  <p className="text-[10px] font-semibold text-slate-400">{t.hint}</p>
-                </button>
-              );
-            })}
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nombre</label>
-            <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl focus-within:border-[#004C6C] focus-within:bg-white transition-colors">
-              <input
-                type="text"
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ej: Seguimiento de obra Torre 2"
-                className="flex-1 min-w-0 bg-transparent px-4 py-3.5 text-sm font-bold text-slate-700 placeholder:text-slate-300 outline-none"
-              />
-              <span className="pr-4 text-xs font-black text-slate-400">.{type}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-5 py-3 rounded-2xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || !name.trim()}
-              className="flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-bold text-white bg-[#EE9D4C] hover:bg-[#e08a35] disabled:opacity-50 shadow-lg transition-all"
-            >
-              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>{isSubmitting ? 'Creando…' : 'Crear y abrir'}</span>
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
+    </Portal>
   );
 };

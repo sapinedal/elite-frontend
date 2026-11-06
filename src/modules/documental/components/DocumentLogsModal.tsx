@@ -22,6 +22,7 @@ import {
 import { documentalService } from '../services/documentalService';
 import type { DocumentActivityLog, DocumentLogFilters } from '../types/documental.types';
 import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
+import { Portal } from '../../../components/ui/Portal';
 
 interface DocumentLogsModalProps {
   isOpen: boolean;
@@ -190,214 +191,216 @@ export const DocumentLogsModal: React.FC<DocumentLogsModalProps> = ({ isOpen, on
   const hasFilters = Object.values(filters).some(Boolean);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-orange-50 text-[#EE9D4C] border border-orange-100">
-              <History className="w-5 h-5" />
+    <Portal isOpen>
+      <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0 bg-slate-50/50">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-orange-50 text-[#EE9D4C] border border-orange-100">
+                <History className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Auditoría de Actividad</h3>
+                <p className="text-xs text-slate-400">
+                  Operaciones, cambios de restricciones e intentos negados en el repositorio
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Auditoría de Actividad</h3>
-              <p className="text-xs text-slate-400">
-                Operaciones, cambios de restricciones e intentos negados en el repositorio
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-6 overflow-y-auto flex-1 space-y-4">
-          {/* Alerta de intentos negados */}
-          {deniedCount > 0 && filters.action !== 'denied' && (
-            <button
-              type="button"
-              onClick={showDenied}
-              className="w-full p-3 px-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-xs text-red-800 font-medium text-left hover:bg-red-100/60 transition-colors"
-            >
-              <ShieldAlert className="w-4 h-4 text-red-600 shrink-0" />
-              <span className="flex-1">
-                <strong>{deniedCount}</strong> intento(s) negado(s) en los últimos 7 días.
-              </span>
-              <span className="text-[11px] font-bold underline">Ver</span>
-            </button>
-          )}
-
-          {/* Filtros */}
-          <form onSubmit={applyFilters} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 items-end">
-            <div className="lg:col-span-1">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Acción</label>
-              <select
-                value={draft.action ?? ''}
-                onChange={(e) => setDraft({ ...draft, action: e.target.value })}
-                className={inputClass}
-              >
-                {ACTION_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="lg:col-span-1">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Usuario</label>
-              <input
-                type="text"
-                value={draft.user ?? ''}
-                onChange={(e) => setDraft({ ...draft, user: e.target.value })}
-                placeholder="Nombre o correo"
-                className={inputClass}
-              />
-            </div>
-            <div className="lg:col-span-1">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Ruta</label>
-              <input
-                type="text"
-                value={draft.path ?? ''}
-                onChange={(e) => setDraft({ ...draft, path: e.target.value })}
-                placeholder="Contiene..."
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Desde</label>
-              <input
-                type="date"
-                value={draft.date_from ?? ''}
-                onChange={(e) => setDraft({ ...draft, date_from: e.target.value })}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Hasta</label>
-              <input
-                type="date"
-                value={draft.date_to ?? ''}
-                onChange={(e) => setDraft({ ...draft, date_to: e.target.value })}
-                className={inputClass}
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white bg-[#004C6C] hover:bg-[#003952] transition-colors"
-              >
-                <Filter className="w-3.5 h-3.5" />
-                <span>Filtrar</span>
-              </button>
-              {hasFilters && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
-                >
-                  Limpiar
-                </button>
-              )}
-            </div>
-          </form>
-
-          {/* Tabla */}
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
-              <Loader2 className="w-6 h-6 animate-spin text-[#004C6C]" />
-              <p className="text-xs font-semibold">Cargando registros de auditoría...</p>
-            </div>
-          ) : logs.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-xs">
-              {hasFilters ? 'No hay registros que coincidan con los filtros.' : 'No se han registrado operaciones aún.'}
-            </div>
-          ) : (
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto shadow-sm">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
-                    <th className="p-3">Acción</th>
-                    <th className="p-3">Usuario</th>
-                    <th className="p-3">Ruta / Detalle</th>
-                    <th className="p-3">Fecha y Hora</th>
-                    <th className="p-3 text-right">IP</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {logs.map((log) => {
-                    const detail = getDetail(log);
-                    return (
-                      <tr
-                        key={log.id}
-                        className={`transition-colors ${log.action === 'denied' ? 'bg-red-50/40 hover:bg-red-50/70' : 'hover:bg-slate-50/70'}`}
-                      >
-                        <td className="p-3 align-top">{getActionBadge(log.action)}</td>
-                        <td className="p-3 align-top">
-                          <span className="font-bold text-slate-800 block">
-                            {log.user?.name || `Usuario #${log.user_id || 'Sistema'}`}
-                          </span>
-                          {log.user?.email && <span className="text-[10px] text-slate-400">{log.user.email}</span>}
-                        </td>
-                        <td className="p-3 align-top max-w-sm">
-                          <span className="font-mono text-[11px] text-slate-600 block truncate" title={log.path}>
-                            {log.path || '/'}
-                          </span>
-                          {detail && (
-                            <span
-                              className={`text-[11px] block mt-0.5 ${log.action === 'denied' ? 'text-red-700' : 'text-slate-400'}`}
-                            >
-                              {detail}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3 align-top text-slate-500 text-[11px] whitespace-nowrap">
-                          {new Date(log.created_at).toLocaleString()}
-                        </td>
-                        <td className="p-3 align-top text-right text-slate-400 text-[11px] font-mono">
-                          {log.ip_address || '—'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Footer con paginación */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3 shrink-0">
-          <span className="text-xs font-semibold text-slate-500">
-            {total} evento(s) • Página {page} de {lastPage}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={page <= 1 || loading}
-              onClick={() => loadLogs(page - 1, filters)}
-              className="p-2 rounded-xl text-slate-600 hover:bg-slate-200/60 disabled:opacity-40 transition-colors"
-              aria-label="Página anterior"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              disabled={page >= lastPage || loading}
-              onClick={() => loadLogs(page + 1, filters)}
-              className="p-2 rounded-xl text-slate-600 hover:bg-slate-200/60 disabled:opacity-40 transition-colors"
-              aria-label="Página siguiente"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
             <button
               onClick={onClose}
-              className="px-5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-colors"
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
             >
-              Cerrar
+              <X className="w-5 h-5" />
             </button>
+          </div>
+
+          <div className="p-6 overflow-y-auto flex-1 space-y-4">
+            {/* Alerta de intentos negados */}
+            {deniedCount > 0 && filters.action !== 'denied' && (
+              <button
+                type="button"
+                onClick={showDenied}
+                className="w-full p-3 px-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-xs text-red-800 font-medium text-left hover:bg-red-100/60 transition-colors"
+              >
+                <ShieldAlert className="w-4 h-4 text-red-600 shrink-0" />
+                <span className="flex-1">
+                  <strong>{deniedCount}</strong> intento(s) negado(s) en los últimos 7 días.
+                </span>
+                <span className="text-[11px] font-bold underline">Ver</span>
+              </button>
+            )}
+
+            {/* Filtros */}
+            <form onSubmit={applyFilters} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 items-end">
+              <div className="lg:col-span-1">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Acción</label>
+                <select
+                  value={draft.action ?? ''}
+                  onChange={(e) => setDraft({ ...draft, action: e.target.value })}
+                  className={inputClass}
+                >
+                  {ACTION_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="lg:col-span-1">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Usuario</label>
+                <input
+                  type="text"
+                  value={draft.user ?? ''}
+                  onChange={(e) => setDraft({ ...draft, user: e.target.value })}
+                  placeholder="Nombre o correo"
+                  className={inputClass}
+                />
+              </div>
+              <div className="lg:col-span-1">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Ruta</label>
+                <input
+                  type="text"
+                  value={draft.path ?? ''}
+                  onChange={(e) => setDraft({ ...draft, path: e.target.value })}
+                  placeholder="Contiene..."
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Desde</label>
+                <input
+                  type="date"
+                  value={draft.date_from ?? ''}
+                  onChange={(e) => setDraft({ ...draft, date_from: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Hasta</label>
+                <input
+                  type="date"
+                  value={draft.date_to ?? ''}
+                  onChange={(e) => setDraft({ ...draft, date_to: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white bg-[#004C6C] hover:bg-[#003952] transition-colors"
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>Filtrar</span>
+                </button>
+                {hasFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {/* Tabla */}
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
+                <Loader2 className="w-6 h-6 animate-spin text-[#004C6C]" />
+                <p className="text-xs font-semibold">Cargando registros de auditoría...</p>
+              </div>
+            ) : logs.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs">
+                {hasFilters ? 'No hay registros que coincidan con los filtros.' : 'No se han registrado operaciones aún.'}
+              </div>
+            ) : (
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto shadow-sm">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                      <th className="p-3">Acción</th>
+                      <th className="p-3">Usuario</th>
+                      <th className="p-3">Ruta / Detalle</th>
+                      <th className="p-3">Fecha y Hora</th>
+                      <th className="p-3 text-right">IP</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {logs.map((log) => {
+                      const detail = getDetail(log);
+                      return (
+                        <tr
+                          key={log.id}
+                          className={`transition-colors ${log.action === 'denied' ? 'bg-red-50/40 hover:bg-red-50/70' : 'hover:bg-slate-50/70'}`}
+                        >
+                          <td className="p-3 align-top">{getActionBadge(log.action)}</td>
+                          <td className="p-3 align-top">
+                            <span className="font-bold text-slate-800 block">
+                              {log.user?.name || `Usuario #${log.user_id || 'Sistema'}`}
+                            </span>
+                            {log.user?.email && <span className="text-[10px] text-slate-400">{log.user.email}</span>}
+                          </td>
+                          <td className="p-3 align-top max-w-sm">
+                            <span className="font-mono text-[11px] text-slate-600 block truncate" title={log.path}>
+                              {log.path || '/'}
+                            </span>
+                            {detail && (
+                              <span
+                                className={`text-[11px] block mt-0.5 ${log.action === 'denied' ? 'text-red-700' : 'text-slate-400'}`}
+                              >
+                                {detail}
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 align-top text-slate-500 text-[11px] whitespace-nowrap">
+                            {new Date(log.created_at).toLocaleString()}
+                          </td>
+                          <td className="p-3 align-top text-right text-slate-400 text-[11px] font-mono">
+                            {log.ip_address || '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Footer con paginación */}
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3 shrink-0">
+            <span className="text-xs font-semibold text-slate-500">
+              {total} evento(s) • Página {page} de {lastPage}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={page <= 1 || loading}
+                onClick={() => loadLogs(page - 1, filters)}
+                className="p-2 rounded-xl text-slate-600 hover:bg-slate-200/60 disabled:opacity-40 transition-colors"
+                aria-label="Página anterior"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                disabled={page >= lastPage || loading}
+                onClick={() => loadLogs(page + 1, filters)}
+                className="p-2 rounded-xl text-slate-600 hover:bg-slate-200/60 disabled:opacity-40 transition-colors"
+                aria-label="Página siguiente"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onClose}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Portal>
   );
 };

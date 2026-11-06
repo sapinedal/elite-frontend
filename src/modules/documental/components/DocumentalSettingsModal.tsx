@@ -3,6 +3,7 @@ import { Settings, X, Check, Loader2, AlertTriangle, Ban, ShieldCheck } from 'lu
 import type { DocumentalSettings, DocumentalSettingsInput, ExtensionMode } from '../types/documental.types';
 import { getErrorMessage } from '../../../lib/apiError';
 import { useEscapeToClose } from '../../../hooks/useEscapeToClose';
+import { Portal } from '../../../components/ui/Portal';
 
 interface DocumentalSettingsModalProps {
   isOpen: boolean;
@@ -187,166 +188,168 @@ export const DocumentalSettingsModal: React.FC<DocumentalSettingsModalProps> = (
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white w-full max-w-2xl max-h-[90vh] rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-slate-100 text-slate-700 border border-slate-200">
-              <Settings className="w-5 h-5" />
+    <Portal isOpen>
+      <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white w-full max-w-2xl max-h-[90vh] rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0 bg-slate-50/50">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-slate-100 text-slate-700 border border-slate-200">
+                <Settings className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Configuración del Repositorio</h3>
+                <p className="text-xs text-slate-400">Reglas que se aplican a todas las subidas de archivos</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Configuración del Repositorio</h3>
-              <p className="text-xs text-slate-400">Reglas que se aplican a todas las subidas de archivos</p>
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
-        {/* Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
-          {error && (
-            <div className="p-3 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl">
-              {error}
-            </div>
-          )}
+          {/* Body */}
+          <div className="p-6 overflow-y-auto space-y-6 flex-1">
+            {error && (
+              <div className="p-3 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl">
+                {error}
+              </div>
+            )}
 
-          {!settings ? (
-            <div className="flex items-center justify-center py-10 text-slate-400">
-              <Loader2 className="w-6 h-6 animate-spin text-[#004C6C]" />
-            </div>
-          ) : (
-            <>
-              {/* Tamaño máximo */}
-              <section className="space-y-2">
-                <label htmlFor="max_upload_mb" className="block text-xs font-bold text-slate-600">
-                  Tamaño máximo por archivo
-                </label>
-                <div className="flex items-center gap-2 max-w-xs">
-                  <input
-                    id="max_upload_mb"
-                    type="number"
-                    min={1}
-                    max={5120}
-                    step={1}
-                    value={maxUploadMb}
-                    onChange={(e) => setMaxUploadMb(e.target.value)}
-                    className="w-32 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#EE9D4C]"
-                  />
-                  <span className="text-xs font-bold text-slate-500">MB</span>
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  Límite actual del servidor: <strong>{serverMax} MB</strong>. Se aplica el menor de los dos.
-                </p>
-                {exceedsServer && (
-                  <div className="flex items-start gap-2 p-3 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-100 rounded-xl">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>
-                      El servidor solo acepta archivos de hasta {serverMax} MB, así que ese será el límite real. Para
-                      permitir {maxValue} MB, un administrador del servidor debe aumentar{' '}
-                      <code className="font-mono">upload_max_filesize</code> y{' '}
-                      <code className="font-mono">post_max_size</code> en PHP.
-                    </span>
+            {!settings ? (
+              <div className="flex items-center justify-center py-10 text-slate-400">
+                <Loader2 className="w-6 h-6 animate-spin text-[#004C6C]" />
+              </div>
+            ) : (
+              <>
+                {/* Tamaño máximo */}
+                <section className="space-y-2">
+                  <label htmlFor="max_upload_mb" className="block text-xs font-bold text-slate-600">
+                    Tamaño máximo por archivo
+                  </label>
+                  <div className="flex items-center gap-2 max-w-xs">
+                    <input
+                      id="max_upload_mb"
+                      type="number"
+                      min={1}
+                      max={5120}
+                      step={1}
+                      value={maxUploadMb}
+                      onChange={(e) => setMaxUploadMb(e.target.value)}
+                      className="w-32 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#EE9D4C]"
+                    />
+                    <span className="text-xs font-bold text-slate-500">MB</span>
                   </div>
-                )}
-              </section>
-
-              {/* Operaciones sobre carpetas */}
-              <section className="space-y-2">
-                <label htmlFor="max_folder_files" className="block text-xs font-bold text-slate-600">
-                  Máximo de archivos para renombrar o eliminar una carpeta
-                </label>
-                <div className="flex items-center gap-2 max-w-xs">
-                  <input
-                    id="max_folder_files"
-                    type="number"
-                    min={1}
-                    max={20000}
-                    step={1}
-                    value={maxFolderFiles}
-                    onChange={(e) => setMaxFolderFiles(e.target.value)}
-                    className="w-32 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#EE9D4C]"
-                  />
-                  <span className="text-xs font-bold text-slate-500">archivos</span>
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  En S3 renombrar o eliminar una carpeta se hace archivo por archivo. Por encima de este límite la
-                  operación se bloquea para que no quede a medias; las carpetas grandes se deben manejar por partes.
-                </p>
-              </section>
-
-              {/* Extensiones */}
-              <section className="space-y-3">
-                <span className="block text-xs font-bold text-slate-600">Tipos de archivo</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {modeOption(
-                    'blocklist',
-                    'Bloquear extensiones',
-                    'Se permite cualquier archivo excepto los de la lista.',
-                    Ban
+                  <p className="text-[11px] text-slate-400">
+                    Límite actual del servidor: <strong>{serverMax} MB</strong>. Se aplica el menor de los dos.
+                  </p>
+                  {exceedsServer && (
+                    <div className="flex items-start gap-2 p-3 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-100 rounded-xl">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        El servidor solo acepta archivos de hasta {serverMax} MB, así que ese será el límite real. Para
+                        permitir {maxValue} MB, un administrador del servidor debe aumentar{' '}
+                        <code className="font-mono">upload_max_filesize</code> y{' '}
+                        <code className="font-mono">post_max_size</code> en PHP.
+                      </span>
+                    </div>
                   )}
-                  {modeOption(
-                    'allowlist',
-                    'Solo permitidas',
-                    'Únicamente se aceptan las extensiones de la lista.',
-                    ShieldCheck
+                </section>
+
+                {/* Operaciones sobre carpetas */}
+                <section className="space-y-2">
+                  <label htmlFor="max_folder_files" className="block text-xs font-bold text-slate-600">
+                    Máximo de archivos para renombrar o eliminar una carpeta
+                  </label>
+                  <div className="flex items-center gap-2 max-w-xs">
+                    <input
+                      id="max_folder_files"
+                      type="number"
+                      min={1}
+                      max={20000}
+                      step={1}
+                      value={maxFolderFiles}
+                      onChange={(e) => setMaxFolderFiles(e.target.value)}
+                      className="w-32 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#EE9D4C]"
+                    />
+                    <span className="text-xs font-bold text-slate-500">archivos</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    En S3 renombrar o eliminar una carpeta se hace archivo por archivo. Por encima de este límite la
+                    operación se bloquea para que no quede a medias; las carpetas grandes se deben manejar por partes.
+                  </p>
+                </section>
+
+                {/* Extensiones */}
+                <section className="space-y-3">
+                  <span className="block text-xs font-bold text-slate-600">Tipos de archivo</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {modeOption(
+                      'blocklist',
+                      'Bloquear extensiones',
+                      'Se permite cualquier archivo excepto los de la lista.',
+                      Ban
+                    )}
+                    {modeOption(
+                      'allowlist',
+                      'Solo permitidas',
+                      'Únicamente se aceptan las extensiones de la lista.',
+                      ShieldCheck
+                    )}
+                  </div>
+
+                  {mode === 'blocklist' ? (
+                    <ExtensionEditor
+                      label="Extensiones bloqueadas"
+                      hint="Escribe una o varias separadas por coma y presiona Enter. Recomendado: ejecutables y scripts."
+                      extensions={blocked}
+                      tone="rose"
+                      onChange={setBlocked}
+                    />
+                  ) : (
+                    <ExtensionEditor
+                      label="Extensiones permitidas"
+                      hint="Escribe una o varias separadas por coma y presiona Enter. Ej: pdf, docx, xlsx, dwg, jpg."
+                      extensions={allowed}
+                      tone="emerald"
+                      onChange={setAllowed}
+                    />
                   )}
-                </div>
+                  <p className="text-[11px] text-slate-400">
+                    La regla también se aplica al renombrar archivos, para evitar cambiar la extensión a una no permitida.
+                    Los archivos que ya existen en el repositorio no se modifican.
+                  </p>
+                </section>
+              </>
+            )}
+          </div>
 
-                {mode === 'blocklist' ? (
-                  <ExtensionEditor
-                    label="Extensiones bloqueadas"
-                    hint="Escribe una o varias separadas por coma y presiona Enter. Recomendado: ejecutables y scripts."
-                    extensions={blocked}
-                    tone="rose"
-                    onChange={setBlocked}
-                  />
-                ) : (
-                  <ExtensionEditor
-                    label="Extensiones permitidas"
-                    hint="Escribe una o varias separadas por coma y presiona Enter. Ej: pdf, docx, xlsx, dwg, jpg."
-                    extensions={allowed}
-                    tone="emerald"
-                    onChange={setAllowed}
-                  />
-                )}
-                <p className="text-[11px] text-slate-400">
-                  La regla también se aplica al renombrar archivos, para evitar cambiar la extensión a una no permitida.
-                  Los archivos que ya existen en el repositorio no se modifican.
-                </p>
-              </section>
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting || !settings}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#004C6C] hover:bg-[#003952] disabled:opacity-50 transition-colors"
-          >
-            {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            <span>{isSubmitting ? 'Guardando...' : 'Guardar configuración'}</span>
-          </button>
-        </div>
-      </form>
-    </div>
+          {/* Footer */}
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200/60 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || !settings}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#004C6C] hover:bg-[#003952] disabled:opacity-50 transition-colors"
+            >
+              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              <span>{isSubmitting ? 'Guardando...' : 'Guardar configuración'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </Portal>
   );
 };
