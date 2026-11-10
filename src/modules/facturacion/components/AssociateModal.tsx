@@ -20,7 +20,7 @@ type TargetType = 'corte' | 'orden';
 /**
  * El residente asocia la factura a su corte (con las tres aprobaciones) o a su orden pendiente de factura.
  * Al corte solo se asocia: el soporte de Multifox lo carga Paula al confirmar y queda en la carpeta del corte.
- * A la orden se adjuntan los soportes: capturas de las aprobaciones y la entrada generada en Multifox.
+ * A la orden se pueden adjuntar soportes (opcional): capturas de las aprobaciones y la entrada generada en Multifox.
  * Reemplaza el cambio de nombre que hacían en Drive para indicar que la factura quedó procesada por obra.
  */
 export const AssociateModal: React.FC<AssociateModalProps> = ({ factura, ...props }) => (
@@ -81,9 +81,8 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
     if (!targetId) return setError(targetType === 'corte' ? 'Elige el corte de la factura.' : 'Elige la orden de la factura.');
     if (factura.amount === null && !parseMoney(amount)) return setError('Indica el valor de la factura.');
     if (targetType === 'orden' && !factura.contractor && !contractorId) return setError('Indica el proveedor de la factura.');
-    // Solo la orden lleva soportes al asociar; el del corte lo carga Paula en el paso de Multifox
+    // Solo la orden admite soportes al asociar (opcionales); el del corte lo carga Paula en el paso de Multifox
     const uploads = targetType === 'orden' ? files : [];
-    if (targetType === 'orden' && !uploads.length) return setError('Adjunta los soportes: capturas de las aprobaciones y la entrada de Multifox.');
 
     setSubmitting(true);
     setError(null);
@@ -223,7 +222,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
         {/* Al corte solo se asocia: el soporte de Multifox lo carga Paula al confirmar y queda en la carpeta del corte */}
         {targetType === 'orden' && (
         <div className="space-y-2">
-          <label className={labelClass}>Soportes * (aprobaciones y entrada de Multifox)</label>
+          <label className={labelClass}>Soportes (opcional: aprobaciones y entrada de Multifox)</label>
           <div onClick={() => !submitting && fileInputRef.current?.click()}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); if (!submitting) addFiles(e.dataTransfer.files); }}
