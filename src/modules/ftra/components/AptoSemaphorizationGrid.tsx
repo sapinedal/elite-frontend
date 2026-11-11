@@ -146,20 +146,19 @@ export function AptoSemaphorizationGrid({ formats: formatsProp, refreshKey, onOp
     <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-4 sm:p-6 space-y-5">
       {/* Controles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[220px_1fr] gap-3">
-        {towers.length > 1 ? (
-          <CustomSelect
-            label="Torre"
-            placeholder="Selecciona la torre"
-            options={towers.map(t => ({ value: t.id.toString(), label: t.name }))}
-            value={towerId}
-            onChange={v => { setTowerId(v); setSelectedNumber(null); }}
-          />
-        ) : (
-          <div className="space-y-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Torre</span>
-            <p className="px-5 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-[#004C6C]">{tower?.name ?? '—'}</p>
-          </div>
-        )}
+        {/* Siempre seleccionable: lista las torres del proyecto que tienen pisos y apartamentos configurados */}
+        <CustomSelect
+          label="Torre"
+          placeholder="Selecciona la torre"
+          searchable={false}
+          options={towers.map(t => ({
+            value: t.id.toString(),
+            label: t.name,
+            sublabel: `${t.floors} pisos × ${t.apartments_per_floor} aptos`,
+          }))}
+          value={towerId}
+          onChange={v => { setTowerId(String(v)); setSelectedNumber(null); }}
+        />
         <CustomSelect
           label="Tipo de FTRA (formato)"
           placeholder="Todos los formatos"
