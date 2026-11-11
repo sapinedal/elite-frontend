@@ -10,6 +10,7 @@ import type {
   ContratacionAlerts,
   ContratacionCatalogs,
   ContractorContract,
+  ContractorOption,
 } from '../types';
 
 const BASE = '/v1/contratacion';
@@ -25,6 +26,12 @@ export const contratacionService = {
     const { data } = await api.get(`${BASE}/contractors/${contractorId}/contracts`, {
       params: projectId ? { project_id: projectId } : {},
     });
+    return data.data;
+  },
+
+  /** Crea un proveedor. Es el único lugar donde se crean (FTRA y los demás módulos solo los consultan). */
+  createContractor: async (contractor: { name: string; nit?: string | null }): Promise<ContractorOption> => {
+    const { data } = await api.post(`${BASE}/contractors`, contractor);
     return data.data;
   },
 

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, User, FileText, AlertTriangle, CheckCircle2, Save, ClipboardCheck, X, Eye } from 'lucide-react';
+import { ArrowLeft, Calendar, User, FileText, AlertTriangle, CheckCircle2, ClipboardCheck, X, Eye } from 'lucide-react';
 import { ftraRecordService } from '../services/ftraRecordService';
-import { SignaturePad } from '../../../components/ui/SignaturePad';
+import { FtraReviewPanel } from '../components/FtraReviewPanel';
 import { Portal } from '../../../components/ui/Portal';
 import type { FtraRecord } from '../types';
 
@@ -12,10 +12,8 @@ export default function RevisionPage() {
 
   const [record, setRecord] = useState<FtraRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [supervisorSignature, setSupervisorSignature] = useState<string | null>(null);
   const [activePhoto, setActivePhoto] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,31 +39,10 @@ export default function RevisionPage() {
     navigate('/app/ftra/seguimiento');
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!record || !supervisorSignature) return;
-
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const fd = new FormData();
-      fd.append('supervisor_signature', supervisorSignature);
-      fd.append('status', 'Seguimiento');
-
-      await ftraRecordService.updateRecord(record.id, fd);
-      setSuccess('Firma del Supervisor registrada. El registro ha avanzado a Seguimiento.');
-
-      setTimeout(() => {
-        navigate('/app/ftra/seguimiento');
-      }, 1500);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Error al registrar la firma del Supervisor.');
-    } finally {
-      setSaving(false);
-    }
+  const handleDone = (updated: FtraRecord, message: string) => {
+    setRecord(updated);
+    setSuccess(message);
+    setTimeout(() => navigate('/app/ftra/seguimiento'), 1800);
   };
 
   const formatDate = (dateStr: string) => {
@@ -111,7 +88,7 @@ export default function RevisionPage() {
   if (!record) return null;
 
   return (
-    <div className="max-w-[1400px] mx-auto py-4 md:py-8 px-4 space-y-6 animate-fade-in">
+    <div className="max-w-[1400px] mx-auto py-3 md:py-8 px-3 sm:px-4 space-y-4 md:space-y-6 animate-fade-in">
       {/* Botón de Retorno */}
       <div>
         <button
@@ -138,10 +115,10 @@ export default function RevisionPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-8 items-start">
         
         {/* Columna Izquierda: Información de Registro (8 Columnas) */}
-        <div className="lg:col-span-8 bg-white rounded-[40px] shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-slate-100 p-8 md:p-10 space-y-8">
+        <div className="lg:col-span-8 bg-white rounded-3xl md:rounded-[40px] shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-slate-100 p-4 sm:p-8 md:p-10 space-y-8">
           
           {/* Encabezado del Registro */}
           <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
@@ -156,7 +133,7 @@ export default function RevisionPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
             {/* Contratista y Ubicación */}
             <div className="space-y-4">
               <div>
@@ -167,7 +144,11 @@ export default function RevisionPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4 py-2 border-y border-slate-100/85">
+              <div className="grid grid-cols-3 gap-4 py-2 border-y border-slate-100/85">
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Torre</span>
+                  <p className="text-sm font-black text-slate-800">{record.tower?.name || 'N/A'}</p>
+                </div>
                 <div>
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Piso</span>
                   <p className="text-sm font-black text-slate-800">{record.piso || 'N/A'}</p>
@@ -178,7 +159,7 @@ export default function RevisionPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-6 text-xs text-slate-500 font-bold">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500 font-bold">
                 <span className="flex items-center gap-2">
                   <Calendar size={14} className="text-slate-400" />
                   Fecha: {formatDate(record.created_at)}
@@ -219,8 +200,8 @@ export default function RevisionPage() {
                   <p className="text-xs font-black text-[#004C6C]">
                     {record.responsable.name}
                   </p>
-                  <div className="flex items-center gap-4 text-[9px] text-slate-400 font-bold mt-0.5">
-                    <span>Rol: {record.responsable.role}</span>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-[9px] text-slate-400 font-bold mt-0.5">
+                    {record.responsable.position?.name && <span>Cargo: {record.responsable.position.name}</span>}
                     <span>Correo: {record.responsable.email}</span>
                   </div>
                 </div>
@@ -229,7 +210,7 @@ export default function RevisionPage() {
           </div>
 
           {/* Dictámenes e Inspección */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-y border-slate-100 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 border-y border-slate-100 py-6">
             <div>
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Resultado de la Inspección</span>
               {(() => {
@@ -308,7 +289,7 @@ export default function RevisionPage() {
           </div>
 
           {/* Firmas Digitales Existentes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-8 border-t border-slate-100 pt-6">
             <div className="space-y-2">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Firma del Contratista</span>
               {record.contractor_signature ? (
@@ -338,60 +319,8 @@ export default function RevisionPage() {
 
         </div>
 
-        {/* Columna Derecha: Firma de Supervisión Técnica (4 Columnas) */}
-        <div className="lg:col-span-4 bg-white rounded-[40px] shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-slate-100 p-8 space-y-6">
-          
-          <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-            <div className="h-10 w-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
-              <CheckCircle2 size={20} />
-            </div>
-            <div>
-              <h3 className="text-md font-black text-[#004C6C] tracking-tight">Fase Supervisión Técnica</h3>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Seguridad y Firma de Revisión</p>
-            </div>
-          </div>
-
-          <p className="text-xs font-bold text-slate-500 leading-relaxed bg-slate-50 border border-slate-100 p-5 rounded-2xl">
-            Como **Supervisor Técnico**, verifique la veracidad y calidad de los datos del control FTRA. Proceda a firmar digitalmente abajo para registrar su autorización oficial y avanzar el registro al estado de **Seguimiento**.
-          </p>
-
-          <form onSubmit={handleSave} className="space-y-6">
-            
-            {/* Signature Pad */}
-            <div>
-              <SignaturePad
-                label="Firma de Supervisión Técnica *"
-                placeholder="Dibuje su firma aquí"
-                value={supervisorSignature}
-                onChange={val => setSupervisorSignature(val)}
-                height={180}
-              />
-            </div>
-
-            {/* Acciones */}
-            <div className="space-y-3 pt-2">
-              <button
-                type="submit"
-                disabled={saving || !supervisorSignature || !!success}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4.5 bg-[#004C6C] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#003a53] shadow-lg shadow-blue-900/10 transition-all disabled:opacity-50 cursor-pointer"
-              >
-                <Save size={18} />
-                {saving ? 'Guardando...' : 'Almacenar y Avanzar'}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleBack}
-                disabled={saving}
-                className="w-full py-4.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all cursor-pointer"
-              >
-                Cancelar
-              </button>
-            </div>
-
-          </form>
-
-        </div>
+        {/* Columna Derecha: revisión (Supervisor) */}
+        <FtraReviewPanel record={record} stage="supervisor" onDone={handleDone} />
 
       </div>
 

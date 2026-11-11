@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ftraRecordService } from '../services/ftraRecordService';
 import { formatService } from '../services/formatService';
 import { contractorService } from '../services/contractorService';
-import { residenteService } from '../services/residenteService';
-import type { FtraRecord, FtraFormat, FtraContractor, Residente, FtraRecordStatus } from '../types';
+import type { FtraRecord, FtraFormat, FtraContractor, FtraTower, FtraRecordStatus } from '../types';
 import { getErrorMessage } from '../../../lib/apiError';
 import { useProject } from '../../../context/ProjectContext';
 
@@ -15,7 +14,7 @@ export function useFtraRecords() {
   const [records, setRecords] = useState<FtraRecord[]>([]);
   const [formats, setFormats] = useState<FtraFormat[]>([]);
   const [contractors, setContractors] = useState<FtraContractor[]>([]);
-  const [residentes, setResidentes] = useState<Residente[]>([]);
+  const [towers, setTowers] = useState<FtraTower[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +28,7 @@ export function useFtraRecords() {
   const [filters, setFilters] = useState({
     contractor_id: '',
     format_id: '',
+    tower_id: '',
     status: '' as FtraRecordStatus | '',
     search: '',
   });
@@ -45,6 +45,7 @@ export function useFtraRecords() {
 
       if (filters.contractor_id) activeFilters.contractor_id = filters.contractor_id;
       if (filters.format_id) activeFilters.format_id = filters.format_id;
+      if (filters.tower_id) activeFilters.tower_id = filters.tower_id;
       if (filters.status) activeFilters.status = filters.status;
       if (filters.search) activeFilters.search = filters.search;
 
@@ -63,26 +64,27 @@ export function useFtraRecords() {
   // Carga catálogos de formatos y contratistas activos para formularios
   const fetchCatalogs = useCallback(async () => {
     try {
-      const [formatsResponse, contractorsResponse, residentesResponse] = await Promise.all([
+      const [formatsResponse, contractorsResponse, towersResponse] = await Promise.all([
         formatService.getFormats({ per_page: 100, is_active: 'true' }),
-        contractorService.getContractors({ per_page: 100, is_active: 'true' }),
-        residenteService.getResidentes({ per_page: 100, is_active: 'true' }),
+        contractorService.getContractors({ per_page: 500, is_active: 'true' }),
+        ftraRecordService.getTowers(),
       ]);
       setFormats(formatsResponse.data);
       setContractors(contractorsResponse.data);
-      setResidentes(residentesResponse.data);
+      setTowers(towersResponse);
     } catch (err) {
-      console.error('Error al cargar catálogos de formatos/contratistas/residentes:', err);
+      console.error('Error al cargar catálogos de formatos/contratistas/torres:', err);
     }
-  }, []);
+  }, [activeProjectId, isLoadingProjects]);
 
   useEffect(() => {
     fetchRecords();
   }, [fetchRecords]);
 
   useEffect(() => {
+    if (isLoadingProjects) return;
     fetchCatalogs();
-  }, [fetchCatalogs]);
+  }, [fetchCatalogs, isLoadingProjects]);
 
   // Reiniciar paginación al cambiar filtros o de proyecto
   useEffect(() => {
@@ -97,6 +99,7 @@ export function useFtraRecords() {
     setFilters({
       contractor_id: '',
       format_id: '',
+      tower_id: '',
       status: '',
       search: '',
     });
@@ -134,22 +137,6 @@ export function useFtraRecords() {
     }
   }, [fetchRecords]);
 
-  const updateRecordStatus = useCallback(async (id: number, status: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const updated = await ftraRecordService.updateStatus(id, status);
-      setRecords(prev => prev.map(r => r.id === id ? updated : r));
-      return updated;
-    } catch (err: any) {
-      const msg = getErrorMessage(err, 'Error al actualizar el estado.');
-      setError(msg);
-      throw new Error(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const deleteRecord = useCallback(async (id: number) => {
     setLoading(true);
     setError(null);
@@ -169,7 +156,7 @@ export function useFtraRecords() {
     records,
     formats,
     contractors,
-    residentes,
+    towers,
     loading,
     error,
     filters,
@@ -184,7 +171,6 @@ export function useFtraRecords() {
     fetchRecords,
     createRecord,
     updateRecord,
-    updateRecordStatus,
     deleteRecord,
   };
 }

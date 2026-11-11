@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { ClipboardCheck, FileText, X, Upload, Save, Eye, AlertCircle } from 'lucide-react';
-import type { FtraFormat, FtraContractor, Residente } from '../types';
+import React, { useState, useRef, useMemo } from 'react';
+import { ClipboardCheck, FileText, X, Upload, Save, Eye, AlertCircle, UserCheck, Building2 } from 'lucide-react';
+import type { FtraFormat, FtraContractor, FtraTower } from '../types';
+import { useAuth } from '../../../context/AuthContext';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Autocomplete } from '../../../components/ui/Autocomplete';
 import { SignaturePad } from '../../../components/ui/SignaturePad';
@@ -8,7 +9,8 @@ import { SignaturePad } from '../../../components/ui/SignaturePad';
 interface FtraRecordFormProps {
   formats: FtraFormat[];
   contractors: FtraContractor[];
-  residentes: Residente[];
+  /** Torres del proyecto activo; solo las que tienen pisos y apartamentos configurados sirven para FTRA */
+  towers: FtraTower[];
   onSubmit: (formData: FormData) => Promise<any>;
   isLoading: boolean;
 }
@@ -16,13 +18,14 @@ interface FtraRecordFormProps {
 export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
   formats,
   contractors,
-  residentes,
+  towers,
   onSubmit,
   isLoading,
 }) => {
   const [contractorId, setContractorId] = useState('');
   const [formatId, setFormatId] = useState('');
-  const [responsableId, setResponsableId] = useState('');
+  const { user } = useAuth();
+  const [chosenTowerId, setTowerId] = useState('');
   const [piso, setPiso] = useState('');
   const [apartamento, setApartamento] = useState('');
   const [resultadoInspeccion, setResultadoInspeccion] = useState('Recibido a satisfacción');
@@ -41,6 +44,29 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Torres con distribución configurada (Administración › Proyectos)
+  const unitTowers = useMemo(() => towers.filter(t => (t.floors ?? 0) > 0 && (t.apartments_per_floor ?? 0) > 0), [towers]);
+  // Con una sola torre queda seleccionada; una torre que ya no está en la lista se descarta
+  const towerId = unitTowers.some(t => t.id.toString() === chosenTowerId)
+    ? chosenTowerId
+    : unitTowers.length === 1 ? unitTowers[0].id.toString() : '';
+  const selectedTower = unitTowers.find(t => t.id.toString() === towerId);
+
+  const floorOptions = useMemo(() => {
+    if (!selectedTower?.floors) return [];
+    return Array.from({ length: selectedTower.floors }, (_, i) => ({ value: String(i + 1), label: `Piso ${i + 1}` }));
+  }, [selectedTower]);
+
+  // Apartamentos del piso: piso × 100 + consecutivo (piso 12 → 1201 ... 1210)
+  const apartmentOptions = useMemo(() => {
+    const floor = Number(piso);
+    if (!selectedTower?.apartments_per_floor || !floor) return [];
+    return Array.from({ length: selectedTower.apartments_per_floor }, (_, i) => {
+      const number = String(floor * 100 + i + 1);
+      return { value: number, label: `Apto ${number}` };
+    });
+  }, [selectedTower, piso]);
 
   // Obtiene los datos del formato seleccionado para mostrar su preview
   const selectedFormat = formats.find(f => f.id.toString() === formatId);
@@ -80,7 +106,7 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
   const handleClear = () => {
     setContractorId('');
     setFormatId('');
-    setResponsableId('');
+    setTowerId('');
     setPiso('');
     setApartamento('');
     setResultadoInspeccion('Recibido a satisfacción');
@@ -101,12 +127,16 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
     setLocalError(null);
     setSuccessMessage(null);
 
-    if (!piso.trim()) {
-      setLocalError('Por favor ingrese el Piso.');
+    if (!towerId) {
+      setLocalError('Por favor selecciona la Torre.');
       return;
     }
-    if (!apartamento.trim()) {
-      setLocalError('Por favor ingrese el Apartamento.');
+    if (!piso) {
+      setLocalError('Por favor selecciona el Piso.');
+      return;
+    }
+    if (!apartamento) {
+      setLocalError('Por favor selecciona el Apartamento.');
       return;
     }
     if (!contractorId) {
@@ -115,10 +145,6 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
     }
     if (!formatId) {
       setLocalError('Por favor selecciona un formato de seguimiento.');
-      return;
-    }
-    if (!responsableId) {
-      setLocalError('Por favor selecciona el Responsable de la revisión (Residente).');
       return;
     }
     if (resultadoInspeccion === 'Recibido con observación' && !observations.trim()) {
@@ -136,11 +162,11 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
 
     try {
       const fd = new FormData();
-      fd.append('piso', piso.trim());
-      fd.append('apartamento', apartamento.trim());
+      fd.append('tower_id', towerId);
+      fd.append('piso', piso);
+      fd.append('apartamento', apartamento);
       fd.append('contractor_id', contractorId);
       fd.append('format_id', formatId);
-      fd.append('responsable_id', responsableId);
       fd.append('resultado_inspeccion', resultadoInspeccion);
       fd.append('orden_aseo', ordenAseo);
       fd.append('observations', observations.trim());
@@ -165,7 +191,7 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
       {localError && (
         <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-xs font-bold text-red-600 text-center flex items-center gap-2 justify-center animate-fade-in">
           <AlertCircle size={16} />
@@ -180,7 +206,7 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
         {/* Selector de Contratista */}
         <div>
           <Autocomplete
@@ -206,50 +232,60 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
         </div>
       </div>
 
-      {/* Ubicación: Piso y Apartamento */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-scale-in">
-        <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-            Piso *
-          </label>
-          <input
-            type="text"
-            required
+      {/* Ubicación: Torre, Piso y Apartamento (según la distribución configurada en Administración › Proyectos) */}
+      {unitTowers.length === 0 ? (
+        <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-xs font-bold text-amber-700 flex items-start gap-2">
+          <Building2 size={16} className="shrink-0 mt-0.5" />
+          <span>El proyecto no tiene torres con pisos y apartamentos configurados. Pide que los configuren en Administración › Proyectos › Torres.</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 md:gap-8 animate-scale-in">
+          <CustomSelect
+            label="Torre *"
+            placeholder="Selecciona la torre"
             disabled={isLoading}
-            placeholder="Ej: Piso 4 o Sótano 1"
+            pyClass="py-4"
+            options={unitTowers.map(t => ({ value: t.id.toString(), label: t.name }))}
+            value={towerId}
+            onChange={val => { setTowerId(val); setPiso(''); setApartamento(''); }}
+          />
+          <CustomSelect
+            label="Piso *"
+            placeholder={selectedTower ? 'Selecciona el piso' : 'Primero la torre'}
+            disabled={isLoading || !selectedTower}
+            pyClass="py-4"
+            options={floorOptions}
             value={piso}
-            onChange={e => setPiso(e.target.value)}
-            className="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none transition-all shadow-sm placeholder:text-slate-300"
+            onChange={val => { setPiso(val); setApartamento(''); }}
+          />
+          <CustomSelect
+            label="Apartamento *"
+            placeholder={piso ? 'Selecciona el apartamento' : 'Primero el piso'}
+            disabled={isLoading || !piso}
+            pyClass="py-4"
+            options={apartmentOptions}
+            value={apartamento}
+            onChange={val => setApartamento(val)}
           />
         </div>
+      )}
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
+
+        {/* Responsable: el usuario logueado */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-            Apartamento *
+            Responsable de la revisión (Residente)
           </label>
-          <input
-            type="text"
-            required
-            disabled={isLoading}
-            placeholder="Ej: Apto 402 o Local 101"
-            value={apartamento}
-            onChange={e => setApartamento(e.target.value)}
-            className="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none transition-all shadow-sm placeholder:text-slate-300"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-        {/* Selector de Responsable */}
-        <div>
-          <Autocomplete
-            label="Responsable de la revisión (Residente) *"
-            placeholder="Buscar o seleccionar responsable..."
-            options={residentes.map(r => ({ value: r.id.toString(), label: r.name, sublabel: r.role }))}
-            value={responsableId || null}
-            onChange={val => setResponsableId(val || '')}
-          />
+          <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3">
+            <div className="h-9 w-9 rounded-xl bg-white border border-slate-100 text-[#004C6C] flex items-center justify-center shrink-0">
+              <UserCheck size={18} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-black text-slate-700 truncate">{user?.nombre ?? '—'}</p>
+              <p className="text-[10px] font-bold text-slate-400 truncate">{user?.position || user?.email}</p>
+            </div>
+          </div>
         </div>
 
         {/* Resultado de la Inspección */}
@@ -277,7 +313,7 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
 
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
 
         {/* Estado Orden y Aseo */}
         <div>
@@ -296,7 +332,7 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
         </div>
 
         {/* Espacio vacío para balancear el grid */}
-        <div></div>
+        <div className="hidden md:block"></div>
 
       </div>
 
@@ -341,7 +377,7 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
           placeholder="Escribe aquí los hallazgos, observaciones detalladas o notas operativas encontradas en la revisión de la FTRA..."
           value={observations}
           onChange={e => setObservations(e.target.value)}
-          className="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none transition-all shadow-sm placeholder:text-slate-300"
+          className="w-full bg-white border border-slate-100 rounded-2xl px-4 md:px-6 py-4 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none transition-all shadow-sm placeholder:text-slate-300"
         />
       </div>
 
@@ -377,7 +413,7 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
               <button
                 type="button"
                 onClick={() => removePhoto(index)}
-                className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-all duration-200 cursor-pointer"
+                className="absolute top-1 right-1 md:inset-0 md:top-auto md:right-auto h-6 w-6 md:h-auto md:w-auto rounded-full md:rounded-none bg-slate-900/70 md:bg-slate-900/60 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center text-white transition-all duration-200 cursor-pointer"
                 title="Remover Foto"
               >
                 <X size={16} />
@@ -388,12 +424,12 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
       </div>
 
       {/* Firmas Digitales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-8 border-t border-slate-100 pt-6">
         <div>
           <SignaturePad
             key={`${signatureKey}-contractor`}
             label="Firma del Contratista / Proveedor *"
-            placeholder="Haga clic aquí para firmar"
+            placeholder="Toque aquí para firmar"
             value={contractorSignature}
             onChange={val => setContractorSignature(val)}
             height={150}
@@ -403,7 +439,7 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
           <SignaturePad
             key={`${signatureKey}-resident`}
             label="Firma del Residente / Supervisor *"
-            placeholder="Haga clic aquí para firmar"
+            placeholder="Toque aquí para firmar"
             value={residentSignature}
             onChange={val => setResidentSignature(val)}
             height={150}
@@ -412,19 +448,19 @@ export const FtraRecordForm: React.FC<FtraRecordFormProps> = ({
       </div>
 
       {/* Botones de acción en el pie del formulario */}
-      <div className="flex justify-end gap-4 pt-4 border-t border-slate-100">
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-4 pt-4 border-t border-slate-100">
         <button
           type="button"
           onClick={handleClear}
           disabled={isLoading}
-          className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-200 transition-all text-xs uppercase tracking-widest cursor-pointer"
+          className="w-full sm:w-auto px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-200 transition-all text-xs uppercase tracking-widest cursor-pointer"
         >
           Limpiar Campos
         </button>
         <button
           type="submit"
-          disabled={isLoading || !contractorId || !formatId}
-          className="flex items-center gap-3 px-10 py-4 bg-[#004C6C] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#003a53] shadow-lg shadow-blue-900/10 transition-all disabled:opacity-50 cursor-pointer"
+          disabled={isLoading || !contractorId || !formatId || !apartamento}
+          className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-[#004C6C] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#003a53] shadow-lg shadow-blue-900/10 transition-all disabled:opacity-50 cursor-pointer"
         >
           <Save size={18} />
           {isLoading ? 'Registrando...' : 'Registrar FTRA'}

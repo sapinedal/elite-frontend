@@ -35,7 +35,7 @@ export default function ContratacionPage() {
   const { showNotification } = useNotification();
   const {
     activeProject, catalogs, contracts, alerts, filters, page, perPage, pagination, loading, error,
-    setFilter, clearFilters, setPage, changePerPage, refresh, refreshCatalogs, saveContract, deleteContract, createTower,
+    setFilter, clearFilters, setPage, changePerPage, refresh, refreshCatalogs, saveContract, deleteContract, createTower, createContractor,
   } = useContracts();
 
   const canCreate = useCan('contratacion.crear');
@@ -313,6 +313,7 @@ export default function ContratacionPage() {
         onClose={() => { setFormOpen(false); clearNew(); }}
         onSave={handleSave}
         onCreateTower={(name) => createTower(name)}
+        onCreateContractor={(name, nit) => createContractor(name, nit)}
         contract={newRequested ? null : editingContract}
         catalogs={catalogs}
         projectName={activeProject.name}

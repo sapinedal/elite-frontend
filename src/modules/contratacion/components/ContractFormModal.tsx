@@ -9,6 +9,8 @@ interface ContractFormModalProps {
   onClose: () => void;
   onSave: (payload: ContractPayload, id?: number) => Promise<Contract>;
   onCreateTower: (name: string) => Promise<{ id: number }>;
+  /** Crea el proveedor desde el contrato (único lugar donde se crean proveedores) */
+  onCreateContractor: (name: string, nit?: string | null) => Promise<{ id: number; name: string }>;
   contract: Contract | null;
   catalogs: ContratacionCatalogs | null;
   projectName?: string;
@@ -38,6 +40,7 @@ export const ContractFormModal: React.FC<ContractFormModalProps> = ({
   onClose,
   onSave,
   onCreateTower,
+  onCreateContractor,
   contract,
   catalogs,
   projectName,
@@ -47,6 +50,8 @@ export const ContractFormModal: React.FC<ContractFormModalProps> = ({
   const [localError, setLocalError] = useState<string | null>(null);
   const [newTowerName, setNewTowerName] = useState<string | null>(null);
   const [creatingTower, setCreatingTower] = useState(false);
+  const [newContractor, setNewContractor] = useState<{ name: string; nit: string } | null>(null);
+  const [creatingContractor, setCreatingContractor] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -104,6 +109,21 @@ export const ContractFormModal: React.FC<ContractFormModalProps> = ({
       setLocalError(err instanceof Error ? err.message : String(err));
     } finally {
       setCreatingTower(false);
+    }
+  };
+
+  const handleCreateContractor = async () => {
+    if (!newContractor?.name.trim()) return;
+    setCreatingContractor(true);
+    setLocalError(null);
+    try {
+      const contractor = await onCreateContractor(newContractor.name.trim(), newContractor.nit.trim() || null);
+      setForm((prev) => ({ ...prev, contractor_id: contractor.id, contractor_name: prev.contractor_name.trim() ? prev.contractor_name : contractor.name }));
+      setNewContractor(null);
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCreatingContractor(false);
     }
   };
 
@@ -271,20 +291,77 @@ export const ContractFormModal: React.FC<ContractFormModalProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <CustomSelect
-                label="Proveedor *"
-                placeholder="Selecciona el proveedor"
-                searchPlaceholder="Buscar proveedor o NIT..."
-                disabled={submitting}
-                options={(catalogs?.contractors ?? []).map((c) => ({ value: c.id, label: c.name, sublabel: c.nit ? `NIT ${c.nit}` : undefined }))}
-                value={form.contractor_id}
-                onChange={(v) => {
-                  const id = Number(v);
-                  const name = catalogs?.contractors.find((c) => c.id === id)?.name ?? '';
-                  // El nombre del contratista se propone con el del proveedor si aún está vacío
-                  setForm((prev) => ({ ...prev, contractor_id: id, contractor_name: prev.contractor_name.trim() ? prev.contractor_name : name }));
-                }}
-              />
+              <div className="space-y-2">
+                {newContractor === null ? (
+                  <>
+                    <CustomSelect
+                      label="Proveedor *"
+                      placeholder="Selecciona el proveedor"
+                      searchPlaceholder="Buscar proveedor o NIT..."
+                      disabled={submitting}
+                      options={(catalogs?.contractors ?? []).map((c) => ({ value: c.id, label: c.name, sublabel: c.nit ? `NIT ${c.nit}` : undefined }))}
+                      value={form.contractor_id}
+                      onChange={(v) => {
+                        const id = Number(v);
+                        const name = catalogs?.contractors.find((c) => c.id === id)?.name ?? '';
+                        // El nombre del contratista se propone con el del proveedor si aún está vacío
+                        setForm((prev) => ({ ...prev, contractor_id: id, contractor_name: prev.contractor_name.trim() ? prev.contractor_name : name }));
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNewContractor({ name: '', nit: '' })}
+                      className="text-[11px] font-bold text-[#EE9D4C] hover:underline ml-1 flex items-center gap-1"
+                    >
+                      <Plus size={12} /> Crear proveedor
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <label className={labelClass}>Nuevo proveedor</label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        autoFocus
+                        className={inputClass}
+                        placeholder="Razón social"
+                        value={newContractor.name}
+                        onChange={(e) => setNewContractor((prev) => prev && { ...prev, name: e.target.value })}
+                      />
+                      <input
+                        className={`${inputClass} sm:max-w-[150px]`}
+                        placeholder="NIT"
+                        value={newContractor.nit}
+                        onChange={(e) => setNewContractor((prev) => prev && { ...prev, nit: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCreateContractor();
+                          }
+                        }}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={creatingContractor || !newContractor.name.trim()}
+                          onClick={handleCreateContractor}
+                          className="flex-1 sm:flex-none px-4 py-3 rounded-2xl bg-[#004C6C] text-white disabled:opacity-50 flex items-center justify-center"
+                          title="Crear proveedor"
+                        >
+                          {creatingContractor ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewContractor(null)}
+                          className="flex-1 sm:flex-none px-4 py-3 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center"
+                          title="Cancelar"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
               <div className="space-y-2">
                 <label className={labelClass}>Nombre del contratista *</label>
                 <input required disabled={submitting} className={inputClass} placeholder="Ej: Interlift S.A.S"

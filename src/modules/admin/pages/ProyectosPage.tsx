@@ -10,10 +10,12 @@ import {
   CheckCircle2,
   XCircle,
   Code2,
-  Users
+  Users,
+  Building
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { ProjectUsersModal } from '../components/ProjectUsersModal';
+import { ProjectTowersModal } from '../components/ProjectTowersModal';
 import { useProjects } from '../hooks/useProjects';
 import { projectService } from '../services/projectService';
 import { useProject } from '../../../context/ProjectContext';
@@ -31,6 +33,7 @@ export default function ProyectosPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [usersProject, setUsersProject] = useState<Project | null>(null);
+  const [towersProject, setTowersProject] = useState<Project | null>(null);
   const { user } = useAuth();
   // Igual que PUT /configuracion/projects/{id}/users en el backend
   const canEditProjects = ['proyectos.editar', 'configuracion.editar'].some(p => user?.permissions?.includes(p));
@@ -162,6 +165,13 @@ export default function ProyectosPage() {
               <Users size={18} />
             </button>
           )}
+          <button
+            onClick={() => setTowersProject(project)}
+            title="Torres y Apartamentos"
+            className="p-3 text-slate-400 hover:text-[#004C6C] hover:bg-blue-50 rounded-2xl transition-all"
+          >
+            <Building size={18} />
+          </button>
           <button
             onClick={() => {
               setSelectedProject(project);
@@ -298,6 +308,13 @@ export default function ProyectosPage() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveProject}
         project={selectedProject}
+      />
+
+      <ProjectTowersModal
+        isOpen={towersProject !== null}
+        onClose={() => setTowersProject(null)}
+        project={towersProject}
+        canEdit={canEditProjects}
       />
 
       <ProjectUsersModal

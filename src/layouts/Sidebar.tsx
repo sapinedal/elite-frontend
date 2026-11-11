@@ -75,67 +75,31 @@ const eliteMenuItems: SidebarItem[] = [
         children: [
             {
                 id: 'interventoria',
-                label: 'Interventoría & Resumen',
+                label: 'Interventoría',
                 icon: <LayoutDashboard className="w-4 h-4" />,
                 href: '/app/obra/interventoria',
                 permission: 'obra.ver',
             },
             {
                 id: 'ftra-registro',
-                label: 'FTRA - Registro',
+                label: 'Registro',
                 icon: <PlusCircle className="w-4 h-4" />,
                 href: '/app/ftra/registro',
                 permission: 'ftra.crear',
             },
             {
                 id: 'ftra-seguimiento',
-                label: 'FTRA - Seguimiento',
+                label: 'Seguimiento',
                 icon: <ClipboardList className="w-4 h-4" />,
                 href: '/app/ftra/seguimiento',
                 permission: 'ftra.ver',
             },
             {
                 id: 'ftra-parametrizacion',
-                label: 'FTRA - Parametrización',
+                label: 'Parametrización',
                 icon: <Settings className="w-4 h-4" />,
                 href: '/app/ftra/parametrizacion',
                 permission: 'ftra.parametrizar',
-            }
-        ]
-    },
-
-    {
-        id: 'kpi',
-        label: 'KPI',
-        icon: <BarChart3 className="w-5 h-5" />,
-        children: [
-            {
-                id: 'dashboard',
-                label: 'Dashboard',
-                icon: <LayoutDashboard className="w-4 h-4" />,
-                href: '/app/kpi/dashboard',
-                permission: 'kpi.ver',
-            },
-            {
-                id: 'nueva-evaluacion',
-                label: 'Nueva Evaluación',
-                href: '/app/kpi/evaluacion',
-                icon: <PlusCircle className="w-4 h-4" />,
-                permission: 'kpi.evaluar',
-            },
-            {
-                id: 'historial',
-                label: 'Historial',
-                href: '/app/kpi/historial',
-                icon: <History className="w-4 h-4" />,
-                permission: 'kpi.historial',
-            },
-            {
-                id: 'parametrizacion',
-                label: 'Parametrización',
-                href: '/app/kpi/plantillas',
-                icon: <ClipboardList className="w-4 h-4" />,
-                permission: 'kpi.parametrizar',
             }
         ]
     },
@@ -190,6 +154,41 @@ const eliteMenuItems: SidebarItem[] = [
                 icon: <FolderArchive className="w-4 h-4" />,
                 href: '/app/documental',
                 permission: 'documental.ver',
+            }
+        ]
+    },
+    {
+        id: 'kpi',
+        label: 'KPI',
+        icon: <BarChart3 className="w-5 h-5" />,
+        children: [
+            {
+                id: 'dashboard',
+                label: 'Dashboard',
+                icon: <LayoutDashboard className="w-4 h-4" />,
+                href: '/app/kpi/dashboard',
+                permission: 'kpi.ver',
+            },
+            {
+                id: 'nueva-evaluacion',
+                label: 'Nueva Evaluación',
+                href: '/app/kpi/evaluacion',
+                icon: <PlusCircle className="w-4 h-4" />,
+                permission: 'kpi.evaluar',
+            },
+            {
+                id: 'historial',
+                label: 'Historial',
+                href: '/app/kpi/historial',
+                icon: <History className="w-4 h-4" />,
+                permission: 'kpi.historial',
+            },
+            {
+                id: 'parametrizacion',
+                label: 'Parametrización',
+                href: '/app/kpi/plantillas',
+                icon: <ClipboardList className="w-4 h-4" />,
+                permission: 'kpi.parametrizar',
             }
         ]
     },

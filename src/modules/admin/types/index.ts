@@ -28,3 +28,21 @@ export interface ProjectMember {
   email: string;
   area_id: number | null;
 }
+
+/** Torre o etapa del proyecto. floors × apartments_per_floor define los apartamentos (piso × 100 + consecutivo). */
+export interface ProjectTower {
+  id: number;
+  project_id: number;
+  name: string;
+  code?: string | null;
+  description?: string | null;
+  floors: number | null;
+  apartments_per_floor: number | null;
+}
+
+export interface SaveTowerDTO {
+  name: string;
+  code?: string | null;
+  floors: number | null;
+  apartments_per_floor: number | null;
+}

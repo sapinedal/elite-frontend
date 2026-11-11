@@ -1,35 +1,37 @@
-import React, { useState } from 'react';
-import { X, Calendar, ClipboardList, CheckCircle2, AlertTriangle, Eye, User } from 'lucide-react';
-import type { FtraRecord, FtraRecordStatus } from '../types';
+import React, { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { X, Calendar, ClipboardList, CheckCircle2, AlertTriangle, Eye, User, Send, Upload, Loader2, ArrowRight } from 'lucide-react';
+import { FTRA_STATUS_LABELS, type FtraRecord } from '../types';
 import { Portal } from '../../../components/ui/Portal';
-import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { useNotification } from '../../../context/NotificationContext';
 import { getErrorMessage } from '../../../lib/apiError';
+import { ftraRecordService } from '../services/ftraRecordService';
+import { FtraProgress } from './FtraProgress';
 
 interface FtraRecordDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   record: FtraRecord | null;
-  onUpdateStatus: (id: number, status: FtraRecordStatus) => Promise<any>;
+  /** Después de reenviar un FTRA devuelto */
+  onChanged: (record: FtraRecord) => void;
 }
 
 export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
   isOpen,
   onClose,
   record,
-  onUpdateStatus,
+  onChanged,
 }) => {
   const { showNotification } = useNotification();
-  const [status, setStatus] = useState<FtraRecordStatus>('Registrada');
-  const [updating, setUpdating] = useState(false);
+  const navigate = useNavigate();
   const [activePhoto, setActivePhoto] = useState<string | null>(null);
-
-  // Al abrir el modal, cargamos el estado inicial del registro
-  React.useEffect(() => {
-    if (record) {
-      setStatus(record.status);
-    }
-  }, [record, isOpen]);
+  // Reenvío de un FTRA devuelto
+  const [resubmitOpen, setResubmitOpen] = useState(false);
+  const [comment, setComment] = useState('');
+  const [observations, setObservations] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [sending, setSending] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   if (!record) return null;
 
@@ -39,26 +41,51 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   };
 
-  const handleStatusSave = async () => {
-    setUpdating(true);
+  const closeAll = () => {
+    setResubmitOpen(false);
+    setComment('');
+    setObservations(null);
+    setPhotos([]);
+    onClose();
+  };
+
+  const handleResubmit = async () => {
+    if (comment.trim().length < 5) {
+      showNotification('Describe los ajustes realizados (mínimo 5 caracteres).', 'error');
+      return;
+    }
+    setSending(true);
     try {
-      await onUpdateStatus(record.id, status);
-      showNotification('Estado del registro actualizado correctamente.', 'success');
-    } catch (err: any) {
-      showNotification(getErrorMessage(err, 'Error al actualizar el estado.'), 'error');
+      const fd = new FormData();
+      fd.append('comment', comment.trim());
+      if (observations !== null) fd.append('observations', observations.trim());
+      photos.forEach(f => fd.append('photos[]', f));
+      const { record: updated, message } = await ftraRecordService.resubmit(record.id, fd);
+      showNotification(message, 'success');
+      setResubmitOpen(false);
+      setComment('');
+      setObservations(null);
+      setPhotos([]);
+      onChanged(updated);
+    } catch (err) {
+      showNotification(getErrorMessage(err, 'No se pudo reenviar el FTRA.'), 'error');
     } finally {
-      setUpdating(false);
+      setSending(false);
     }
   };
 
+  const reviewPath = record.current_stage === 'supervisor'
+    ? `/app/ftra/revision/${record.id}`
+    : record.current_stage === 'director_obra' ? `/app/ftra/aprobacion/${record.id}` : null;
+
   return (
     <>
-      <Portal isOpen={isOpen} onClose={onClose}>
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-[#f8fafc] w-full max-w-3xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-in">
+      <Portal isOpen={isOpen} onClose={closeAll}>
+        <div className="fixed inset-0 z-100 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-[#f8fafc] w-full max-w-3xl rounded-t-[28px] sm:rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[94vh] sm:max-h-[90vh] animate-scale-in">
             
             {/* Header */}
-            <div className="bg-white p-8 border-b border-slate-100 flex items-center justify-between">
+            <div className="bg-white p-5 sm:p-8 border-b border-slate-100 flex items-center justify-between gap-3">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 bg-blue-50 text-[#004C6C] rounded-2xl flex items-center justify-center">
                   <ClipboardList size={24} />
@@ -70,15 +97,15 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
                   </p>
                 </div>
               </div>
-              <button onClick={onClose} className="p-3 text-slate-300 hover:bg-slate-50 rounded-2xl transition-all cursor-pointer">
+              <button onClick={closeAll} className="p-3 text-slate-300 hover:bg-slate-50 rounded-2xl transition-all cursor-pointer">
                 <X size={24} />
               </button>
             </div>
 
             {/* Content */}
-            <div className="p-10 space-y-8 overflow-y-auto flex-1">
+            <div className="p-4 sm:p-10 space-y-6 sm:space-y-8 overflow-y-auto flex-1">
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
                 {/* Proveedor e Información del Registro */}
                 <div className="space-y-4">
                   <div>
@@ -89,7 +116,11 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 py-2 border-y border-slate-100/85">
+                  <div className="grid grid-cols-3 gap-4 py-2 border-y border-slate-100/85">
+                    <div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Torre</span>
+                      <p className="text-sm font-black text-slate-800">{record.tower?.name || 'N/A'}</p>
+                    </div>
                     <div>
                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Piso</span>
                       <p className="text-sm font-black text-slate-800">{record.piso || 'N/A'}</p>
@@ -100,7 +131,7 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 pt-2 text-xs text-slate-500 font-bold">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2 text-xs text-slate-500 font-bold">
                     <span className="flex items-center gap-2">
                       <Calendar size={14} className="text-slate-400" />
                       Registrado: {formatDate(record.created_at)}
@@ -118,7 +149,7 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
                         {record.responsable.name}
                       </p>
                       <div className="flex items-center gap-4 mt-1 text-[10px] text-slate-500 font-bold">
-                        <span>Rol: <strong className="text-slate-700 uppercase">{record.responsable.role}</strong></span>
+                        {record.responsable.position?.name && <span>Cargo: <strong className="text-slate-700 uppercase">{record.responsable.position.name}</strong></span>}
                         <span>Correo: <strong className="text-slate-700">{record.responsable.email}</strong></span>
                       </div>
                     </div>
@@ -202,16 +233,22 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
                     className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest leading-none inline-block ${
                       record.status === 'Aprobada'
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                        : record.status === 'Rechazada'
+                        : record.status === 'Rechazada' || record.status === 'Devuelta'
                         ? 'bg-rose-50 text-rose-700 border border-rose-100'
                         : record.status === 'Seguimiento'
                         ? 'bg-blue-50 text-blue-700 border border-blue-100'
                         : 'bg-slate-100 text-slate-600 border border-slate-200'
                     }`}
                   >
-                    {record.status}
+                    {FTRA_STATUS_LABELS[record.status] ?? record.status}
                   </span>
                 </div>
+              </div>
+
+              {/* Flujo: Registrado → Supervisor → Director de Obra */}
+              <div className="space-y-2">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Flujo de aprobación</span>
+                <FtraProgress record={record} />
               </div>
 
               {/* Observaciones */}
@@ -306,39 +343,60 @@ export const FtraRecordDetailModal: React.FC<FtraRecordDetailModalProps> = ({
 
             </div>
 
-            {/* Footer - Panel de Modificación de Estado */}
-            <div className="p-8 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3 w-full sm:w-[320px]">
-                <div className="flex-1">
-                  <CustomSelect
-                    label=""
-                    placeholder="Cambiar estado..."
-                    options={[
-                      { value: 'Registrada', label: 'Registrada' },
-                      { value: 'Seguimiento', label: 'Seguimiento' },
-                      { value: 'Aprobada', label: 'Aprobada' },
-                      { value: 'Rechazada', label: 'Rechazada' }
-                    ]}
-                    value={status}
-                    onChange={val => setStatus(val as FtraRecordStatus)}
-                  />
+            {/* Footer: reenviar (si fue devuelto), ir a revisar (si le toca al usuario) o cerrar */}
+            <div className="p-4 sm:p-6 bg-white border-t border-slate-100 space-y-3">
+              {record.can?.resubmit && resubmitOpen && (
+                <div className="space-y-3 animate-fade-in">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ajustes realizados *</label>
+                    <textarea rows={2} value={comment} onChange={e => setComment(e.target.value)} placeholder="Qué corregiste según la devolución..."
+                      className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Observaciones del registro</label>
+                    <textarea rows={2} value={observations ?? record.observations ?? ''} onChange={e => setObservations(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none" />
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button type="button" onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-xs font-bold text-slate-500 cursor-pointer">
+                      <Upload size={14} /> Agregar fotos
+                    </button>
+                    <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+                      onChange={e => setPhotos(prev => [...prev, ...Array.from(e.target.files ?? [])])} />
+                    {photos.length > 0 && <span className="text-xs font-bold text-slate-500">{photos.length} foto(s) nueva(s)</span>}
+                  </div>
                 </div>
-                <button
-                  onClick={handleStatusSave}
-                  disabled={updating || status === record.status}
-                  className="px-5 py-4 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-md shrink-0 cursor-pointer disabled:opacity-50"
-                >
-                  {updating ? 'Guardando...' : 'Cambiar Estado'}
-                </button>
-              </div>
+              )}
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-200 transition-all text-xs uppercase tracking-widest cursor-pointer w-full sm:w-auto"
-              >
-                Cerrar
-              </button>
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={closeAll}
+                  className="px-8 py-3.5 bg-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-200 transition-all text-xs uppercase tracking-widest cursor-pointer w-full sm:w-auto"
+                >
+                  Cerrar
+                </button>
+                {record.can?.resubmit && (
+                  resubmitOpen ? (
+                    <button type="button" onClick={handleResubmit} disabled={sending}
+                      className="flex items-center justify-center gap-2 px-6 py-3.5 bg-[#004C6C] text-white rounded-2xl font-black text-xs uppercase tracking-widest disabled:opacity-50 cursor-pointer w-full sm:w-auto">
+                      {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                      Reenviar al Supervisor
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => setResubmitOpen(true)}
+                      className="flex items-center justify-center gap-2 px-6 py-3.5 bg-[#EE9D4C] text-white rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer w-full sm:w-auto">
+                      <Send size={14} /> Corregir y reenviar
+                    </button>
+                  )
+                )}
+                {record.can?.review && reviewPath && (
+                  <button type="button" onClick={() => navigate(reviewPath)}
+                    className="flex items-center justify-center gap-2 px-6 py-3.5 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest cursor-pointer w-full sm:w-auto">
+                    {record.current_stage === 'supervisor' ? 'Revisar como Supervisor' : 'Revisar como Director'} <ArrowRight size={14} />
+                  </button>
+                )}
+              </div>
             </div>
 
           </div>

@@ -133,6 +133,16 @@ export function useContracts() {
     }
   }, [refresh]);
 
+  const createContractor = useCallback(async (name: string, nit?: string | null) => {
+    try {
+      const contractor = await contratacionService.createContractor({ name, nit: nit || null });
+      await fetchCatalogs();
+      return contractor;
+    } catch (err) {
+      throw new Error(getApiErrorMessage(err, 'Error al crear el proveedor.'));
+    }
+  }, [fetchCatalogs]);
+
   const createTower = useCallback(async (name: string, code?: string) => {
     try {
       const tower = await contratacionService.createTower({ name, code });
@@ -163,5 +173,6 @@ export function useContracts() {
     saveContract,
     deleteContract,
     createTower,
+    createContractor,
   };
 }
