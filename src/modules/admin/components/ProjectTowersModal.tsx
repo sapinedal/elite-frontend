@@ -5,6 +5,7 @@ import { projectService } from '../services/projectService';
 import type { Project, ProjectTower, SaveTowerDTO } from '../types';
 import { getErrorMessage } from '../../../lib/apiError';
 
+import { useConfirm } from '../../../context/ConfirmContext';
 interface ProjectTowersModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -30,6 +31,7 @@ const unitNumber = (floor: number, index: number) => floor * 100 + index;
  * Las etapas sin apartamentos (ej. Urbanismo) se dejan sin pisos.
  */
 export const ProjectTowersModal: React.FC<ProjectTowersModalProps> = ({ isOpen, onClose, project, canEdit }) => {
+  const confirm = useConfirm();
   const [towers, setTowers] = useState<ProjectTower[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -119,7 +121,7 @@ export const ProjectTowersModal: React.FC<ProjectTowersModalProps> = ({ isOpen, 
 
   const handleDelete = async (tower: ProjectTower) => {
     if (!project) return;
-    if (!window.confirm(`¿Eliminar ${tower.name}? Los contratos y FTRA que la usan quedarán sin torre asignada.`)) return;
+    if (!(await confirm({ title: `Eliminar ${tower.name}`, message: 'Los contratos y FTRA que la usan quedarán sin torre asignada.', confirmText: 'Eliminar' }))) return;
     try {
       await projectService.deleteTower(tower.id);
       await load(project.id);

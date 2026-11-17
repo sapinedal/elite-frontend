@@ -25,7 +25,9 @@ import type { Project, CreateProjectDTO } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { getErrorMessage } from '../../../lib/apiError';
 
+import { useConfirm } from '../../../context/ConfirmContext';
 export default function ProyectosPage() {
+  const confirm = useConfirm();
   const { showNotification } = useNotification();
   const { projects, isLoading, error, refetch } = useProjects();
   const { refreshProjects } = useProject();
@@ -76,7 +78,7 @@ export default function ProyectosPage() {
   };
 
   const handleDeleteProject = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar este proyecto? Esta acción no se puede deshacer.')) return;
+    if (!(await confirm({ title: 'Eliminar proyecto', message: '¿Estás seguro de que deseas eliminar este proyecto? Esta acción no se puede deshacer.', confirmText: 'Eliminar' }))) return;
     try {
       await projectService.deleteProject(id);
       refetch();

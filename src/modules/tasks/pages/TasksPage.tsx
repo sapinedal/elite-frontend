@@ -24,7 +24,9 @@ import { Pagination } from '../../../components/ui/Pagination';
 import { useNotification } from '../../../context/NotificationContext';
 import { getErrorMessage } from '../../../lib/apiError';
 
+import { useConfirm } from '../../../context/ConfirmContext';
 export default function TasksPage() {
+  const confirm = useConfirm();
   const { showNotification } = useNotification();
   const navigate = useNavigate();
 
@@ -171,7 +173,7 @@ export default function TasksPage() {
   };
 
   const handleDeleteTask = async (id: number) => {
-    if (window.confirm('¿Estás 100% seguro de que deseas eliminar este compromiso de la bitácora? Esta acción se registrará y borrará de forma física todos los logs históricos.')) {
+    if (await confirm({ title: 'Eliminar compromiso', message: 'Se eliminará de la bitácora junto con todo su historial. La eliminación queda registrada y no se puede deshacer.', confirmText: 'Eliminar' })) {
       try {
         await deleteTask(id);
       } catch (err: unknown) {

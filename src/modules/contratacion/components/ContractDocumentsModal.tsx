@@ -7,6 +7,7 @@ import { useNotification } from '../../../context/NotificationContext';
 import { contratacionService, getApiErrorMessage } from '../services/contratacionService';
 import type { Contract, ContractDocument, ContratacionCatalogs } from '../types';
 
+import { useConfirm } from '../../../context/ConfirmContext';
 interface ContractDocumentsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,6 +36,7 @@ export const ContractDocumentsModal: React.FC<ContractDocumentsModalProps> = ({
   canDelete,
 }) => {
   const { showNotification } = useNotification();
+  const confirm = useConfirm();
   const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(false);
   // Clave de la carpeta (o "legal.<tipo>") que se está subiendo
@@ -114,7 +116,7 @@ export const ContractDocumentsModal: React.FC<ContractDocumentsModalProps> = ({
   };
 
   const handleDelete = async (doc: ContractDocument) => {
-    if (!window.confirm(`¿Eliminar "${doc.name}" del repositorio documental?`)) return;
+    if (!(await confirm({ title: 'Eliminar archivo', message: `¿Eliminar "${doc.name}" del repositorio documental?`, confirmText: 'Eliminar' }))) return;
     setDeletingId(doc.id);
     try {
       await contratacionService.deleteDocument(doc.id);

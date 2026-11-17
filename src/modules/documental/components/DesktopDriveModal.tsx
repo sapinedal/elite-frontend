@@ -6,6 +6,7 @@ import { getErrorMessage } from '../../../lib/apiError';
 import { documentalService } from '../services/documentalService';
 import type { DesktopKey, DesktopKeysResponse } from '../types/documental.types';
 
+import { useConfirm } from '../../../context/ConfirmContext';
 interface DesktopDriveModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -70,6 +71,7 @@ const Step: React.FC<{ n: number; children: React.ReactNode }> = ({ n, children 
  * Cada usuario crea sus propias claves de escritorio (una por equipo) y las puede revocar.
  */
 export const DesktopDriveModal: React.FC<DesktopDriveModalProps> = ({ isOpen, onClose }) => {
+  const confirm = useConfirm();
   useEscapeToClose(isOpen, onClose);
 
   const [data, setData] = useState<DesktopKeysResponse | null>(null);
@@ -126,7 +128,7 @@ export const DesktopDriveModal: React.FC<DesktopDriveModalProps> = ({ isOpen, on
   };
 
   const revoke = async (key: DesktopKey) => {
-    if (!window.confirm(`¿Revocar la clave de "${key.name}"? Ese equipo dejará de tener acceso a la unidad de red.`)) return;
+    if (!(await confirm({ title: 'Revocar clave', message: `Ese equipo ("${key.name}") dejará de tener acceso a la unidad de red.`, confirmText: 'Revocar' }))) return;
     setRevokingId(key.id);
     setError(null);
     try {

@@ -28,7 +28,9 @@ import {
 
 
 
+import { useConfirm } from '../../../context/ConfirmContext';
 export default function ContratosPage() {
+  const confirm = useConfirm();
   const { projects: contextProjects, activeProject, setProjectById } = useProject();
 
   const [contractsList, setContractsList] = useState<Contract[]>([]);
@@ -111,7 +113,7 @@ export default function ContratosPage() {
   };
 
   const handleDeleteContract = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este contrato?')) return;
+    if (!(await confirm({ title: 'Eliminar contrato', message: '¿Estás seguro de eliminar este contrato? Esta acción no se puede deshacer.', confirmText: 'Eliminar' }))) return;
     try {
       await contractService.deleteContract(id);
       loadData();
@@ -141,7 +143,7 @@ export default function ContratosPage() {
   };
 
   const handleDeleteTower = async (towerId: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta torre/etapa?')) return;
+    if (!(await confirm({ title: 'Eliminar torre/etapa', message: '¿Estás seguro de eliminar esta torre/etapa?', confirmText: 'Eliminar' }))) return;
     try {
       await contractService.deleteTower(towerId);
       setTowersList((prev) => prev.filter((t) => t.id !== towerId));
@@ -180,7 +182,7 @@ export default function ContratosPage() {
   };
 
   const handleDeleteContractType = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este tipo de contrato?')) return;
+    if (!(await confirm({ title: 'Eliminar tipo de contrato', message: '¿Estás seguro de eliminar este tipo de contrato?', confirmText: 'Eliminar' }))) return;
     try {
       await contractService.deleteContractType(id);
       setContractTypes((prev) => prev.filter((t) => t.id !== id));

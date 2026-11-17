@@ -18,7 +18,9 @@ import { Portal } from '../../../components/ui/Portal';
 import { getErrorMessage } from '../../../lib/apiError';
 import { useNotification } from '../../../context/NotificationContext';
 
+import { useConfirm } from '../../../context/ConfirmContext';
 export default function RolesPage() {
+  const confirm = useConfirm();
   const { showNotification } = useNotification();
   const [roles, setRoles] = useState<Role[]>([]);
   const [catalog, setCatalog] = useState<PermissionCatalogResponse | null>(null);
@@ -128,7 +130,7 @@ export default function RolesPage() {
       showNotification('El rol Administrador es fundamental para el sistema y no puede eliminarse.', 'warning');
       return;
     }
-    if (window.confirm(`¿Estás seguro de que deseas eliminar el rol "${role.name}"?`)) {
+    if (await confirm({ title: 'Eliminar rol', message: `¿Estás seguro de que deseas eliminar el rol "${role.name}"? Los usuarios con este rol perderán sus permisos.`, confirmText: 'Eliminar' })) {
       try {
         await roleService.deleteRole(role.id);
         await fetchRolesAndCatalog();

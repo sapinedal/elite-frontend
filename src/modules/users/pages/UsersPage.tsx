@@ -23,7 +23,9 @@ import type { User } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { getErrorMessage } from '../../../lib/apiError';
 
+import { useConfirm } from '../../../context/ConfirmContext';
 export default function UsersPage() {
+  const confirm = useConfirm();
   const { showNotification } = useNotification();
   const { users, isLoading, refetch } = useUsers(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,7 +86,12 @@ export default function UsersPage() {
   const handleToggleStatus = async (user: User) => {
     const isActive = user.is_active !== false && !user.deleted_at;
     const actionText = isActive ? 'inactivar' : 'activar';
-    if (!window.confirm(`¿Estás seguro de que deseas ${actionText} al usuario "${user.name}"?`)) return;
+    if (!(await confirm({
+      title: isActive ? 'Inactivar usuario' : 'Activar usuario',
+      message: `¿Estás seguro de que deseas ${actionText} al usuario "${user.name}"?`,
+      confirmText: isActive ? 'Inactivar' : 'Activar',
+      tone: isActive ? 'warning' : 'info',
+    }))) return;
     try {
       await userService.toggleStatus(user.id);
       refetch();

@@ -4,14 +4,17 @@ import { router } from './router/router';
 
 import { NotificationProvider } from './context/NotificationContext';
 import { ProjectProvider } from './context/ProjectContext';
+import { ConfirmProvider } from './context/ConfirmContext';
 
 function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <ProjectProvider>
-          <RouterProvider router={router} />
-        </ProjectProvider>
+        <ConfirmProvider>
+          <ProjectProvider>
+            <RouterProvider router={router} />
+          </ProjectProvider>
+        </ConfirmProvider>
       </NotificationProvider>
     </AuthProvider>
   );

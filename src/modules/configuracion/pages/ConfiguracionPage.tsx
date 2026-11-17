@@ -9,7 +9,9 @@ import {
 } from 'lucide-react';
 import { configuracionService, type Area } from '../services/configuracionService';
 
+import { useConfirm } from '../../../context/ConfirmContext';
 export default function ConfiguracionPage() {
+  const confirm = useConfirm();
   // States for Areas & Positions
   const [areas, setAreas] = useState<Area[]>([]);
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
@@ -66,7 +68,7 @@ export default function ConfiguracionPage() {
   };
 
   const handleDeleteArea = async (id: number) => {
-    if (confirm('¿Está seguro de eliminar esta área? Se eliminarán también sus cargos.')) {
+    if (await confirm({ title: 'Eliminar área', message: '¿Está seguro de eliminar esta área? Se eliminarán también sus cargos.', confirmText: 'Eliminar' })) {
       try {
         await configuracionService.deleteArea(id);
         if (selectedArea?.id === id) setSelectedArea(null);
@@ -100,7 +102,7 @@ export default function ConfiguracionPage() {
   };
 
   const handleDeletePosition = async (id: number) => {
-    if (confirm('¿Está seguro de eliminar este cargo?')) {
+    if (await confirm({ title: 'Eliminar cargo', message: '¿Está seguro de eliminar este cargo?', confirmText: 'Eliminar' })) {
       try {
         await configuracionService.deletePosition(id);
         fetchAreas();

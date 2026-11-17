@@ -10,6 +10,7 @@ import type { FtraFormat } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { getErrorMessage } from '../../../lib/apiError';
 
+import { useConfirm } from '../../../context/ConfirmContext';
 /**
  * Parametrización de FTRA: solo los formatos PDF.
  * - Los proveedores se crean en Contratación, al registrar el contrato.
@@ -17,6 +18,7 @@ import { getErrorMessage } from '../../../lib/apiError';
  * - El residente responsable es el usuario que registra el FTRA.
  */
 export default function ParametrizacionPage() {
+  const confirm = useConfirm();
   const { showNotification } = useNotification();
   const { user } = useAuth();
   const isEditor = !!user?.permissions?.includes('ftra.parametrizar');
@@ -44,7 +46,7 @@ export default function ParametrizacionPage() {
   };
 
   const handleDeleteFormat = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este formato? Esta acción no se puede deshacer y borrará físicamente el archivo PDF asociado.')) {
+    if (await confirm({ title: 'Eliminar formato', message: 'Esta acción no se puede deshacer y borrará el archivo PDF asociado.', confirmText: 'Eliminar' })) {
       try {
         await formatsData.deleteFormat(id);
       } catch (err: unknown) {
