@@ -242,6 +242,7 @@ export const DesktopDriveModal: React.FC<DesktopDriveModalProps> = ({ isOpen, on
                   <Step n={2}>Escoge una letra (por ejemplo <b>E:</b>) y en <b>Carpeta</b> pega la dirección del paso 2.</Step>
                   <Step n={3}>Marca <b>Conectar de nuevo al iniciar sesión</b> y <b>Conectar con otras credenciales</b>, y pulsa <b>Finalizar</b>.</Step>
                   <Step n={4}>Escribe tu usuario (correo) y la clave de escritorio, y marca <b>Recordar mis credenciales</b>.</Step>
+                  <Step n={5}>La primera vez que abras un Word o Excel, Office mostrará una ventana de <b>Elite</b>: entra con tu correo y tu contraseña de Elite. Office recordará la sesión por 30 días y la verás aquí abajo como <b>Office en Windows</b>.</Step>
                   <li className="text-[11px] text-slate-500 font-semibold bg-slate-50 border border-slate-100 rounded-2xl p-3">
                     Windows solo permite archivos de hasta 50 MB en unidades de red. Si trabajas con archivos más grandes (planos, videos), usa la opción <b>Como disco (RaiDrive)</b>.
                   </li>
