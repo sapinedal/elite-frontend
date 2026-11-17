@@ -41,7 +41,9 @@ const ACTION_OPTIONS = [
   { value: 'create_file', label: 'Archivos creados' },
   { value: 'project_tag', label: 'Asignación de proyecto' },
   { value: 'create_folder', label: 'Carpetas creadas' },
+  { value: 'update', label: 'Archivos reemplazados' },
   { value: 'rename', label: 'Renombrados' },
+  { value: 'move', label: 'Movidos' },
   { value: 'delete', label: 'Eliminaciones' },
   { value: 'restrictions', label: 'Cambios de restricciones' },
   { value: 'settings', label: 'Cambios de configuración' },
@@ -56,6 +58,7 @@ const ATTEMPTED_LABELS: Record<string, string> = {
   open_editor: 'abrir en el editor',
   edit: 'guardar edición',
   rename: 'renombrar',
+  move: 'mover',
   delete: 'eliminar',
 };
 
@@ -77,6 +80,10 @@ const getActionBadge = (action: string) => {
       return <span className={`${badgeBase} bg-sky-50 text-[#004C6C] border-sky-100`}><Building2 className="w-3 h-3" /> Proyecto</span>;
     case 'create_folder':
       return <span className={`${badgeBase} bg-orange-50 text-[#D97F2A] border-orange-100`}><FolderPlus className="w-3 h-3" /> Carpeta</span>;
+    case 'update':
+      return <span className={`${badgeBase} bg-emerald-50 text-emerald-700 border-emerald-100`}><PencilLine className="w-3 h-3" /> Reemplazado</span>;
+    case 'move':
+      return <span className={`${badgeBase} bg-violet-50 text-violet-700 border-violet-100`}><ArrowUpRight className="w-3 h-3" /> Movido</span>;
     case 'rename':
       return <span className={`${badgeBase} bg-violet-50 text-violet-700 border-violet-100`}><Edit2 className="w-3 h-3" /> Renombrado</span>;
     case 'delete':
@@ -99,8 +106,12 @@ const getDetail = (log: DocumentActivityLog): string | null => {
     const attempted = String(d.attempted_action ?? '');
     return `Intentó ${ATTEMPTED_LABELS[attempted] ?? attempted}: ${String(d.reason ?? '')}`;
   }
-  if (log.action === 'rename' && d.from) {
-    return `Antes: ${String(d.from)}`;
+  const fromDesktop = d.source === 'escritorio' ? 'Desde la unidad de red del escritorio' : null;
+  if ((log.action === 'rename' || log.action === 'move') && d.from) {
+    return [`Antes: ${String(d.from)}`, fromDesktop].filter(Boolean).join(' · ');
+  }
+  if (fromDesktop) {
+    return fromDesktop;
   }
   if (log.action === 'restrictions') {
     const rules = Array.isArray(d.rules) ? (d.rules as Array<{ role_name?: string }>) : [];

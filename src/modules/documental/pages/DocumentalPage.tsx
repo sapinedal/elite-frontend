@@ -6,6 +6,7 @@ import {
   FileText,
   FolderOpen,
   FolderPlus,
+  HardDrive,
   History,
   Info,
   LayoutGrid,
@@ -52,6 +53,7 @@ import { FolderRestrictionsModal } from '../components/FolderRestrictionsModal';
 import { DocumentLogsModal } from '../components/DocumentLogsModal';
 import { DocumentalSettingsModal } from '../components/DocumentalSettingsModal';
 import { NewOfficeFileModal } from '../components/NewOfficeFileModal';
+import { DesktopDriveModal } from '../components/DesktopDriveModal';
 import { editorCapability, editorUrl, openInEditor } from '../utils/editor';
 import { getErrorMessage } from '../../../lib/apiError';
 
@@ -104,6 +106,7 @@ export default function DocumentalPage() {
   const [restrictionTarget, setRestrictionTarget] = useState<string | null>(null);
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDesktopOpen, setIsDesktopOpen] = useState(false);
   const [settings, setSettings] = useState<DocumentalSettings | null>(null);
   const [editorInfo, setEditorInfo] = useState<EditorInfo | null>(null);
 
@@ -381,6 +384,14 @@ export default function DocumentalPage() {
         </div>
 
         <div className="relative z-10 flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={() => setIsDesktopOpen(true)}
+            title="Abrir Gestión Documental como unidad de red en Windows o Mac"
+            className="hidden md:flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border border-white/15 text-white px-5 py-3.5 rounded-2xl font-bold transition-all"
+          >
+            <HardDrive size={18} /> Conectar al escritorio
+          </button>
           {permissions.can_upload && (
             <button
               type="button"
@@ -751,6 +762,8 @@ export default function DocumentalPage() {
         onSave={handleSaveRestriction}
         onNavigate={handleNavigate}
       />
+
+      <DesktopDriveModal isOpen={isDesktopOpen} onClose={() => setIsDesktopOpen(false)} />
 
       <DocumentalSettingsModal
         isOpen={isSettingsOpen}

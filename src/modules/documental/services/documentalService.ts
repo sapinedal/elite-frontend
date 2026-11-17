@@ -10,6 +10,8 @@ import type {
   EditorInfo,
   EditorSession,
   OfficeFileType,
+  DesktopKey,
+  DesktopKeysResponse,
 } from '../types/documental.types';
 
 export const documentalService = {
@@ -168,5 +170,20 @@ export const documentalService = {
   async updateSettings(data: DocumentalSettingsInput): Promise<DocumentalSettings> {
     const response = await api.put('/v1/documental/settings', data);
     return response.data.data;
+  },
+
+  /** Claves de escritorio del usuario y datos para conectar la unidad de red */
+  async getDesktopKeys(): Promise<DesktopKeysResponse> {
+    const response = await api.get('/v1/documental/desktop-keys');
+    return response.data.data;
+  },
+
+  async createDesktopKey(name: string): Promise<DesktopKey> {
+    const response = await api.post('/v1/documental/desktop-keys', { name });
+    return response.data.data;
+  },
+
+  async revokeDesktopKey(id: number): Promise<void> {
+    await api.delete(`/v1/documental/desktop-keys/${id}`);
   },
 };

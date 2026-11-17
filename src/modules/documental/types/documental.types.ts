@@ -188,3 +188,23 @@ export interface EditorSession {
   can_edit: boolean;
   read_only_reason: string | null;
 }
+
+/** Clave de escritorio para conectar la unidad de red (WebDAV) */
+export interface DesktopKey {
+  id: number;
+  name: string;
+  last_four: string;
+  created_at: string | null;
+  last_used_at: string | null;
+  last_used_ip: string | null;
+  /** Solo viene al crearla: es la única vez que se puede ver */
+  key?: string;
+}
+
+export interface DesktopKeysResponse {
+  keys: DesktopKey[];
+  /** Dirección de la unidad de red */
+  url: string;
+  /** Usuario para conectarse (correo) */
+  username: string;
+}
