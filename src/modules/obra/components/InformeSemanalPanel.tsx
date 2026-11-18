@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, ClipboardList, FastForward, MessageSquare, ShieldAlert, ShieldCheck, Timer, Wrench } from 'lucide-react';
 import type { ControlEstado, InterventoriaCapitulo, InterventoriaReport } from '../types';
 import { formatDate, formatMoney, formatPct } from '../format';
+import { PhotoGallery } from './PhotoGallery';
 
 /** Estado del control de programación: siempre con ícono y texto, nunca solo color */
 export const ControlBadge: React.FC<{ control: InterventoriaCapitulo['control']; compact?: boolean }> = ({ control, compact }) => {
@@ -125,6 +126,9 @@ export const InformeSemanalPanel: React.FC<{ report: InterventoriaReport }> = ({
         <Section icon={<MessageSquare size={16} />} title="Temas tratados en comité" items={report.comite} empty="Sin temas registrados." />
         <Section icon={<Wrench size={16} />} title="Actividades ejecutadas en la semana" items={report.actividades} empty="Sin actividades registradas." />
       </div>
+
+      {/* Informes leídos con la versión anterior del lector traen solo la cantidad de fotos */}
+      <PhotoGallery photos={Array.isArray(report.fotos) ? report.fotos : []} numero={report.numero} />
 
       {/* Pólizas */}
       {report.polizas.length > 0 && (

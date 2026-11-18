@@ -7,4 +7,10 @@ export const interventoriaService = {
     const { data } = await api.get('/v1/obra/interventoria', { params: numero ? { numero } : {} });
     return data.data;
   },
+
+  /** Botón "Sincronizar": trae lo nuevo (desde Drive si está configurado) y carga el último informe */
+  async sync(): Promise<{ success: boolean; message: string; data: InterventoriaDashboard }> {
+    const { data } = await api.post('/v1/obra/interventoria/sincronizar');
+    return data;
+  },
 };

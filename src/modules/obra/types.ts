@@ -33,6 +33,10 @@ export interface InterventoriaReport {
   es_ultimo: boolean;
   proyecto: string | null;
   interventoria: string | null;
+  interventoria_nit: string | null;
+  constructor: string | null;
+  constructor_nit: string | null;
+  ubicacion: string | null;
   fecha_inicio_obra: string | null;
   fecha_fin_obra: string | null;
   presupuesto: {
@@ -45,7 +49,16 @@ export interface InterventoriaReport {
   actividades: string[];
   observaciones: string[];
   polizas: InterventoriaPoliza[];
-  fotos: number;
+  fotos: InterventoriaFoto[];
+}
+
+export interface InterventoriaFoto {
+  archivo: string;
+  pagina: number;
+  ancho: number | null;
+  alto: number | null;
+  /** Enlace firmado y temporal */
+  url: string;
 }
 
 export interface InterventoriaHistoryPoint {
@@ -58,4 +71,5 @@ export interface InterventoriaHistoryPoint {
 export interface InterventoriaDashboard {
   report: InterventoriaReport | null;
   history: InterventoriaHistoryPoint[];
+  sync: { ultima: string | null; desde_drive: boolean };
 }
