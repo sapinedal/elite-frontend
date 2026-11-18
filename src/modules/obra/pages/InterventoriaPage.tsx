@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Building2,
   ExternalLink,
@@ -10,11 +10,20 @@ import {
   HardHat,
   CheckCircle2,
   Clock,
-  DollarSign
+  DollarSign,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { AptoSemaphorizationGrid } from '../../ftra/components/AptoSemaphorizationGrid';
 import { Tabs } from '../../../components/ui/Tabs';
 import aerialPhoto from '../../../assets/san_miguel_aerial_real.jpg';
+import { CustomSelect } from '../../../components/ui/CustomSelect';
+import { getErrorMessage } from '../../../lib/apiError';
+import { interventoriaService } from '../services/interventoriaService';
+import { AvanceHistoryChart } from '../components/AvanceHistoryChart';
+import { InformeSemanalPanel, ControlBadge } from '../components/InformeSemanalPanel';
+import { formatDate, formatMoney, formatPct } from '../format';
+import type { InterventoriaDashboard } from '../types';
 
 interface ContractItem {
   id: string;
@@ -155,40 +164,119 @@ const urbanismoContracts: ContractItem[] = [
   }
 ];
 
+type TabId = 'informe' | 'semáforo' | 'torre2' | 'urbanismo';
+
 export default function InterventoriaPage() {
-  const [activeTab, setActiveTab] = useState<'semáforo' | 'torre2' | 'urbanismo'>('semáforo');
+  const [activeTab, setActiveTab] = useState<TabId>('informe');
+  const [dashboard, setDashboard] = useState<InterventoriaDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [numero, setNumero] = useState<number | undefined>(undefined);
+
+  const load = useCallback(async (selected?: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      setDashboard(await interventoriaService.getDashboard(selected));
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo cargar el informe de interventoría.'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load(numero);
+  }, [load, numero]);
+
+  const report = dashboard?.report ?? null;
+  const budget = report?.presupuesto;
+  const avance = budget?.avance_inversion ?? null;
+  const saldo = budget?.presupuesto_aprobado != null && budget?.inversion_ejecutada != null ? budget.presupuesto_aprobado - budget.inversion_ejecutada : null;
+  const saldoPct = avance != null ? 100 - avance : null;
+  const expiredPolicies = report?.polizas.filter((p) => p.estado === 'VENCIDA') ?? [];
+  // Capítulos en ejecución, primero los de más atraso
+  const inProgress = (report?.capitulos ?? [])
+    .filter((c) => (c.avance_actual ?? 0) < 100 && c.control.estado)
+    .sort((a, b) => (b.control.estado === 'atraso' ? b.control.dias ?? 0 : -1) - (a.control.estado === 'atraso' ? a.control.dias ?? 0 : -1))
+    .slice(0, 6);
+  const weekOptions = [...(dashboard?.history ?? [])].reverse().map((h) => ({
+    value: String(h.numero),
+    label: `Informe N° ${h.numero}`,
+    sublabel: formatDate(h.fecha),
+  }));
 
   return (
     <div className="max-w-[1600px] mx-auto flex flex-col gap-6 md:gap-8 py-4 md:py-6 px-4">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-[#004C6C] via-[#005981] to-[#003850] p-6 md:p-8 rounded-[32px] text-white shadow-xl">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
-              <Building2 className="w-8 h-8 text-[#EE9D4C]" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight">Módulo de Control de Obra & Interventoría</h1>
-              <p className="text-xs font-bold text-blue-200 uppercase tracking-widest">
-                Inverconstrucción S.A.S. | Ciudadela San Miguel — Informe N° 18 (Equiproyectos S.A.S)
-              </p>
-            </div>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-[#004C6C] via-[#005981] to-[#003850] p-6 md:p-8 rounded-[32px] text-white shadow-xl">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md shrink-0">
+            <Building2 className="w-8 h-8 text-[#EE9D4C]" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight">Módulo de Control de Obra & Interventoría</h1>
+            <p className="text-xs font-bold text-blue-200 uppercase tracking-widest">
+              Inverconstrucción S.A.S. | Ciudadela San Miguel
+              {report && ` — Informe N° ${report.numero} · ${formatDate(report.fecha)}${report.interventoria ? ` (${report.interventoria})` : ''}`}
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/10">
-          <Calendar className="w-5 h-5 text-[#EE9D4C]" />
-          <div>
-            <p className="text-[10px] uppercase font-bold text-slate-300">Entrega Pactada</p>
-            <p className="text-sm font-black text-white">28 DE FEBRERO DE 2027</p>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {weekOptions.length > 0 && (
+            <div className="sm:w-56 text-slate-700">
+              <CustomSelect
+                pyClass="py-3"
+                searchable={false}
+                options={weekOptions}
+                value={String(report?.numero ?? '')}
+                onChange={(v) => setNumero(Number(v) === dashboard?.history.at(-1)?.numero ? undefined : Number(v))}
+              />
+            </div>
+          )}
+          {report?.pdf_url && (
+            <a
+              href={report.pdf_url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border border-white/15 text-white px-5 py-3 rounded-2xl font-bold transition-all"
+            >
+              <FileText size={18} /> Ver PDF
+            </a>
+          )}
+          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/10">
+            <Calendar className="w-5 h-5 text-[#EE9D4C]" />
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-300">Entrega pactada</p>
+              <p className="text-sm font-black text-white uppercase">{report ? formatDate(report.fecha_fin_obra) : '—'}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* DASHBOARD EJECUTIVO CLARO CON COLORES CORPORATIVOS ELITE (#004C6C / #EE9D4C) */}
-      <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-xl space-y-6">
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-xs font-bold text-red-600 flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button type="button" onClick={() => load(numero)} className="px-3 py-1.5 rounded-xl bg-white border border-red-100 hover:bg-red-50">Reintentar</button>
+        </div>
+      )}
 
-        {/* Encabezado Principal del Proyecto */}
+      {!loading && !error && !report && (
+        <div className="p-5 bg-amber-50 border border-amber-100 rounded-3xl text-sm font-bold text-amber-800">
+          Aún no se ha importado ningún informe de interventoría. Llegan a Gestión Documental → tecnica → INFORMES SEMANALES INTERVENTORÍA y se leen automáticamente cada hora.
+        </div>
+      )}
+
+      {report && !report.es_ultimo && (
+        <div className="p-4 bg-sky-50 border border-sky-100 rounded-2xl text-xs font-bold text-[#004C6C] flex items-center justify-between gap-3">
+          <span>Estás viendo el informe N° {report.numero}, que no es el más reciente.</span>
+          <button type="button" onClick={() => setNumero(undefined)} className="px-3 py-1.5 rounded-xl bg-white border border-sky-100 hover:bg-sky-100">Ver el último</button>
+        </div>
+      )}
+
+      {/* DASHBOARD EJECUTIVO */}
+      <div className={`bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-xl space-y-6 transition-opacity ${loading ? 'opacity-60' : ''}`}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
           <div>
             <h2 className="text-xl md:text-2xl font-black text-[#004C6C] flex items-center gap-2 tracking-tight">
@@ -200,59 +288,42 @@ export default function InterventoriaPage() {
               Caldas, Antioquia (VIS - 2,200 Aptos)
             </p>
           </div>
+          {loading && <Loader2 className="w-5 h-5 text-[#EE9D4C] animate-spin" />}
         </div>
 
-        {/* Main Grid Layout: Foto Dron Izquierda + Panel Lateral de Interventoría Derecha */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-          {/* Columna Izquierda: Mapa Aéreo Dron con Pines Flotantes individuales por Torre (Posicionamiento Preciso) */}
+          {/* Mapa aéreo con el avance por torre */}
           <div className="lg:col-span-8 relative rounded-3xl overflow-hidden border border-slate-200 min-h-[480px] md:min-h-[540px] flex flex-col justify-between group shadow-inner">
             <img
               src={aerialPhoto}
               alt="Mapa Aéreo San Miguel"
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-slate-900/20" />
 
-            {/* Overlay visual sutil */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-slate-900/20" />Ortofotonía Aérea & Interventoría N° 18
-
-
-            {/* PINES FLOTANTES INDIVIDUALES Y PRECISOS SOBRE CADA TORRE */}
             <div className="absolute inset-0 pointer-events-none z-10">
-              {/* Pin Torre 1 - Entregada/Construida */}
               <div className="absolute top-[55%] left-[74%] pointer-events-auto bg-emerald-600/95 backdrop-blur-md text-white px-3.5 py-1.5 rounded-full text-xs font-black border-2 border-emerald-300 shadow-xl flex items-center gap-1.5 transform -translate-x-1/2 -translate-y-1/2">
                 <Building2 size={13} />
                 Torre 1 | 99.9%
               </div>
-
-              {/* Pin Torre 2 - En Ejecución Activa */}
-              <div className="absolute top-[54%] left-[42%] pointer-events-auto bg-[#EE9D4C] backdrop-blur-md text-white px-4 py-2 rounded-full text-xs font-black border-2 border-white shadow-2xl flex items-center gap-1.5">
+              <div className="absolute top-[54%] left-[42%] pointer-events-auto bg-[#EE9D4C] backdrop-blur-md text-white px-4 py-2 rounded-full text-xs font-black border-2 border-white shadow-2xl flex items-center gap-1.5" title="Avance según inversión del último informe de interventoría">
                 <HardHat size={14} />
-                Torre 2 | 43.0% (En Obra)
+                Torre 2 | {formatPct(avance)} (En Obra)
               </div>
-
-              {/* Pin Torre 3 - No Iniciada */}
               <div className="absolute top-[24%] left-[75%] pointer-events-auto bg-slate-900/85 backdrop-blur-md text-white px-3 py-1 rounded-full text-[11px] font-bold border border-slate-600 shadow-md transform -translate-x-1/2">
                 Torre 3 | 0%
               </div>
-
-              {/* Pin Torre 4 - No Iniciada */}
               <div className="absolute top-[28%] left-[60%] pointer-events-auto bg-slate-900/85 backdrop-blur-md text-white px-3 py-1 rounded-full text-[11px] font-bold border border-slate-600 shadow-md transform -translate-x-1/2">
                 Torre 4 | 0%
               </div>
-
-              {/* Pin Torre 5 - No Iniciada */}
               <div className="absolute top-[34%] left-[38%] pointer-events-auto bg-slate-900/85 backdrop-blur-md text-white px-3 py-1 rounded-full text-[11px] font-bold border border-slate-600 shadow-md transform -translate-x-1/2">
                 Torre 5 | 0%
               </div>
-
-              {/* Pin Zonas Comunes & Canchas */}
               <div className="absolute top-[48%] left-[20%] pointer-events-auto bg-slate-900/85 backdrop-blur-md text-white px-3 py-1 rounded-full text-[11px] font-bold border border-slate-600 shadow-md transform -translate-x-1/2">
                 Zonas Comunes | 0%
               </div>
             </div>
 
-            {/* Leyenda Inferior */}
             <div className="relative z-10 p-4 flex justify-center">
               <div className="bg-white/95 backdrop-blur-md border border-slate-200 px-5 py-2 rounded-full flex items-center gap-4 text-xs font-bold text-slate-700 shadow-lg">
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Finalizada</span>
@@ -262,147 +333,152 @@ export default function InterventoriaPage() {
             </div>
           </div>
 
-          {/* Columna Derecha: Panel Lateral Claro de Interventoría con Estilo ELITE */}
+          {/* Panel lateral con el último informe */}
           <div className="lg:col-span-4 flex flex-col gap-4">
-
-            {/* Card 1: Avance Inversión Donut */}
             <div className="bg-slate-50 border border-slate-200 p-5 rounded-3xl space-y-3">
               <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">
-                AVANCE INVERSIÓN TORRE 2 (INFORME 18)
+                Avance inversión Torre 2 {report && `(informe ${report.numero})`}
               </span>
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-[conic-gradient(#004C6C_0%_45.1%,#e2e8f0_45.1%_100%)] flex items-center justify-center shrink-0 shadow-sm">
-                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-xs font-black text-[#004C6C]">
-                    45.1%
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                  style={{ background: `conic-gradient(#004C6C 0% ${avance ?? 0}%, #e2e8f0 ${avance ?? 0}% 100%)` }}
+                >
+                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-[11px] font-black text-[#004C6C]">
+                    {avance != null ? `${avance.toFixed(1)}%` : '—'}
                   </div>
                 </div>
                 <div className="text-xs space-y-0.5 text-slate-700">
-                  <p>Inversión Ejecutada: <strong className="text-emerald-700 font-black">45,09%</strong></p>
-                  <p>Saldo por Ejecutar: <strong className="text-slate-900 font-bold">54,91%</strong></p>
-                  <p className="text-[11px] text-slate-400 font-semibold">Interventoría: Equiproyectos S.A.S</p>
-                  <p className="text-[11px] text-[#004C6C] font-black">Finalización: 28 Feb 2027</p>
+                  <p>Inversión ejecutada: <strong className="text-slate-900 font-black">{formatPct(avance)}</strong></p>
+                  <p>Saldo por ejecutar: <strong className="text-slate-900 font-bold">{formatPct(saldoPct)}</strong></p>
+                  <p className="text-[11px] text-slate-400 font-semibold">Interventoría: {report?.interventoria ?? '—'}</p>
+                  <p className="text-[11px] text-[#004C6C] font-black">Finalización: {formatDate(report?.fecha_fin_obra)}</p>
                 </div>
               </div>
             </div>
 
-            {/* Card 2: Seguimiento Presupuestal */}
             <div className="bg-slate-50 border border-slate-200 p-5 rounded-3xl space-y-2">
-              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">
-                SEGUIMIENTO PRESUPUESTAL TORRE 2
-              </span>
-              <p className="text-xl font-black text-[#004C6C]">$ 22.454.184.688 COP</p>
+              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">Seguimiento presupuestal Torre 2</span>
+              <p className="text-xl font-black text-[#004C6C]">{formatMoney(budget?.presupuesto_aprobado)}</p>
               <div className="text-xs space-y-1.5 text-slate-600 font-medium">
-                <p className="flex justify-between border-b border-slate-200/60 pb-1">
-                  <span>• Inversión Ejecutada:</span>
-                  <strong className="text-emerald-700 font-bold">$ 10.125.195.768 (45,09%)</strong>
+                <p className="flex justify-between gap-2 border-b border-slate-200/60 pb-1">
+                  <span>• Inversión ejecutada:</span>
+                  <strong className="text-slate-900 font-bold text-right">{formatMoney(budget?.inversion_ejecutada)} ({formatPct(avance)})</strong>
                 </p>
-                <p className="flex justify-between">
-                  <span>• Saldo por Ejecutar:</span>
-                  <strong className="text-amber-700 font-bold">$ 12.328.988.919 (54,91%)</strong>
+                <p className="flex justify-between gap-2">
+                  <span>• Saldo por ejecutar:</span>
+                  <strong className="text-slate-900 font-bold text-right">{formatMoney(saldo)} ({formatPct(saldoPct)})</strong>
                 </p>
               </div>
             </div>
 
-            {/* Card 3: Avance Real por Especialidad */}
             <div className="bg-slate-50 border border-slate-200 p-5 rounded-3xl space-y-2 text-xs">
-              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">
-                AVANCE REAL POR ESPECIALIDAD (TORRE 2)
-              </span>
-              <div className="space-y-1.5 text-slate-700 font-semibold">
-                <div className="flex justify-between border-b border-slate-200/60 pb-1"><span>Estructura Cimentación N15:</span><strong className="text-emerald-700 font-black">100,0%</strong></div>
-                <div className="flex justify-between border-b border-slate-200/60 pb-1"><span>Super Estructura:</span><strong className="text-emerald-700 font-black">79,80% (+16d)</strong></div>
-                <div className="flex justify-between border-b border-slate-200/60 pb-1"><span>Estructura N16 a Cubierta:</span><strong className="text-emerald-700 font-black">20,00% (+17d)</strong></div>
-                <div className="flex justify-between border-b border-slate-200/60 pb-1"><span>Mampostería:</span><strong className="text-rose-600 font-black">25,73% (-3d)</strong></div>
-                <div className="flex justify-between border-b border-slate-200/60 pb-1"><span>Enchapes:</span><strong className="text-rose-600 font-black">8,41% (-5d)</strong></div>
-                <div className="flex justify-between"><span>Afinados de Piso:</span><strong className="text-rose-600 font-black">4,36% (-11d)</strong></div>
-              </div>
+              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Capítulos en ejecución (Torre 2)</span>
+              {inProgress.length === 0 ? (
+                <p className="text-slate-400 font-bold">{report ? 'Sin capítulos en ejecución en este informe.' : '—'}</p>
+              ) : (
+                <div className="space-y-1.5 text-slate-700 font-semibold">
+                  {inProgress.map((c) => (
+                    <div key={`${c.numero}-${c.nombre}`} className="flex items-center justify-between gap-2 border-b border-slate-200/60 pb-1.5 last:border-0">
+                      <span className="min-w-0 truncate" title={c.nombre}>{c.nombre.replace(/^\d+(\.\d+)?\.\s*/, '')}: <strong className="text-slate-900">{formatPct(c.avance_actual)}</strong></span>
+                      <ControlBadge control={c.control} compact />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Card 4: Alerta Interventoría N 18 */}
-            <div className="bg-rose-50 border border-rose-200 p-4 rounded-3xl border-l-4 border-l-rose-500 space-y-1">
-              <div className="flex items-center justify-between text-xs font-black text-rose-800">
-                <span className="flex items-center gap-1.5"><AlertTriangle size={14} className="text-rose-600" /> ALERTA INTERVENTORÍA N 18</span>
-                <span className="bg-white border border-rose-200 px-2 py-0.5 rounded-full text-[10px] text-rose-700 font-bold">28-Jul-2026</span>
+            {report && (report.observaciones.length > 0 || expiredPolicies.length > 0) && (
+              <div className="bg-rose-50 border border-rose-200 p-4 rounded-3xl border-l-4 border-l-rose-500 space-y-2">
+                <div className="flex items-center justify-between gap-2 text-xs font-black text-rose-800">
+                  <span className="flex items-center gap-1.5"><AlertTriangle size={14} className="text-rose-600" /> ALERTAS INTERVENTORÍA N° {report.numero}</span>
+                  <span className="bg-white border border-rose-200 px-2 py-0.5 rounded-full text-[10px] text-rose-700 font-bold">{formatDate(report.fecha)}</span>
+                </div>
+                {expiredPolicies.length > 0 && (
+                  <p className="text-xs text-rose-900 font-bold">
+                    {expiredPolicies.length} póliza{expiredPolicies.length === 1 ? '' : 's'} vencida{expiredPolicies.length === 1 ? '' : 's'}: {[...new Set(expiredPolicies.map((p) => p.contratista ?? 'contratista sin nombre legible'))].join(', ')}.
+                  </p>
+                )}
+                {report.observaciones.slice(0, 3).map((o, i) => (
+                  <p key={i} className="text-xs text-rose-900 leading-snug font-medium">• {o}</p>
+                ))}
               </div>
-              <p className="text-xs text-rose-900 leading-snug font-medium">
-                Atención requerida en ritmo de mampostería y afinados de piso (-11 días). Se recomienda reforzar cuadrillas de contratista de acabados.
-              </p>
-            </div>
-
+            )}
           </div>
-
         </div>
-
       </div>
 
-      {/* KPI Cards Rápidas */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-3xl border-l-4 border-l-[#004C6C] border border-slate-100 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Presupuesto Total Torre 2</span>
             <DollarSign className="w-5 h-5 text-[#004C6C]" />
           </div>
-          <p className="text-xl md:text-2xl font-black text-[#004C6C]">$22.454.184.688</p>
-          <p className="text-[11px] font-bold text-slate-400">Presupuesto asignado 100%</p>
+          <p className="text-xl md:text-2xl font-black text-[#004C6C]">{formatMoney(budget?.presupuesto_aprobado)}</p>
+          <p className="text-[11px] font-bold text-slate-400">Presupuesto aprobado</p>
         </div>
 
         <div className="bg-white p-6 rounded-3xl border-l-4 border-l-emerald-600 border border-slate-100 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold text-emerald-600 uppercase tracking-wider">Ejecutado Físico (45,09%)</span>
+            <span className="text-[11px] font-extrabold text-emerald-600 uppercase tracking-wider">Ejecutado ({formatPct(avance)})</span>
             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
           </div>
-          <p className="text-xl md:text-2xl font-black text-emerald-700">$10.125.195.768</p>
+          <p className="text-xl md:text-2xl font-black text-emerald-700">{formatMoney(budget?.inversion_ejecutada)}</p>
           <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-            <div className="bg-emerald-500 h-full w-[45.09%]"></div>
+            <div className="bg-emerald-500 h-full" style={{ width: `${avance ?? 0}%` }}></div>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-3xl border-l-4 border-l-amber-500 border border-slate-100 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold text-amber-600 uppercase tracking-wider">Saldo por Ejecutar (54,91%)</span>
+            <span className="text-[11px] font-extrabold text-amber-600 uppercase tracking-wider">Saldo por Ejecutar ({formatPct(saldoPct)})</span>
             <Clock className="w-5 h-5 text-amber-500" />
           </div>
-          <p className="text-xl md:text-2xl font-black text-amber-700">$12.328.988.919</p>
+          <p className="text-xl md:text-2xl font-black text-amber-700">{formatMoney(saldo)}</p>
           <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-            <div className="bg-amber-500 h-full w-[54.91%]"></div>
+            <div className="bg-amber-500 h-full" style={{ width: `${saldoPct ?? 0}%` }}></div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border-l-4 border-l-indigo-600 border border-slate-100 shadow-sm space-y-2">
+        <div className={`bg-white p-6 rounded-3xl border-l-4 ${expiredPolicies.length ? 'border-l-rose-600' : 'border-l-indigo-600'} border border-slate-100 shadow-sm space-y-2`}>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold text-indigo-600 uppercase tracking-wider">Contratos en Obra</span>
-            <Layers className="w-5 h-5 text-indigo-600" />
+            <span className={`text-[11px] font-extrabold uppercase tracking-wider ${expiredPolicies.length ? 'text-rose-600' : 'text-indigo-600'}`}>Pólizas vencidas</span>
+            <Layers className={`w-5 h-5 ${expiredPolicies.length ? 'text-rose-600' : 'text-indigo-600'}`} />
           </div>
-          <p className="text-xl md:text-2xl font-black text-indigo-900">31 Contratos</p>
-          <p className="text-[11px] font-bold text-slate-500">16 Torre 2 | 15 Urbanismo</p>
+          <p className={`text-xl md:text-2xl font-black ${expiredPolicies.length ? 'text-rose-700' : 'text-indigo-900'}`}>
+            {report?.polizas.length ? `${expiredPolicies.length} de ${report.polizas.length}` : '—'}
+          </p>
+          <p className="text-[11px] font-bold text-slate-500">{report?.polizas.length ? 'Según el informe de interventoría' : 'El informe no reporta pólizas'}</p>
         </div>
       </div>
 
-      {/* Navigation Tabs (Interactivo & Centrado con componente UI) */}
+      {/* Navigation Tabs */}
       <Tabs
         activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as 'semáforo' | 'torre2' | 'urbanismo')}
+        onChange={(id) => setActiveTab(id as TabId)}
         centered={true}
         items={[
-          {
-            id: 'semáforo',
-            label: 'Semaforización (200 Aptos)',
-            icon: <Building2 className="w-4 h-4" />,
-          },
-          {
-            id: 'torre2',
-            label: 'Contratos Torre 2',
-            icon: <Layers className="w-4 h-4" />,
-            count: 16,
-          },
-          {
-            id: 'urbanismo',
-            label: 'Urbanismo & Zonas Comunes',
-            icon: <TreePine className="w-4 h-4" />,
-            count: 15,
-          },
+          { id: 'informe', label: 'Informe semanal', icon: <FileText className="w-4 h-4" /> },
+          { id: 'semáforo', label: 'Semaforización (200 Aptos)', icon: <Building2 className="w-4 h-4" /> },
+          { id: 'torre2', label: 'Contratos Torre 2', icon: <Layers className="w-4 h-4" />, count: 16 },
+          { id: 'urbanismo', label: 'Urbanismo & Zonas Comunes', icon: <TreePine className="w-4 h-4" />, count: 15 },
         ]}
       />
+
+      {/* Tab: Informe semanal */}
+      {activeTab === 'informe' && report && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 md:p-6 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <h3 className="text-lg font-black text-[#004C6C]">Avance según inversión, semana a semana</h3>
+              <span className="text-[11px] font-bold text-slate-400">Torre 2 · {dashboard?.history.length ?? 0} informes</span>
+            </div>
+            <AvanceHistoryChart history={dashboard?.history ?? []} selected={report.numero} onSelect={(n) => setNumero(n === dashboard?.history.at(-1)?.numero ? undefined : n)} />
+          </div>
+          <InformeSemanalPanel report={report} />
+        </div>
+      )}
 
       {/* Tab Content 1: Semaforización 200 Aptos */}
       {activeTab === 'semáforo' && (
