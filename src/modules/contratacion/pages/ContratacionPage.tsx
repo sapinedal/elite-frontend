@@ -99,7 +99,7 @@ export default function ContratacionPage() {
       ),
     },
     {
-      header: 'Frente / Tipo',
+      header: 'Centro de costos / Tipo',
       accessor: (c: Contract) => (
         <div className="min-w-[140px]">
           <p>{c.tower?.name ?? '—'}</p>
@@ -246,7 +246,7 @@ export default function ContratacionPage() {
           />
         </div>
         <CustomSelect
-          placeholder="Frente de obra"
+          placeholder="Centro de costos"
           clearable
           onClear={() => setFilter('tower_id', '')}
           options={(catalogs?.towers ?? []).map((t) => ({ value: String(t.id), label: t.name }))}

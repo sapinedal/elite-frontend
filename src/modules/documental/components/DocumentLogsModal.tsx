@@ -5,6 +5,8 @@ import {
   Loader2,
   ArrowUpRight,
   ArrowDownLeft,
+  Link2,
+  Link2Off,
   Trash2,
   FolderPlus,
   Edit2,
@@ -36,6 +38,8 @@ const ACTION_OPTIONS = [
   { value: 'denied', label: 'Intentos negados' },
   { value: 'upload', label: 'Subidas' },
   { value: 'download', label: 'Descargas' },
+  { value: 'share_link', label: 'Enlaces públicos creados' },
+  { value: 'revoke_share_link', label: 'Enlaces públicos revocados' },
   { value: 'desktop_login', label: 'Conexiones de Office' },
   { value: 'edit', label: 'Ediciones en línea' },
   { value: 'open_editor', label: 'Aperturas en el editor' },
@@ -71,6 +75,10 @@ const getActionBadge = (action: string) => {
       return <span className={`${badgeBase} bg-emerald-50 text-emerald-700 border-emerald-100`}><ArrowUpRight className="w-3 h-3" /> Subida</span>;
     case 'download':
       return <span className={`${badgeBase} bg-sky-50 text-[#004C6C] border-sky-100`}><ArrowDownLeft className="w-3 h-3" /> Descarga</span>;
+    case 'share_link':
+      return <span className={`${badgeBase} bg-sky-50 text-[#004C6C] border-sky-100`}><Link2 className="w-3 h-3" /> Enlace público</span>;
+    case 'revoke_share_link':
+      return <span className={`${badgeBase} bg-rose-50 text-rose-700 border-rose-100`}><Link2Off className="w-3 h-3" /> Enlace revocado</span>;
     case 'edit':
       return <span className={`${badgeBase} bg-[#004C6C] text-white border-[#004C6C]`}><PencilLine className="w-3 h-3" /> Editado</span>;
     case 'open_editor':

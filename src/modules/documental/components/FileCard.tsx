@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Edit2, Eye, Link as LinkIcon, PencilLine, Trash2 } from 'lucide-react';
+import { Download, Edit2, Eye, Link as LinkIcon, Link2Off, PencilLine, Trash2 } from 'lucide-react';
 import type { FileItem, EffectivePermissions } from '../types/documental.types';
 import { getFileIconConfig, isBrowserPreviewable } from '../utils/fileIcons';
 import type { EditorCapability } from '../utils/editor';
@@ -15,6 +15,7 @@ interface FileCardProps {
   onPreview: (file: FileItem) => void;
   onDownload: (file: FileItem) => void;
   onCopyLink: (file: FileItem) => void;
+  onRevokeLink: (file: FileItem) => void;
   onRename: (file: FileItem) => void;
   onDelete: (file: FileItem) => void;
   onOpenLocation?: (path: string) => void;
@@ -31,6 +32,7 @@ export const FileCard: React.FC<FileCardProps> = ({
   onPreview,
   onDownload,
   onCopyLink,
+  onRevokeLink,
   onRename,
   onDelete,
   onOpenLocation,
@@ -63,7 +65,8 @@ export const FileCard: React.FC<FileCardProps> = ({
               { key: 'editor', label: canEdit ? 'Abrir y editar' : 'Abrir en el visor', icon: canEdit ? <PencilLine size={14} className="text-[#EE9D4C]" /> : <Eye size={14} className="text-[#004C6C]" />, onClick: () => onOpenEditor(file), hidden: !editorMode },
               { key: 'preview', label: 'Vista previa', icon: <Eye size={14} className="text-[#004C6C]" />, onClick: () => onPreview(file), hidden: !canPreview || !!editorMode },
               { key: 'download', label: 'Descargar', icon: <Download size={14} className="text-emerald-600" />, onClick: () => onDownload(file) },
-              { key: 'link', label: 'Copiar enlace', icon: <LinkIcon size={14} className="text-slate-400" />, onClick: () => onCopyLink(file) },
+              { key: 'link', label: 'Copiar enlace permanente', icon: <LinkIcon size={14} className="text-slate-400" />, onClick: () => onCopyLink(file) },
+              { key: 'unlink', label: 'Revocar enlace público', icon: <Link2Off size={14} className="text-slate-400" />, onClick: () => onRevokeLink(file) },
               { key: 'rename', label: 'Renombrar', icon: <Edit2 size={14} className="text-slate-400" />, onClick: () => onRename(file), hidden: !permissions.can_rename },
               { key: 'delete', label: 'Eliminar', icon: <Trash2 size={14} />, onClick: () => onDelete(file), danger: true, hidden: !permissions.can_delete },
             ]}

@@ -17,7 +17,7 @@ interface PayModalProps {
 const today = () => new Date().toLocaleDateString('en-CA'); // AAAA-MM-DD en hora local
 
 /**
- * Contabilidad registra el pago de una cuenta programada: total o abono, con referencia y soporte opcional.
+ * Contabilidad registra el pago de una cuenta programada: total o abono, con referencia y soporte de pago obligatorio.
  */
 export const PayModal: React.FC<PayModalProps> = ({ cuenta, ...props }) => (
   cuenta ? <PayContent key={cuenta.id} cuenta={cuenta} {...props} /> : null
@@ -50,21 +50,20 @@ const PayContent: React.FC<Omit<PayModalProps, 'cuenta'> & { cuenta: PagoCuenta 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (value <= 0 || value > cuenta.balance) return setError(`El valor debe ser mayor a cero y no superar el saldo de ${formatMoney(cuenta.balance)}.`);
+    if (!file) return setError('Adjunta el soporte de pago para registrar el pago.');
 
     setSaving(true);
     setError(null);
     try {
-      let token: string | null = null;
-      if (file) {
-        setProgress(0);
-        try {
-          token = await pagoService.uploadFile(file, setProgress);
-        } catch (err) {
-          if (isAxiosError(err) && !err.response && !err.config?.url?.includes('/v1/')) {
-            throw new Error('No se pudo subir el soporte al repositorio. Revisa tu conexión e intenta de nuevo.');
-          }
-          throw new Error(getApiErrorMessage(err, 'Error al subir el soporte.'));
+      let token: string;
+      setProgress(0);
+      try {
+        token = await pagoService.uploadFile(file, setProgress);
+      } catch (err) {
+        if (isAxiosError(err) && !err.response && !err.config?.url?.includes('/v1/')) {
+          throw new Error('No se pudo subir el soporte al repositorio. Revisa tu conexión e intenta de nuevo.');
         }
+        throw new Error(getApiErrorMessage(err, 'Error al subir el soporte.'));
       }
       await onConfirm(cuenta.id, { amount: value, payment_date: paymentDate, reference: reference.trim() || null, comment: comment.trim() || null, upload_token: token });
       onClose();
@@ -116,7 +115,7 @@ const PayContent: React.FC<Omit<PayModalProps, 'cuenta'> & { cuenta: PagoCuenta 
         </div>
 
         <div className="space-y-2">
-          <label className={labelClass}>Soporte de pago</label>
+          <label className={labelClass}>Soporte de pago *</label>
           <div onClick={() => !saving && fileInputRef.current?.click()}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); if (!saving) selectFile(e.dataTransfer.files[0]); }}
@@ -132,7 +131,7 @@ const PayContent: React.FC<Omit<PayModalProps, 'cuenta'> & { cuenta: PagoCuenta 
             ) : (
               <>
                 <UploadCloud size={24} className="text-slate-400" />
-                <p className="text-sm font-bold text-slate-500">Comprobante de la transferencia (opcional)</p>
+                <p className="text-sm font-bold text-slate-500">Comprobante de la transferencia (obligatorio)</p>
               </>
             )}
           </div>
@@ -143,7 +142,7 @@ const PayContent: React.FC<Omit<PayModalProps, 'cuenta'> & { cuenta: PagoCuenta 
           )}
         </div>
 
-        <button type="submit" disabled={saving}
+        <button type="submit" disabled={saving || !file}
           className="w-full px-6 py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2 disabled:opacity-60">
           {saving ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
           {isPartial ? 'Registrar abono' : 'Marcar como pagada'}

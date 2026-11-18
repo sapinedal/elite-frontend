@@ -91,6 +91,22 @@ export const documentalService = {
   },
 
   /**
+   * Enlace público permanente (no caduca) de un archivo; si ya existe uno activo lo reutiliza.
+   */
+  async createShareLink(path: string): Promise<{ url: string; path: string; created_at: string | null; access_count: number }> {
+    const response = await api.post('/v1/documental/share-links', { path });
+    return response.data.data;
+  },
+
+  /**
+   * Revoca el enlace público permanente de un archivo.
+   */
+  async revokeShareLink(path: string): Promise<{ message: string }> {
+    const response = await api.delete('/v1/documental/share-links', { params: { path } });
+    return response.data.data;
+  },
+
+  /**
    * Consulta los permisos del usuario actual y, si administra el módulo, las restricciones por carpeta.
    */
   async getPermissions(path = ''): Promise<PermissionsResponse> {

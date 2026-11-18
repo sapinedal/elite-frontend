@@ -86,7 +86,7 @@ export interface PagoPayPayload {
   payment_date: string;
   reference: string | null;
   comment: string | null;
-  upload_token: string | null;
+  upload_token: string;
 }
 
 export interface PagoFilters {

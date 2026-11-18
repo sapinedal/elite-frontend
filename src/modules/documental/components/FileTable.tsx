@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Download, Edit2, Eye, Folder, Link as LinkIcon, Lock, PencilLine, Trash2 } from 'lucide-react';
+import { Building2, Download, Edit2, Eye, Folder, Link as LinkIcon, Link2Off, Lock, PencilLine, Trash2 } from 'lucide-react';
 import type { FolderItem, FileItem, EffectivePermissions } from '../types/documental.types';
 import { useProject } from '../../../context/ProjectContext';
 import { getFileIconConfig, isBrowserPreviewable } from '../utils/fileIcons';
@@ -17,6 +17,7 @@ interface FileTableProps {
   onPreviewFile: (file: FileItem) => void;
   onDownloadFile: (file: FileItem) => void;
   onCopyLink: (file: FileItem) => void;
+  onRevokeLink: (file: FileItem) => void;
   onRenameFolder: (folder: FolderItem) => void;
   onRenameFile: (file: FileItem) => void;
   onDeleteFolder: (folder: FolderItem) => void;
@@ -39,6 +40,7 @@ export const FileTable: React.FC<FileTableProps> = ({
   onPreviewFile,
   onDownloadFile,
   onCopyLink,
+  onRevokeLink,
   onRenameFolder,
   onRenameFile,
   onDeleteFolder,
@@ -169,7 +171,8 @@ export const FileTable: React.FC<FileTableProps> = ({
                         items={[
                           { key: 'editor', label: canEdit ? 'Abrir y editar' : 'Abrir en el visor', icon: canEdit ? <PencilLine size={14} className="text-[#EE9D4C]" /> : <Eye size={14} className="text-[#004C6C]" />, onClick: () => onOpenEditor(file), hidden: !editorMode },
                           { key: 'preview', label: 'Vista previa', icon: <Eye size={14} className="text-[#004C6C]" />, onClick: () => onPreviewFile(file), hidden: !canPreview || !!editorMode },
-                          { key: 'link', label: 'Copiar enlace', icon: <LinkIcon size={14} className="text-slate-400" />, onClick: () => onCopyLink(file) },
+                          { key: 'link', label: 'Copiar enlace permanente', icon: <LinkIcon size={14} className="text-slate-400" />, onClick: () => onCopyLink(file) },
+                          { key: 'unlink', label: 'Revocar enlace público', icon: <Link2Off size={14} className="text-slate-400" />, onClick: () => onRevokeLink(file) },
                           { key: 'rename', label: 'Renombrar', icon: <Edit2 size={14} className="text-slate-400" />, onClick: () => onRenameFile(file), hidden: !permissions.can_rename },
                           { key: 'delete', label: 'Eliminar', icon: <Trash2 size={14} />, onClick: () => onDeleteFile(file), danger: true, hidden: !permissions.can_delete },
                         ]}

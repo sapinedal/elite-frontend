@@ -77,7 +77,7 @@ export function useContracts() {
     }
   }, [filters, page, perPage]);
 
-  // Catálogos (frentes del proyecto) y alertas dependen del proyecto activo
+  // Catálogos (centros de costos del proyecto) y alertas dependen del proyecto activo
   useEffect(() => {
     if (!projectId) return;
     setFilters(EMPTY_FILTERS);
@@ -149,7 +149,7 @@ export function useContracts() {
       await fetchCatalogs();
       return tower;
     } catch (err) {
-      throw new Error(getApiErrorMessage(err, 'Error al crear el frente de obra.'));
+      throw new Error(getApiErrorMessage(err, 'Error al crear el centro de costos.'));
     }
   }, [fetchCatalogs]);
 

@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { useNotification } from '../../../context/NotificationContext';
+import { useConfirm } from '../../../context/ConfirmContext';
 import { useProject } from '../../../context/ProjectContext';
 import { documentalService } from '../services/documentalService';
 import type {
@@ -65,6 +66,7 @@ const NEW_OFFICE_OPTIONS: Array<{ type: OfficeFileType; label: string; icon: Rea
 
 export default function DocumentalPage() {
   const { showNotification } = useNotification();
+  const confirm = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Navigation State
@@ -253,18 +255,36 @@ export default function DocumentalPage() {
     }
   };
 
-  // Copy Link Action
+  // Enlace público permanente: no caduca y lo puede abrir cualquiera que lo tenga, hasta que se revoque
   const handleCopyLink = async (file: FileItem) => {
+    let url: string;
     try {
-      let url = file.preview_url;
-      if (!url) {
-        const res = await documentalService.getDownloadUrl(file.path);
-        url = res.download_url;
-      }
+      url = (await documentalService.createShareLink(file.path)).url;
+    } catch (err) {
+      showNotification(getErrorMessage(err, 'No se pudo generar el enlace'), 'error');
+      return;
+    }
+    try {
       await navigator.clipboard.writeText(url);
-      showNotification('Enlace temporal copiado al portapapeles (válido por 2h).', 'info');
+      showNotification('Enlace permanente copiado. No caduca; puedes revocarlo desde el menú del archivo.', 'success');
     } catch {
-      showNotification('No se pudo copiar el enlace', 'error');
+      showNotification(`No se pudo copiar automáticamente. Enlace: ${url}`, 'info');
+    }
+  };
+
+  const handleRevokeLink = async (file: FileItem) => {
+    const ok = await confirm({
+      title: 'Revocar enlace público',
+      message: `El enlace permanente de "${file.name}" dejará de funcionar para todas las personas que lo tengan. Si luego copias el enlace de nuevo se generará uno distinto.`,
+      confirmText: 'Revocar',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const res = await documentalService.revokeShareLink(file.path);
+      showNotification(res.message, 'success');
+    } catch (err) {
+      showNotification(getErrorMessage(err, 'No se pudo revocar el enlace'), 'error');
     }
   };
 
@@ -665,6 +685,7 @@ export default function DocumentalPage() {
                         onPreview={openPreview}
                         onDownload={handleDownload}
                         onCopyLink={handleCopyLink}
+                        onRevokeLink={handleRevokeLink}
                         onOpenLocation={handleNavigate}
                         onRename={(f) => openRename(f, 'file')}
                         onDelete={(f) => openDelete(f, 'file')}
@@ -685,6 +706,7 @@ export default function DocumentalPage() {
               onPreviewFile={openPreview}
               onDownloadFile={handleDownload}
               onCopyLink={handleCopyLink}
+              onRevokeLink={handleRevokeLink}
               onRenameFolder={(f) => openRename(f, 'folder')}
               onRenameFile={(f) => openRename(f, 'file')}
               onDeleteFolder={(f) => openDelete(f, 'folder')}

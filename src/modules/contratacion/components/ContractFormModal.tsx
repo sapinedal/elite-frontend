@@ -130,7 +130,7 @@ export const ContractFormModal: React.FC<ContractFormModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.tower_id || !form.contract_type_id) {
-      setLocalError('Selecciona el frente de obra y el tipo de contrato.');
+      setLocalError('Selecciona el centro de costos y el tipo de contrato.');
       return;
     }
     if (!form.contractor_id) {
@@ -204,8 +204,8 @@ export const ContractFormModal: React.FC<ContractFormModalProps> = ({
                 {newTowerName === null ? (
                   <>
                     <CustomSelect
-                      label="Frente de obra *"
-                      placeholder="Selecciona el frente"
+                      label="Centro de costos *"
+                      placeholder="Selecciona el centro de costos"
                       disabled={submitting}
                       options={(catalogs?.towers ?? []).map((t) => ({ value: t.id, label: t.name }))}
                       value={form.tower_id}
@@ -216,12 +216,12 @@ export const ContractFormModal: React.FC<ContractFormModalProps> = ({
                       onClick={() => setNewTowerName('')}
                       className="text-[11px] font-bold text-[#EE9D4C] hover:underline ml-1 flex items-center gap-1"
                     >
-                      <Plus size={12} /> Crear frente de obra
+                      <Plus size={12} /> Crear centro de costos
                     </button>
                   </>
                 ) : (
                   <>
-                    <label className={labelClass}>Nuevo frente de obra</label>
+                    <label className={labelClass}>Nuevo centro de costos</label>
                     <div className="flex gap-2">
                       <input
                         autoFocus
@@ -241,7 +241,7 @@ export const ContractFormModal: React.FC<ContractFormModalProps> = ({
                         disabled={creatingTower || !newTowerName.trim()}
                         onClick={handleCreateTower}
                         className="px-4 rounded-2xl bg-[#004C6C] text-white disabled:opacity-50"
-                        title="Crear frente"
+                        title="Crear centro de costos"
                       >
                         {creatingTower ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
                       </button>
