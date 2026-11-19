@@ -13,7 +13,8 @@ import {
   Users,
   FolderLock,
   FileText,
-  Settings
+  Settings,
+  Mail
 } from 'lucide-react';
 import { roleService } from '../../users/services/roleService';
 import type { Role, PermissionCatalogResponse } from '../../users/types';
@@ -30,7 +31,8 @@ const moduleIcons: Record<string, React.ReactNode> = {
   contratos: <FileText className="w-5 h-5 text-indigo-600" />,
   configuracion: <Settings className="w-5 h-5 text-slate-600" />,
   roles: <Shield className="w-5 h-5 text-rose-600" />,
-  permisos: <Key className="w-5 h-5 text-teal-600" />
+  permisos: <Key className="w-5 h-5 text-teal-600" />,
+  correos: <Mail className="w-5 h-5 text-[#EE9D4C]" />
 };
 
 export default function PermisosPage() {
@@ -159,8 +161,9 @@ export default function PermisosPage() {
           {Object.entries(catalog.modules)
             .filter(([modKey]) => selectedModule === 'all' || selectedModule === modKey)
             .map(([modKey, mod]) => {
+              const term = searchTerm.toLowerCase();
               const visiblePermissions = mod.permissions.filter(p =>
-                p.toLowerCase().includes(searchTerm.toLowerCase())
+                p.toLowerCase().includes(term) || (catalog.labels?.[p] ?? '').toLowerCase().includes(term)
               );
 
               if (visiblePermissions.length === 0 && searchTerm) return null;
@@ -205,6 +208,9 @@ export default function PermisosPage() {
                             </span>
                             <Key size={14} className="text-slate-300 group-hover:text-[#EE9D4C] transition-colors" />
                           </div>
+                          {catalog.labels?.[permName] && (
+                            <p className="text-xs text-slate-600 font-medium leading-snug">{catalog.labels[permName]}</p>
+                          )}
 
                           {/* Roles having this permission */}
                           <div className="space-y-1 pt-1">

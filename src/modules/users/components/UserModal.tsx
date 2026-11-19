@@ -435,7 +435,9 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, u
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {mod.permissions.map(permName => {
                                 const isDirectlySelected = formData.permissions.includes(permName);
-                                const isInherited = inheritedPermissions.has(permName);
+                                // Los correos solo se envían por permiso directo: el rol no cuenta
+                                const isInherited = moduleKey !== 'correos' && inheritedPermissions.has(permName);
+                                const label = permissionsCatalog.labels?.[permName];
 
                                 return (
                                   <label
@@ -448,14 +450,19 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSave, u
                                         : 'bg-white border-slate-100 hover:border-slate-300 text-slate-700'
                                     }`}
                                   >
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
                                       <input
                                         type="checkbox"
                                         checked={isDirectlySelected}
                                         onChange={() => handleTogglePermission(permName)}
-                                        className="rounded border-slate-300 text-[#004C6C] focus:ring-[#004C6C] h-4 w-4"
+                                        className="rounded border-slate-300 text-[#004C6C] focus:ring-[#004C6C] h-4 w-4 shrink-0"
                                       />
-                                      <span className="font-mono text-[11px]">{permName}</span>
+                                      <div className="min-w-0">
+                                        <span className="font-mono text-[11px] block">{permName}</span>
+                                        {label && (
+                                          <span className="block text-[10px] font-medium text-slate-500 leading-snug">{label}</span>
+                                        )}
+                                      </div>
                                     </div>
                                     {isInherited && (
                                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold uppercase">

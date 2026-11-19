@@ -37,6 +37,8 @@ export interface ModulePermissions {
 export interface PermissionCatalogResponse {
   all: string[];
   modules: Record<string, ModulePermissions>;
+  /** Descripción legible de algunos permisos (ej. correos.*: quién recibe cada correo). */
+  labels?: Record<string, string>;
 }
 
 export interface KPI {
