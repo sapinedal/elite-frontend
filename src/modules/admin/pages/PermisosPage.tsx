@@ -14,7 +14,9 @@ import {
   FolderLock,
   FileText,
   Settings,
-  Mail
+  Mail,
+  HandCoins,
+  Receipt
 } from 'lucide-react';
 import { roleService } from '../../users/services/roleService';
 import type { Role, PermissionCatalogResponse } from '../../users/types';
@@ -32,7 +34,9 @@ const moduleIcons: Record<string, React.ReactNode> = {
   configuracion: <Settings className="w-5 h-5 text-slate-600" />,
   roles: <Shield className="w-5 h-5 text-rose-600" />,
   permisos: <Key className="w-5 h-5 text-teal-600" />,
-  correos: <Mail className="w-5 h-5 text-[#EE9D4C]" />
+  correos: <Mail className="w-5 h-5 text-[#EE9D4C]" />,
+  anticipos: <HandCoins className="w-5 h-5 text-emerald-600" />,
+  cuentas_cobro: <Receipt className="w-5 h-5 text-sky-600" />
 };
 
 export default function PermisosPage() {
