@@ -3,7 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { useNotification } from '../../../context/NotificationContext';
-import { Mail, Lock, LogIn } from 'lucide-react';
+import { Mail, Lock, LogIn, Eye, EyeOff } from 'lucide-react';
 import { getErrorMessage } from '../../../lib/apiError';
 import { AuthShell } from '../components/AuthShell';
 
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,11 +35,11 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthShell title="Bienvenido" subtitle="Ingresa tus credenciales para acceder">
+    <AuthShell title="Iniciar sesión" subtitle="Ingresa con tu correo corporativo para continuar.">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           <div className="group space-y-2">
-            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 transition-colors group-focus-within:text-[#004C6C]">Email Corporativo</label>
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 transition-colors group-focus-within:text-[#004C6C]">Correo corporativo</label>
             <div className="relative">
               <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#004C6C] transition-colors">
                 <Mail size={18} />
@@ -46,10 +47,12 @@ export default function LoginPage() {
               <input
                 type="email"
                 required
-                placeholder="ejemplo@elite.com"
+                placeholder="nombre@inverconstruccion.com"
+                autoComplete="email"
+                autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-14 pr-6 py-4 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-[#004C6C] focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-slate-200"
+                className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-14 pr-6 py-4 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-[#004C6C] focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-slate-300"
               />
             </div>
           </div>
@@ -61,22 +64,27 @@ export default function LoginPage() {
                 <Lock size={18} />
               </div>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-14 pr-6 py-4 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-[#EE9D4C] focus:ring-4 focus:ring-orange-50 transition-all placeholder:text-slate-200"
+                className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-14 pr-14 py-4 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-[#EE9D4C] focus:ring-4 focus:ring-orange-50 transition-all placeholder:text-slate-300"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-300 hover:text-[#004C6C] hover:bg-slate-100 transition-colors cursor-pointer"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between px-1">
-          <label className="flex items-center gap-2 cursor-pointer group">
-            <input type="checkbox" className="w-4 h-4 rounded border-slate-200 text-[#004C6C] focus:ring-[#004C6C]" />
-            <span className="text-xs font-bold text-slate-400 group-hover:text-slate-600 transition-colors">Recordarme</span>
-          </label>
+        <div className="flex items-center justify-end px-1">
           <Link to="/recuperar-clave" className="text-xs font-bold text-[#004C6C] hover:underline">¿Olvidaste tu contraseña?</Link>
         </div>
 
