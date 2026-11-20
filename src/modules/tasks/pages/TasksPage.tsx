@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   PlayCircle,
   Clock,
+  PauseCircle,
   Search,
   SlidersHorizontal,
   ChevronLeft,
@@ -83,14 +84,17 @@ export default function TasksPage() {
   const activeCardFilter = 
     filters.priority === 'P0' ? 'critical' :
     filters.status === 'Por hacer' ? 'todo' :
+    filters.status === 'En espera' ? 'waiting' :
     filters.status === 'En progreso' ? 'in_progress' :
     filters.status === 'Completada' ? 'completed' : 'all';
 
-  const handleCardClick = (card: 'all' | 'todo' | 'in_progress' | 'completed' | 'critical') => {
+  const handleCardClick = (card: 'all' | 'todo' | 'waiting' | 'in_progress' | 'completed' | 'critical') => {
     if (card === 'all') {
       applyFilters({ status: '', priority: '' });
     } else if (card === 'todo') {
       applyFilters({ status: 'Por hacer', priority: '' });
+    } else if (card === 'waiting') {
+      applyFilters({ status: 'En espera', priority: '' });
     } else if (card === 'in_progress') {
       applyFilters({ status: 'En progreso', priority: '' });
     } else if (card === 'completed') {
@@ -196,6 +200,7 @@ export default function TasksPage() {
   // Usamos las estadísticas reales calculadas en el backend
   const totalTasks = stats.total;
   const todoTasks = stats.todo;
+  const waitingTasks = stats.waiting;
   const inProgressTasks = stats.in_progress;
   const completedTasks = stats.completed;
   const criticalTasks = stats.critical;
@@ -350,7 +355,7 @@ export default function TasksPage() {
         </div>
 
         {/* METRICAS DE BITÁCORA - 5 clickable cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-6 gap-4">
 
           {/* 1. Tareas Totales */}
           <div
@@ -395,6 +400,29 @@ export default function TasksPage() {
             <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'todo' ? 'bg-[#EE9D4C] text-white' : 'bg-orange-50 text-[#EE9D4C] group-hover:rotate-6'
               }`}>
               <Clock size={18} />
+            </div>
+          </div>
+
+          {/* 2b. En Espera */}
+          <div
+            onClick={() => handleCardClick('waiting')}
+            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'waiting'
+              ? 'border-[#005981] ring-2 ring-[#005981]/10 bg-[#005981]/5'
+              : 'border-slate-100 hover:border-[#005981]/30'
+              }`}
+          >
+            <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-[#005981]/5 rounded-full blur-2xl group-hover:bg-[#005981]/10 transition-all" />
+            <div className="relative z-10">
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">En Espera</p>
+              {loading ? (
+                <div className="h-8 w-12 bg-slate-100 rounded-lg animate-pulse my-0.5" />
+              ) : (
+                <p className="text-2xl font-black text-[#005981] tracking-tight">{waitingTasks}</p>
+              )}
+            </div>
+            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'waiting' ? 'bg-[#005981] text-white' : 'bg-[#005981]/10 text-[#005981] group-hover:rotate-6'
+              }`}>
+              <PauseCircle size={18} />
             </div>
           </div>
 
@@ -511,6 +539,7 @@ export default function TasksPage() {
             {activeCardFilter !== 'all' && (
               <span> (Segmentado por: <strong className="text-[#004C6C] font-black">{
                 activeCardFilter === 'todo' ? 'Por Hacer' :
+                activeCardFilter === 'waiting' ? 'En Espera' :
                   activeCardFilter === 'in_progress' ? 'En Progreso' :
                     activeCardFilter === 'completed' ? 'Completadas' :
                       'Críticas P0'
