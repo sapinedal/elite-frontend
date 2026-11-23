@@ -7,6 +7,7 @@ import { Pagination } from '../../../components/ui/Pagination';
 import { Tabs } from '../../../components/ui/Tabs';
 import { useNotification } from '../../../context/NotificationContext';
 import { useNewFromQuery } from '../../../hooks/useNewFromQuery';
+import { useTabFromQuery } from '../../../hooks/useTabFromQuery';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { formatMoney } from '../../../utils/money';
 import { useCuentasCobro } from '../hooks/useCuentasCobro';
@@ -62,6 +63,9 @@ export default function CuentasCobroPage() {
     ...(catalogs?.can_view_all || catalogs?.can_handle_multifox || catalogs?.can_approve_accounting ? [{ id: 'all', label: 'Todas', icon: <Layers size={14} /> }] : []),
     ...(catalogs?.can_parametrize ? [{ id: 'tipos', label: 'Tipos', icon: <Tags size={14} /> }] : []),
   ], [counts, isReviewer, catalogs]);
+
+  // Los correos abren el registro sobre su pestaña (ej. ?tab=accounting para Contabilidad)
+  useTabFromQuery(useMemo(() => tabs.map((t) => t.id), [tabs]), (id) => setScope(id as CuentaCobroScope));
 
   const changeTab = (id: string) => {
     setTiposOpen(id === 'tipos');

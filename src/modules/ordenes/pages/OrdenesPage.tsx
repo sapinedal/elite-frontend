@@ -8,6 +8,7 @@ import { Tabs } from '../../../components/ui/Tabs';
 import { useAuth } from '../../../context/AuthContext';
 import { useNotification } from '../../../context/NotificationContext';
 import { useNewFromQuery } from '../../../hooks/useNewFromQuery';
+import { useTabFromQuery } from '../../../hooks/useTabFromQuery';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { useOrdenes } from '../hooks/useOrdenes';
 import { OrdenFormModal } from '../components/OrdenFormModal';
@@ -54,6 +55,9 @@ export default function OrdenesPage() {
     ...(catalogs?.can_view_all || catalogs?.can_approve_accounting ? [{ id: 'all', label: 'Todas', icon: <Layers size={14} /> }] : []),
   ], [counts, isReviewer, hasTasks, catalogs]);
 
+  // Los correos abren el registro sobre su pestaña (ej. ?tab=accounting para Contabilidad)
+  useTabFromQuery(useMemo(() => tabs.map((t) => t.id), [tabs]), (id) => setScope(id as OrdenScope));
+
   const hasFilters = Boolean(filters.search || filters.status || filters.project_id);
 
   const handleSave = async (payload: OrdenPayload, id?: number) => {
@@ -74,8 +78,8 @@ export default function OrdenesPage() {
     return orden;
   };
 
-  const handleReviewAccounting = async (id: number, decision: 'aprobar' | 'devolver', comment?: string) => {
-    const orden = await reviewAccounting(id, decision, comment);
+  const handleReviewAccounting = async (id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => {
+    const orden = await reviewAccounting(id, decision, comment, amount);
     showNotification(decision === 'aprobar' ? 'Orden aprobada. Pasó a cuentas por pagar.' : 'Orden devuelta a Almacén.', 'success');
     return orden;
   };

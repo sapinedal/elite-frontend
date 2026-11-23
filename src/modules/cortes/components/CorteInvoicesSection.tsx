@@ -17,7 +17,7 @@ interface CorteInvoicesSectionProps {
   /** Paula confirma que la factura quedó cargada en Multifox con su soporte (pasa a cuentas por pagar) */
   onConfirmMultifox: (invoiceId: number, file: File, onProgress?: (percent: number) => void) => Promise<Corte>;
   /** Contabilidad aprueba la factura cargada en Multifox (pasa a cuentas por pagar) o la devuelve a Multifox */
-  onReviewAccounting: (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Corte>;
+  onReviewAccounting: (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => Promise<Corte>;
 }
 
 const TYPE_STYLES: Record<InvoiceDocumentType, string> = {
@@ -182,7 +182,9 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                 <AccountingReviewPanel compact
                   subject={`${invoice.document_type_label} N.º ${invoice.invoice_number}`}
                   returnsTo="Multifox"
-                  onSubmit={async (decision, comment) => onCreated(await onReviewAccounting(invoice.id, decision, comment))} />
+                  askAmount
+                  currentAmount={invoice.amount}
+                  onSubmit={async (decision, comment, amount) => onCreated(await onReviewAccounting(invoice.id, decision, comment, amount))} />
               </div>
             )}
 

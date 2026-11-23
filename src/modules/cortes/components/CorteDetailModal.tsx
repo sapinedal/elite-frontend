@@ -18,7 +18,7 @@ interface CorteDetailModalProps {
   onReview: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Corte>;
   onResubmit: (corte: Corte) => void;
   onConfirmMultifox: (invoiceId: number, file: File, onProgress?: (percent: number) => void) => Promise<Corte>;
-  onReviewAccounting: (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Corte>;
+  onReviewAccounting: (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => Promise<Corte>;
 }
 
 const STEP_STYLES: Record<CorteProgressStep['state'], { icon: React.ReactNode; tone: string; text: string }> = {

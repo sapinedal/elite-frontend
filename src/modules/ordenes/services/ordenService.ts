@@ -72,8 +72,8 @@ export const ordenService = {
   },
 
   /** Contabilidad aprueba la orden con su entrada (pasa a cuentas por pagar) o la devuelve a Almacén */
-  reviewAccounting: async (id: number, decision: 'aprobar' | 'devolver', comment?: string): Promise<Orden> => {
-    const { data } = await api.post(`${BASE}/${id}/accounting`, { decision, comment: comment || null });
+  reviewAccounting: async (id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null): Promise<Orden> => {
+    const { data } = await api.post(`${BASE}/${id}/accounting`, { decision, comment: comment || null, amount: amount ?? null });
     return data.data;
   },
 

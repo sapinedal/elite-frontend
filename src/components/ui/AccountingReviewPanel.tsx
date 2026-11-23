@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Calculator, CheckCircle2, Undo2, Loader2, Send, AlertCircle } from 'lucide-react';
+import { formatMoneyInput, parseMoney } from '../../utils/money';
 
 export type AccountingDecision = 'aprobar' | 'devolver';
 
@@ -10,8 +11,12 @@ interface AccountingReviewPanelProps {
   returnsTo: string;
   /** Destino al aprobar (cuentas por pagar / cuadro de pagos) */
   approvesTo?: string;
-  onSubmit: (decision: AccountingDecision, comment?: string) => Promise<unknown>;
+  onSubmit: (decision: AccountingDecision, comment?: string, amount?: number | null) => Promise<unknown>;
   compact?: boolean;
+  /** Cortes y órdenes: Contabilidad registra el valor de la factura (obligatorio al aprobar) */
+  askAmount?: boolean;
+  /** Valor ya registrado (se precarga para confirmarlo o corregirlo) */
+  currentAmount?: number | null;
 }
 
 /**
@@ -20,9 +25,10 @@ interface AccountingReviewPanelProps {
  * regresa a quien lo carga en Multifox (o a Almacén en órdenes), que recibe el aviso.
  */
 export const AccountingReviewPanel: React.FC<AccountingReviewPanelProps> = ({
-  subject, returnsTo, approvesTo = 'cuentas por pagar', onSubmit, compact = false,
+  subject, returnsTo, approvesTo = 'cuentas por pagar', onSubmit, compact = false, askAmount = false, currentAmount = null,
 }) => {
   const [decision, setDecision] = useState<AccountingDecision | null>(null);
+  const [amount, setAmount] = useState(currentAmount ? formatMoneyInput(String(Math.round(currentAmount))) : '');
   const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,10 +39,15 @@ export const AccountingReviewPanel: React.FC<AccountingReviewPanelProps> = ({
       setError(`Indica el motivo de la devolución para que ${returnsTo} sepa qué corregir.`);
       return;
     }
+    const value = askAmount ? parseMoney(amount) : null;
+    if (askAmount && decision === 'aprobar' && !value) {
+      setError('Indica el valor de la factura para pasarla a cuentas por pagar.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      await onSubmit(decision, comment.trim() || undefined);
+      await onSubmit(decision, comment.trim() || undefined, value || null);
       setDecision(null);
       setComment('');
     } catch (err) {
@@ -79,6 +90,19 @@ export const AccountingReviewPanel: React.FC<AccountingReviewPanelProps> = ({
 
       {decision && (
         <>
+          {askAmount && (
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+                Valor de la factura {decision === 'aprobar' ? '*' : '(opcional)'}
+              </label>
+              <div className="relative">
+                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
+                <input disabled={saving} inputMode="numeric" placeholder="0" value={amount}
+                  onChange={(e) => setAmount(formatMoneyInput(e.target.value))}
+                  className="w-full bg-white border border-slate-100 rounded-2xl pl-9 pr-5 py-3.5 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none shadow-sm placeholder:text-slate-300" />
+              </div>
+            </div>
+          )}
           <textarea rows={3} disabled={saving} value={comment} onChange={(e) => setComment(e.target.value)}
             className="w-full bg-white border border-slate-100 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none shadow-sm resize-none placeholder:text-slate-300"
             placeholder={decision === 'devolver' ? 'Motivo de la devolución (obligatorio)' : 'Comentario (opcional)'} />

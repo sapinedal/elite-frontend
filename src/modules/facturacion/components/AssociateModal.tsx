@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link2, Loader2, AlertCircle, Scissors, ShoppingCart, CheckCircle2 } from 'lucide-react';
-import { formatMoney, formatMoneyInput, parseMoney } from '../../../utils/money';
+import { formatMoney } from '../../../utils/money';
 import { formatDate } from '../../../utils/dateUtils';
 import { facturacionService, getApiErrorMessage } from '../services/facturacionService';
 import { ModalShell, inputClass, labelClass } from '../../../components/ui/ModalShell';
@@ -17,7 +17,7 @@ type TargetType = 'corte' | 'orden';
 
 /**
  * El residente asocia la factura a su corte (con las tres aprobaciones) o a su orden pendiente de factura, con los
- * mismos datos en ambos casos: solo el valor si Contabilidad no lo registró y una observación opcional. El proveedor
+ * mismos datos en ambos casos: solo una observación opcional (el valor lo indica Contabilidad al aprobar). El proveedor
  * sale de la factura del mes (no se pide) y los soportes los carga después quien sigue en el flujo.
  * Reemplaza el cambio de nombre que hacían en Drive para indicar que la factura quedó procesada por obra.
  */
@@ -30,7 +30,6 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
   const [targets, setTargets] = useState<FacturaTargets | null>(null);
   const [targetType, setTargetType] = useState<TargetType>('corte');
   const [targetId, setTargetId] = useState<number | null>(null);
-  const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +55,6 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
 
   const handleSubmit = async () => {
     if (!targetId) return setError(targetType === 'corte' ? 'Elige el corte de la factura.' : 'Elige la orden de la factura.');
-    if (factura.amount === null && !parseMoney(amount)) return setError('Indica el valor de la factura.');
 
     setSubmitting(true);
     setError(null);
@@ -64,7 +62,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
       const updated = await facturacionService.associate(factura.id, {
         target_type: targetType,
         target_id: targetId,
-        amount: factura.amount === null ? parseMoney(amount) : null,
+        amount: null, // El valor lo indica Contabilidad al aprobar, después de Multifox
         contractor_id: null,
         comment: comment.trim() || null,
         support_tokens: [],
@@ -103,7 +101,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
       onClose={() => !submitting && onClose()}
       icon={<Link2 size={24} />}
       title={`Asociar ${factura.document_number}`}
-      subtitle={`${factura.supplier_name} · ${formatMoney(factura.amount)} · ${factura.period_label}`}
+      subtitle={`${factura.supplier_name}${factura.amount !== null ? ` · ${formatMoney(factura.amount)}` : ''} · ${factura.period_label}`}
       footer={
         <button type="button" onClick={handleSubmit} disabled={submitting || !targets}
           className="w-full px-6 py-3.5 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-60">
@@ -163,17 +161,6 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
           <p className="text-sm font-bold text-slate-400 bg-white rounded-2xl p-4 border border-slate-100">
             No tienes órdenes de compra esperando la factura del proveedor.
           </p>
-        )}
-
-        {factura.amount === null && (
-          <div className="space-y-1.5">
-            <label className={labelClass}>Valor de la factura *</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
-              <input disabled={submitting} inputMode="numeric" className={`${inputClass} pl-8`} placeholder="Contabilidad no lo registró"
-                value={amount} onChange={(e) => setAmount(formatMoneyInput(e.target.value))} />
-            </div>
-          </div>
         )}
 
         <div className="space-y-1.5">

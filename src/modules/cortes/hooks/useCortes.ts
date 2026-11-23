@@ -112,9 +112,9 @@ export function useCortes() {
     }
   }, [fetchCortes]);
 
-  const reviewAccounting = useCallback(async (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string) => {
+  const reviewAccounting = useCallback(async (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => {
     try {
-      const corte = await corteService.reviewAccounting(invoiceId, decision, comment);
+      const corte = await corteService.reviewAccounting(invoiceId, decision, comment, amount);
       await fetchCortes();
       return corte;
     } catch (err) {

@@ -95,8 +95,8 @@ export function useOrdenes() {
   const uploadDocument = useCallback((id: number, payload: OrdenDocumentPayload) =>
     run(() => ordenService.uploadDocument(id, payload), 'Error al cargar el documento.'), [run]);
 
-  const reviewAccounting = useCallback((id: number, decision: 'aprobar' | 'devolver', comment?: string) =>
-    run(() => ordenService.reviewAccounting(id, decision, comment), 'Error al registrar la aprobación de Contabilidad.'), [run]);
+  const reviewAccounting = useCallback((id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) =>
+    run(() => ordenService.reviewAccounting(id, decision, comment, amount), 'Error al registrar la aprobación de Contabilidad.'), [run]);
 
   return {
     catalogs,

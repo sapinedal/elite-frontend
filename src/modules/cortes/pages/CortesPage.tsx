@@ -7,6 +7,7 @@ import { Pagination } from '../../../components/ui/Pagination';
 import { Tabs } from '../../../components/ui/Tabs';
 import { useAuth } from '../../../context/AuthContext';
 import { useNewFromQuery } from '../../../hooks/useNewFromQuery';
+import { useTabFromQuery } from '../../../hooks/useTabFromQuery';
 import { useNotification } from '../../../context/NotificationContext';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { useCortes } from '../hooks/useCortes';
@@ -55,6 +56,9 @@ export default function CortesPage() {
     ...(catalogs?.can_view_all ? [{ id: 'all', label: 'Todos', icon: <Layers size={14} /> }] : []),
   ], [counts, isReviewer, catalogs]);
 
+  // Los correos abren el registro sobre su pestaña (ej. ?tab=accounting para Contabilidad)
+  useTabFromQuery(useMemo(() => tabs.map((t) => t.id), [tabs]), (id) => setScope(id as CorteScope));
+
   const hasFilters = Boolean(filters.search || filters.status || filters.project_id);
 
   const handleSave = async (payload: CortePayload, id?: number) => {
@@ -75,8 +79,8 @@ export default function CortesPage() {
     return corte;
   };
 
-  const handleReviewAccounting = async (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string) => {
-    const corte = await reviewAccounting(invoiceId, decision, comment);
+  const handleReviewAccounting = async (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => {
+    const corte = await reviewAccounting(invoiceId, decision, comment, amount);
     showNotification(decision === 'aprobar' ? 'Factura aprobada. Pasó a cuentas por pagar.' : 'Factura devuelta a Multifox. Se notificó a quien la carga.', 'success');
     return corte;
   };

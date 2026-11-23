@@ -7,6 +7,7 @@ import { Pagination } from '../../../components/ui/Pagination';
 import { Tabs } from '../../../components/ui/Tabs';
 import { useNotification } from '../../../context/NotificationContext';
 import { useNewFromQuery } from '../../../hooks/useNewFromQuery';
+import { useTabFromQuery } from '../../../hooks/useTabFromQuery';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { formatMoney } from '../../../utils/money';
 import { useAnticipos } from '../hooks/useAnticipos';
@@ -55,6 +56,9 @@ export default function AnticiposPage() {
     ...(catalogs?.can_approve_accounting ? [{ id: 'accounting_approval', label: 'Aprobación Contabilidad', icon: <Calculator size={14} />, count: counts.accounting_approval }] : []),
     ...(catalogs?.can_view_all || catalogs?.can_contabilizar || catalogs?.can_approve_accounting ? [{ id: 'all', label: 'Todos', icon: <Layers size={14} /> }] : []),
   ], [counts, isReviewer, catalogs]);
+
+  // Los correos abren el registro sobre su pestaña (ej. ?tab=accounting para Contabilidad)
+  useTabFromQuery(useMemo(() => tabs.map((t) => t.id), [tabs]), (id) => setScope(id as AnticipoScope));
 
   const hasFilters = Boolean(filters.search || filters.status || filters.project_id);
 

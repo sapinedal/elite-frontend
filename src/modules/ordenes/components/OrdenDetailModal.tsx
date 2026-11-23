@@ -16,7 +16,7 @@ interface OrdenDetailModalProps {
   onReview: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Orden>;
   onResubmit: (orden: Orden) => void;
   onUploadDocument: (id: number, payload: OrdenDocumentPayload) => Promise<Orden>;
-  onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Orden>;
+  onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => Promise<Orden>;
   steps: OrdenCatalogs['steps'];
   maxUploadMb: number;
 }
@@ -221,7 +221,9 @@ const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { or
                 <AccountingReviewPanel
                   subject={`Orden ${orden.code}`}
                   returnsTo="Almacén"
-                  onSubmit={async (accountingDecision, accountingComment) => setOrden(await onReviewAccounting(orden.id, accountingDecision, accountingComment))} />
+                  askAmount
+                  currentAmount={orden.documents?.find((d) => d.step === 'factura')?.amount ?? null}
+                  onSubmit={async (accountingDecision, accountingComment, amount) => setOrden(await onReviewAccounting(orden.id, accountingDecision, accountingComment, amount))} />
               )}
             </>
           )}
