@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { HandCoins, Plus, Search, X, FileText, ClipboardCheck, Layers, Eye, Database } from 'lucide-react';
+import { HandCoins, Plus, Search, X, FileText, ClipboardCheck, Layers, Eye, Database, Calculator } from 'lucide-react';
 import { DataTable } from '../../../components/ui/DataTable';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
@@ -24,7 +24,7 @@ export default function AnticiposPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     catalogs, anticipos, counts, scope, filters, page, perPage, pagination, loading, error,
-    setScope, setFilter, clearFilters, setPage, changePerPage, createAnticipo, resubmitAnticipo, reviewAnticipo, registerMultifox,
+    setScope, setFilter, clearFilters, setPage, changePerPage, createAnticipo, resubmitAnticipo, reviewAnticipo, registerMultifox, reviewAccounting,
   } = useAnticipos();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -52,7 +52,8 @@ export default function AnticiposPage() {
     ...(catalogs?.can_create ? [{ id: 'mine', label: 'Mis anticipos', icon: <FileText size={14} />, count: counts.mine }] : []),
     ...(isReviewer ? [{ id: 'pending', label: 'Por aprobar', icon: <ClipboardCheck size={14} />, count: counts.pending }] : []),
     ...(catalogs?.can_contabilizar ? [{ id: 'accounting', label: 'Por generar en Multifox', icon: <Database size={14} />, count: counts.accounting }] : []),
-    ...(catalogs?.can_view_all || catalogs?.can_contabilizar ? [{ id: 'all', label: 'Todos', icon: <Layers size={14} /> }] : []),
+    ...(catalogs?.can_approve_accounting ? [{ id: 'accounting_approval', label: 'Aprobación Contabilidad', icon: <Calculator size={14} />, count: counts.accounting_approval }] : []),
+    ...(catalogs?.can_view_all || catalogs?.can_contabilizar || catalogs?.can_approve_accounting ? [{ id: 'all', label: 'Todos', icon: <Layers size={14} /> }] : []),
   ], [counts, isReviewer, catalogs]);
 
   const hasFilters = Boolean(filters.search || filters.status || filters.project_id);
@@ -71,7 +72,13 @@ export default function AnticiposPage() {
 
   const handleMultifox = async (id: number, payload: MultifoxPayload) => {
     const anticipo = await registerMultifox(id, payload);
-    showNotification(`Anticipo ${anticipo.code} cargado. Pasó al cuadro de pagos.`, 'success');
+    showNotification(`Anticipo ${anticipo.code} cargado. Pasó a la aprobación de Contabilidad.`, 'success');
+    return anticipo;
+  };
+
+  const handleReviewAccounting = async (id: number, decision: 'aprobar' | 'devolver', comment?: string) => {
+    const anticipo = await reviewAccounting(id, decision, comment);
+    showNotification(decision === 'aprobar' ? `Anticipo ${anticipo.code} aprobado. Pasó al cuadro de pagos.` : `Anticipo ${anticipo.code} devuelto a Multifox.`, 'success');
     return anticipo;
   };
 
@@ -127,8 +134,8 @@ export default function AnticiposPage() {
       header: 'Acciones',
       className: 'text-right',
       accessor: (a: Anticipo) => {
-        const label = a.can_review ? 'Aprobar' : a.can_resubmit ? 'Corregir' : a.can_register_multifox ? 'Cargar Multifox' : 'Ver';
-        const highlighted = a.can_review || a.can_resubmit || a.can_register_multifox;
+        const label = a.can_review || a.can_review_accounting ? 'Aprobar' : a.can_resubmit ? 'Corregir' : a.can_register_multifox ? 'Cargar Multifox' : 'Ver';
+        const highlighted = a.can_review || a.can_resubmit || a.can_register_multifox || a.can_review_accounting;
         return (
           <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setDetailId(a.id)}
@@ -246,6 +253,7 @@ export default function AnticiposPage() {
         onReview={handleReview}
         onResubmit={openResubmit}
         onRegisterMultifox={handleMultifox}
+        onReviewAccounting={handleReviewAccounting}
       />
     </div>
   );

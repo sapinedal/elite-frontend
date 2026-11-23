@@ -1,9 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { isAxiosError } from 'axios';
-import { Package, Download, Loader2, UploadCloud, FileText, Send, AlertCircle } from 'lucide-react';
+import { Receipt, Download, Loader2, Send, AlertCircle, ArrowRight, Clock } from 'lucide-react';
+import { FileDrop } from '../../../components/ui/FileDrop';
 import { formatDateTime } from '../../../utils/dateUtils';
-import { formatMoney, formatMoneyInput, parseMoney } from '../../../utils/money';
-import { CustomSelect } from '../../../components/ui/CustomSelect';
+import { formatMoney } from '../../../utils/money';
+import { inputClass, labelClass } from '../../../components/ui/ModalShell';
 import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { ordenService, getApiErrorMessage } from '../services/ordenService';
 import type { Orden, OrdenCatalogs, OrdenDocumentPayload, OrdenStepKey } from '../types';
@@ -11,33 +13,37 @@ import type { Orden, OrdenCatalogs, OrdenDocumentPayload, OrdenStepKey } from '.
 interface OrdenDocumentsSectionProps {
   orden: Orden;
   steps: OrdenCatalogs['steps'];
-  contractors: OrdenCatalogs['contractors'];
   maxUploadMb: number;
+  /** El residente responsable asocia la factura del proveedor desde Facturas del mes (igual que en cortes) */
+  canAssociate: boolean;
   onUpload: (id: number, payload: OrdenDocumentPayload) => Promise<Orden>;
   onUploaded: (orden: Orden) => void;
 }
 
-const inputClass =
-  'w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-700 outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:bg-white focus:border-[#004C6C] focus:ring-4 focus:ring-blue-50 disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed';
-const labelClass = 'text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1';
+const STEP_STYLES: Record<OrdenStepKey, string> = {
+  orden_erp: 'bg-blue-50 text-[#004C6C]',
+  factura: 'bg-teal-50 text-teal-700',
+  entrada: 'bg-purple-50 text-purple-700',
+};
 
-// Indicaciones para quien carga cada documento
-const STEP_HINTS: Record<OrdenStepKey, string> = {
-  orden_erp: 'Crea la orden de compra en el ERP y adjunta el archivo que genera. Se notificará a Facturación.',
-  factura: 'Adjunta la factura con su proveedor y valor. Se notificará a Almacén para registrar la entrada; al completarse, pasa a cuentas por pagar.',
-  entrada: 'Registra la entrada de almacén y adjunta el soporte. Con esto la orden queda completada.',
+// Indicaciones para quien carga cada documento de Almacén
+const STEP_HINTS: Partial<Record<OrdenStepKey, string>> = {
+  orden_erp: 'Crea la orden de compra en el ERP y adjunta el archivo que genera. Luego el residente asocia la factura del proveedor.',
+  entrada: 'Registra la entrada de almacén y adjunta el soporte. Con esto la orden pasa a la aprobación de Contabilidad.',
 };
 
 /**
- * Documentos posteriores a la aprobación: los ya cargados (con descarga) y, para el responsable del paso actual,
- * el formulario de cargue con número, observación y archivo (directo a S3).
+ * Documentos de la orden aprobada, con la misma presentación que la facturación del corte: listado con descarga y,
+ * según el paso actual:
+ *  - Factura del proveedor: no se carga aquí. Contabilidad la sube en Facturas del mes y el residente responsable
+ *    la asocia a su orden (sin pedir proveedor, igual que en cortes).
+ *  - Orden ERP y entrada de almacén: Almacén carga el número y el archivo (directo a S3).
+ * Con la entrada, la orden pasa a la aprobación de Contabilidad y de ahí a cuentas por pagar.
  */
-export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ orden, steps, contractors, maxUploadMb, onUpload, onUploaded }) => {
+export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ orden, steps, maxUploadMb, canAssociate, onUpload, onUploaded }) => {
   const documents = orden.documents ?? [];
   const [number, setNumber] = useState('');
   const [observation, setObservation] = useState('');
-  const [amount, setAmount] = useState('');
-  const [contractorId, setContractorId] = useState<number | null>(null);
   const [file, setFile] = useState<File | null>(null);
   // Si el registro falla por validación no hay que volver a subir el archivo
   const [uploadedToken, setUploadedToken] = useState<string | null>(null);
@@ -45,13 +51,13 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const step = orden.can_upload_step ? orden.current_step : null;
-  const isInvoice = step === 'factura';
+  const currentStep = orden.current_step;
+  // La factura se asocia desde Facturas del mes; aquí solo se cargan los documentos de Almacén
+  const uploadStep = orden.can_upload_step && currentStep !== 'factura' ? currentStep : null;
+  const waitingInvoice = currentStep === 'factura';
 
-  const selectFile = (selected: File | undefined) => {
-    if (!selected) return;
+  const selectFile = (selected: File) => {
     if (selected.size > maxUploadMb * 1024 * 1024) {
       setError(`El archivo pesa ${formatBytes(selected.size)} y supera el máximo de ${formatMaxSize(maxUploadMb)}.`);
       return;
@@ -76,7 +82,6 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!number.trim()) return setError(`Indica el ${orden.current_step_number_label ?? 'número del documento'}.`);
-    if (isInvoice && (!contractorId || !parseMoney(amount))) return setError('Selecciona el proveedor e indica el valor de la factura.');
     if (!file) return setError('Adjunta el archivo del documento.');
 
     setSubmitting(true);
@@ -96,17 +101,9 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
         }
         setUploadedToken(token);
       }
-      const updated = await onUpload(orden.id, {
-        number: number.trim(),
-        observation: observation.trim() || null,
-        amount: isInvoice ? parseMoney(amount) : null,
-        contractor_id: isInvoice ? contractorId : null,
-        upload_token: token,
-      });
+      const updated = await onUpload(orden.id, { number: number.trim(), observation: observation.trim() || null, upload_token: token });
       setNumber('');
       setObservation('');
-      setAmount('');
-      setContractorId(null);
       setFile(null);
       setUploadedToken(null);
       setProgress(null);
@@ -121,12 +118,20 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
 
   return (
     <div className="bg-white rounded-3xl border border-teal-100 p-6 space-y-5">
-      <div className="flex items-center gap-2">
-        <Package size={18} className="text-teal-600" />
-        <h3 className="font-black text-[#004C6C] tracking-tight">Compra y recepción</h3>
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          {documents.length} de {steps.length} documentos
-        </span>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Receipt size={18} className="text-teal-600" />
+          <h3 className="font-black text-[#004C6C] tracking-tight">Facturación y recepción</h3>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            {documents.length} de {steps.length} documentos
+          </span>
+        </div>
+        {canAssociate && (
+          <Link to="/app/contratacion/facturas"
+            className="flex items-center gap-1 text-xs font-bold text-white bg-[#EE9D4C] hover:bg-[#e08a35] px-3 py-2 rounded-xl transition-all">
+            Asociar factura <ArrowRight size={14} />
+          </Link>
+        )}
       </div>
 
       {error && (
@@ -139,10 +144,10 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
       {documents.length > 0 && (
         <ul className="space-y-2">
           {documents.map((doc) => (
-            <li key={doc.id} className="flex items-start justify-between gap-3 bg-slate-50 rounded-2xl p-4">
+            <li key={doc.id} className="bg-slate-50 rounded-2xl p-4 flex items-start justify-between gap-3">
               <div className="min-w-0 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-teal-50 text-teal-700">
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${STEP_STYLES[doc.step]}`}>
                     {doc.step_label}
                   </span>
                   <span className="font-black text-slate-700">N.º {doc.number}</span>
@@ -164,47 +169,32 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
       )}
 
       {/* Paso pendiente que no le corresponde al usuario */}
-      {!step && orden.current_step && (
-        <p className="text-xs font-bold text-slate-500 bg-slate-50 rounded-2xl px-4 py-3">
-          Pendiente: {orden.current_step_label} ({steps.find((s) => s.key === orden.current_step)?.responsible}).
+      {waitingInvoice ? (
+        <p className="flex items-center gap-1 text-[11px] font-bold text-orange-600">
+          <Clock size={13} /> Pendiente de la factura del proveedor: Contabilidad la carga en Facturas del mes y el residente responsable la asocia a esta orden.
+        </p>
+      ) : !uploadStep && currentStep && (
+        <p className="flex items-center gap-1 text-[11px] font-bold text-orange-600">
+          <Clock size={13} /> Pendiente: {orden.current_step_label} ({steps.find((s) => s.key === currentStep)?.responsible}).
+        </p>
+      )}
+      {orden.status === 'pendiente_aprobacion_contable' && (
+        <p className="flex items-center gap-1 text-[11px] font-bold text-orange-600">
+          <Clock size={13} /> Pendiente de aprobación de Contabilidad para pasar a cuentas por pagar.
         </p>
       )}
 
-      {step && (
+      {uploadStep && (
         <form onSubmit={handleSubmit} className="space-y-4 border-t border-slate-100 pt-5">
           <div>
             <p className="font-black text-slate-700">Cargar {orden.current_step_label?.toLowerCase()}</p>
-            <p className="text-xs font-bold text-slate-400 mt-0.5">{STEP_HINTS[step]}</p>
+            <p className="text-xs font-bold text-slate-400 mt-0.5">{STEP_HINTS[uploadStep]}</p>
           </div>
 
-          {isInvoice && (
-            <CustomSelect
-              pyClass="py-3.5"
-              label="Proveedor *"
-              placeholder="Selecciona el proveedor"
-              disabled={submitting}
-              options={contractors.map((c) => ({ value: c.id, label: c.name, sublabel: c.nit ? `NIT ${c.nit}` : undefined }))}
-              value={contractorId}
-              onChange={(v) => setContractorId(Number(v))}
-            />
-          )}
-
-          <div className={`grid grid-cols-1 gap-4 ${isInvoice ? 'md:grid-cols-2' : ''}`}>
-            <div className="space-y-2">
-              <label className={labelClass}>{orden.current_step_number_label} *</label>
-              <input disabled={submitting} className={inputClass} placeholder="Número del documento"
-                value={number} onChange={(e) => setNumber(e.target.value)} />
-            </div>
-            {isInvoice && (
-              <div className="space-y-2">
-                <label className={labelClass}>Valor de la factura *</label>
-                <div className="relative">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
-                  <input disabled={submitting} inputMode="numeric" className={`${inputClass} pl-9`} placeholder="0"
-                    value={amount} onChange={(e) => setAmount(formatMoneyInput(e.target.value))} />
-                </div>
-              </div>
-            )}
+          <div className="space-y-2">
+            <label className={labelClass}>{orden.current_step_number_label} *</label>
+            <input disabled={submitting} className={inputClass} placeholder="Número del documento"
+              value={number} onChange={(e) => setNumber(e.target.value)} />
           </div>
 
           <div className="space-y-2">
@@ -215,30 +205,8 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
 
           <div className="space-y-2">
             <label className={labelClass}>Archivo *</label>
-            <div onClick={() => !submitting && fileInputRef.current?.click()}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => { e.preventDefault(); if (!submitting) selectFile(e.dataTransfer.files[0]); }}
-              className="border-2 border-dashed border-slate-300 hover:border-[#004C6C]/60 hover:bg-blue-50/30 rounded-3xl p-5 flex flex-col items-center justify-center gap-1.5 text-center cursor-pointer bg-slate-50 transition-all">
-              <input ref={fileInputRef} type="file" className="hidden"
-                onChange={(e) => { selectFile(e.target.files?.[0]); e.target.value = ''; }} />
-              {file ? (
-                <>
-                  <FileText size={24} className="text-[#004C6C]" />
-                  <p className="text-sm font-black text-slate-700 break-all">{file.name}</p>
-                  <p className="text-[11px] font-bold text-slate-400">{formatBytes(file.size)} · clic para cambiar</p>
-                </>
-              ) : (
-                <>
-                  <UploadCloud size={24} className="text-slate-400" />
-                  <p className="text-sm font-bold text-slate-500">Arrastra el archivo o haz clic para seleccionarlo</p>
-                </>
-              )}
-            </div>
-            {progress !== null && (
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-[#004C6C] transition-all" style={{ width: `${progress}%` }} />
-              </div>
-            )}
+            <FileDrop file={file} onSelect={selectFile} disabled={submitting} progress={progress}
+              hint="Arrastra el archivo o haz clic para seleccionarlo" />
           </div>
 
           <button type="submit" disabled={submitting}
@@ -247,6 +215,10 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
             {submitting && progress !== null && progress < 100 ? `Subiendo archivo... ${progress}%` : 'Cargar y notificar'}
           </button>
         </form>
+      )}
+
+      {documents.length === 0 && !uploadStep && !waitingInvoice && (
+        <p className="text-xs font-bold text-slate-400">Almacén carga la orden de compra del ERP y el residente asocia la factura desde Facturas del mes.</p>
       )}
     </div>
   );

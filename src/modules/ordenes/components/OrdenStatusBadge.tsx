@@ -8,6 +8,7 @@ const STATUS_STYLES: Record<OrdenStatus, string> = {
   pendiente_erp: 'bg-orange-50 text-orange-700',
   pendiente_factura: 'bg-teal-50 text-teal-700',
   pendiente_entrada: 'bg-blue-50 text-[#004C6C]',
+  pendiente_aprobacion_contable: 'bg-amber-50 text-amber-700',
   completada: 'bg-green-50 text-green-600',
 };
 

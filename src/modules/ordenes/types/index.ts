@@ -5,6 +5,7 @@ export type OrdenStatus =
   | 'pendiente_erp'
   | 'pendiente_factura'
   | 'pendiente_entrada'
+  | 'pendiente_aprobacion_contable'
   | 'completada';
 
 export type OrdenStageKey = 'director_obra' | 'gerencia';
@@ -12,7 +13,7 @@ export type OrdenStageKey = 'director_obra' | 'gerencia';
 /** Documentos que se cargan después de la aprobación, en orden */
 export type OrdenStepKey = 'orden_erp' | 'factura' | 'entrada';
 
-export type OrdenScope = 'mine' | 'pending' | 'tasks' | 'all';
+export type OrdenScope = 'mine' | 'pending' | 'tasks' | 'accounting' | 'all';
 
 export interface OrdenProjectOption {
   id: number;
@@ -34,13 +35,15 @@ export interface OrdenCatalogs {
   task_steps: OrdenStepKey[];
   can_view_all: boolean;
   can_create: boolean;
+  /** Aprueba en Contabilidad las órdenes con entrada cargada (ordenes.aprobar_contabilidad) */
+  can_approve_accounting: boolean;
   stages: { key: OrdenStageKey; label: string; status: OrdenStatus }[];
   steps: { key: OrdenStepKey; label: string; responsible: string; status: OrdenStatus; number_label: string }[];
   statuses: { key: OrdenStatus; label: string }[];
 }
 
 export interface OrdenProgressStep {
-  key: OrdenStageKey | OrdenStepKey;
+  key: OrdenStageKey | OrdenStepKey | 'aprobacion_contable';
   label: string;
   kind: 'approval' | 'document';
   state: 'aprobado' | 'devuelto' | 'actual' | 'pendiente';
@@ -50,7 +53,7 @@ export interface OrdenProgressStep {
 
 export interface OrdenHistoryEntry {
   id: number;
-  action: 'registrada' | 'aprobado' | 'devuelto' | 'reenviada' | 'documento';
+  action: 'registrada' | 'aprobado' | 'devuelto' | 'reenviada' | 'documento' | 'contabilidad_aprobada' | 'contabilidad_devuelta';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
@@ -100,6 +103,7 @@ export interface Orden {
   can_review: boolean;
   can_resubmit: boolean;
   can_upload_step: boolean;
+  can_review_accounting: boolean;
   // Solo en el detalle
   progress?: OrdenProgressStep[];
   history?: OrdenHistoryEntry[];
@@ -142,4 +146,5 @@ export interface OrdenCounts {
   mine: number;
   pending: number;
   tasks: number;
+  accounting: number;
 }

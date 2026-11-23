@@ -71,6 +71,12 @@ export const ordenService = {
     return data.data;
   },
 
+  /** Contabilidad aprueba la orden con su entrada (pasa a cuentas por pagar) o la devuelve a Almacén */
+  reviewAccounting: async (id: number, decision: 'aprobar' | 'devolver', comment?: string): Promise<Orden> => {
+    const { data } = await api.post(`${BASE}/${id}/accounting`, { decision, comment: comment || null });
+    return data.data;
+  },
+
   getDocumentDownloadUrl: async (documentId: number): Promise<string> => {
     const { data } = await api.get(`${BASE}/documents/${documentId}/download`);
     return data.data.download_url;

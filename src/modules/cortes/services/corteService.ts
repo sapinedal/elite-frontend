@@ -84,6 +84,12 @@ export const corteService = {
     return data.data;
   },
 
+  /** Contabilidad aprueba la factura cargada en Multifox (pasa a cuentas por pagar) o la devuelve a Multifox */
+  reviewAccounting: async (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string): Promise<Corte> => {
+    const { data } = await api.post(`${BASE}/invoices/${invoiceId}/accounting`, { decision, comment: comment || null });
+    return data.data;
+  },
+
   /** URL de descarga de la factura, o de su soporte de Multifox con `multifox` */
   getInvoiceDownloadUrl: async (invoiceId: number, multifox = false): Promise<string> => {
     const { data } = await api.get(`${BASE}/invoices/${invoiceId}/download`, { params: multifox ? { multifox: 1 } : {} });

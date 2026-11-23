@@ -64,8 +64,9 @@ export const facturacionService = {
     await api.delete(`${BASE}/${id}`);
   },
 
-  getTargets: async (): Promise<FacturaTargets> => {
-    const { data } = await api.get(`${BASE}/targets`);
+  /** Cortes y órdenes del residente que admiten la factura `invoiceId` (aprobados sin factura / pendientes de factura) */
+  getTargets: async (invoiceId?: number): Promise<FacturaTargets> => {
+    const { data } = await api.get(`${BASE}/targets`, { params: invoiceId ? { invoice: invoiceId } : {} });
     return data.data;
   },
 

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { X, ShoppingCart, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle } from 'lucide-react';
 import { Portal } from '../../../components/ui/Portal';
+import { useAuth } from '../../../context/AuthContext';
 import { HistoryButton, HistoryModal } from '../../../components/ui/HistoryModal';
+import { AccountingReviewPanel } from '../../../components/ui/AccountingReviewPanel';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { ordenService, getApiErrorMessage } from '../services/ordenService';
 import { OrdenStatusBadge } from './OrdenStatusBadge';
@@ -14,20 +16,21 @@ interface OrdenDetailModalProps {
   onReview: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Orden>;
   onResubmit: (orden: Orden) => void;
   onUploadDocument: (id: number, payload: OrdenDocumentPayload) => Promise<Orden>;
+  onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Orden>;
   steps: OrdenCatalogs['steps'];
-  contractors: OrdenCatalogs['contractors'];
   maxUploadMb: number;
 }
 
+// Mismo estilo de fases que el Registro de Corte
 const STEP_STYLES: Record<OrdenProgressStep['state'], { icon: React.ReactNode; tone: string }> = {
-  aprobado: { icon: <CheckCircle2 size={18} />, tone: 'bg-green-50 text-green-600 border-green-100' },
-  devuelto: { icon: <Undo2 size={18} />, tone: 'bg-red-50 text-red-600 border-red-100' },
-  actual: { icon: <Clock size={18} />, tone: 'bg-orange-50 text-[#EE9D4C] border-orange-100' },
-  pendiente: { icon: <Circle size={18} />, tone: 'bg-slate-50 text-slate-300 border-slate-100' },
+  aprobado: { icon: <CheckCircle2 size={20} />, tone: 'bg-green-50 text-green-600 border-green-100' },
+  devuelto: { icon: <Undo2 size={20} />, tone: 'bg-red-50 text-red-600 border-red-100' },
+  actual: { icon: <Clock size={20} />, tone: 'bg-orange-50 text-[#EE9D4C] border-orange-100' },
+  pendiente: { icon: <Circle size={20} />, tone: 'bg-slate-50 text-slate-300 border-slate-100' },
 };
 
 const STATE_TEXT: Record<OrdenProgressStep['kind'], Record<OrdenProgressStep['state'], string>> = {
-  approval: { aprobado: 'Aprobado', devuelto: 'Devuelto', actual: 'Por aprobar', pendiente: 'Pendiente' },
+  approval: { aprobado: 'Aprobado', devuelto: 'Devuelto', actual: 'En revisión', pendiente: 'Pendiente' },
   document: { aprobado: 'Cargado', devuelto: 'Devuelto', actual: 'Por cargar', pendiente: 'Pendiente' },
 };
 
@@ -37,6 +40,8 @@ const ACTION_LABELS: Record<OrdenHistoryEntry['action'], { label: string; tone: 
   aprobado: { label: 'Aprobada', tone: 'text-green-600' },
   devuelto: { label: 'Devuelta', tone: 'text-red-600' },
   documento: { label: 'Documento cargado', tone: 'text-teal-700' },
+  contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
+  contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
 };
 
 // El contenido se monta por cada orden abierta (`key`), así arranca sin datos de la orden anterior
@@ -47,8 +52,9 @@ export const OrdenDetailModal: React.FC<OrdenDetailModalProps> = ({ ordenId, ...
 );
 
 const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { ordenId: number }> = ({
-  ordenId, onClose, onReview, onResubmit, onUploadDocument, steps, contractors, maxUploadMb,
+  ordenId, onClose, onReview, onResubmit, onUploadDocument, onReviewAccounting, steps, maxUploadMb,
 }) => {
+  const { user } = useAuth();
   const [orden, setOrden] = useState<Orden | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [decision, setDecision] = useState<'aprobar' | 'devolver' | null>(null);
@@ -119,52 +125,50 @@ const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { or
 
           {orden && (
             <>
-              {/* Fases: 2 aprobaciones + 3 documentos */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {/* Fases del flujo: aprobaciones, documentos y aprobación de Contabilidad */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {(orden.progress ?? []).map((step, index) => {
                   const style = STEP_STYLES[step.state];
                   return (
-                    <div key={step.key} className={`rounded-3xl border p-4 flex flex-col gap-2 ${style.tone}`}>
-                      <div className="flex items-center justify-between">
+                    <div key={step.key} className={`rounded-3xl border p-4 flex items-center gap-3 ${style.tone}`}>
+                      <div className="shrink-0">{style.icon}</div>
+                      <div className="min-w-0">
                         <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Fase {index + 1}</p>
-                        {style.icon}
+                        <p className="font-black text-slate-700">{step.label}</p>
+                        <p className="text-[11px] font-bold truncate" title={step.user ?? undefined}>
+                          {STATE_TEXT[step.kind][step.state]}{step.user ? ` · ${step.user}` : ''}
+                        </p>
                       </div>
-                      <p className="font-black text-slate-700 text-sm leading-tight">{step.label}</p>
-                      <p className="text-[11px] font-bold truncate" title={step.user ?? undefined}>
-                        {STATE_TEXT[step.kind][step.state]}{step.user ? ` · ${step.user}` : ''}
-                      </p>
                     </div>
                   );
                 })}
               </div>
 
               {/* Datos */}
-              <div className="bg-white rounded-3xl border border-slate-100 p-6 space-y-4 text-sm">
-                <div>
+              <div className="bg-white rounded-3xl border border-slate-100 p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                <div className="md:col-span-2">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Descripción</p>
                   <p className="font-bold text-slate-700 whitespace-pre-line">{orden.description}</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                  {[
-                    ['Presupuesto', `${orden.project?.name ?? '—'}${orden.tower ? ` · ${orden.tower.name}` : ''}`],
-                    ['Capítulo', orden.chapter],
-                    ['Actividad', orden.activity],
-                    ['Registrada por', orden.created_by?.name ?? '—'],
-                    ['Fecha de registro', formatDateTime(orden.created_at)],
-                    ['Aprobada', orden.approved_at ? formatDateTime(orden.approved_at) : '—'],
-                  ].map(([label, value]) => (
-                    <div key={label}>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
-                      <p className="font-bold text-slate-700">{value}</p>
-                    </div>
-                  ))}
-                </div>
+                {[
+                  ['Presupuesto / Torre', `${orden.project?.name ?? '—'}${orden.tower ? ` · ${orden.tower.name}` : ''}`],
+                  ['Capítulo / Actividad', `${orden.chapter} · ${orden.activity}`],
+                  ['Registrada por', orden.created_by?.name ?? '—'],
+                  ['Fecha de registro', formatDateTime(orden.created_at)],
+                  ['Aprobada', orden.approved_at ? formatDateTime(orden.approved_at) : '—'],
+                  ['Completada', orden.completed_at ? formatDateTime(orden.completed_at) : '—'],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+                    <p className="font-bold text-slate-700">{value}</p>
+                  </div>
+                ))}
               </div>
 
               {/* Aprobación de la etapa actual */}
               {orden.can_review && (
                 <div className="bg-white rounded-3xl border border-orange-100 p-6 space-y-4">
-                  <h3 className="font-black text-[#004C6C] tracking-tight">Tu aprobación como {orden.current_stage_label}</h3>
+                  <h3 className="font-black text-[#004C6C] tracking-tight">Tu revisión como {orden.current_stage_label}</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <button type="button" onClick={() => setDecision('aprobar')} disabled={saving}
                       className={`px-4 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${decision === 'aprobar' ? 'bg-green-600 text-white shadow-lg' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}>
@@ -178,7 +182,7 @@ const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { or
                   {decision && (
                     <>
                       <textarea rows={3} disabled={saving} value={comment} onChange={(e) => setComment(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-700 outline-none transition-all resize-none placeholder:text-slate-400 hover:border-slate-300 focus:bg-white focus:border-[#004C6C] focus:ring-4 focus:ring-blue-50"
+                        className="w-full bg-white border border-slate-100 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none shadow-sm resize-none placeholder:text-slate-300"
                         placeholder={decision === 'devolver' ? 'Motivo de la devolución (obligatorio)' : 'Comentario (opcional)'} />
                       <button type="button" onClick={handleReview} disabled={saving}
                         className="w-full px-6 py-4 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2 disabled:opacity-60">
@@ -193,7 +197,7 @@ const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { or
               {orden.can_resubmit && (
                 <div className="bg-orange-50 border border-orange-100 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <p className="text-sm font-bold text-orange-700">
-                    Esta orden fue devuelta por {orden.returned_stage_label}. Corrígela y reenvíala para reiniciar la aprobación.
+                    Esta orden fue devuelta por {orden.returned_stage_label}. Corrígela y reenvíala para reiniciar la revisión.
                   </p>
                   <button onClick={() => onResubmit(orden)}
                     className="flex items-center justify-center gap-2 bg-[#EE9D4C] hover:bg-[#e08a35] text-white px-5 py-3 rounded-2xl font-bold shrink-0">
@@ -206,11 +210,18 @@ const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { or
                 <OrdenDocumentsSection
                   orden={orden}
                   steps={steps}
-                  contractors={contractors}
                   maxUploadMb={maxUploadMb}
+                  canAssociate={orden.current_step === 'factura' && orden.created_by?.id === user?.id}
                   onUpload={onUploadDocument}
                   onUploaded={setOrden}
                 />
+              )}
+
+              {orden.can_review_accounting && (
+                <AccountingReviewPanel
+                  subject={`Orden ${orden.code}`}
+                  returnsTo="Almacén"
+                  onSubmit={async (accountingDecision, accountingComment) => setOrden(await onReviewAccounting(orden.id, accountingDecision, accountingComment))} />
               )}
             </>
           )}

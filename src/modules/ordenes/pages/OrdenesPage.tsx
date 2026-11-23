@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ShoppingCart, Plus, Search, X, FileText, ClipboardCheck, Layers, Eye, Package, Upload } from 'lucide-react';
+import { ShoppingCart, Plus, Search, X, FileText, ClipboardCheck, Layers, Eye, Package, Upload, Receipt, Calculator } from 'lucide-react';
 import { DataTable } from '../../../components/ui/DataTable';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
 import { Tabs } from '../../../components/ui/Tabs';
+import { useAuth } from '../../../context/AuthContext';
 import { useNotification } from '../../../context/NotificationContext';
 import { useNewFromQuery } from '../../../hooks/useNewFromQuery';
 import { formatDateTime } from '../../../utils/dateUtils';
@@ -15,11 +16,12 @@ import { OrdenStatusBadge } from '../components/OrdenStatusBadge';
 import type { Orden, OrdenDocumentPayload, OrdenPayload, OrdenScope } from '../types';
 
 export default function OrdenesPage() {
+  const { user } = useAuth();
   const { showNotification } = useNotification();
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     catalogs, ordenes, counts, scope, filters, page, perPage, pagination, loading, error,
-    setScope, setFilter, clearFilters, setPage, changePerPage, createOrden, resubmitOrden, reviewOrden, uploadDocument,
+    setScope, setFilter, clearFilters, setPage, changePerPage, createOrden, resubmitOrden, reviewOrden, uploadDocument, reviewAccounting,
   } = useOrdenes();
 
   const isReviewer = (catalogs?.review_stages.length ?? 0) > 0;
@@ -48,7 +50,8 @@ export default function OrdenesPage() {
     { id: 'mine', label: 'Mis registros', icon: <FileText size={14} />, count: counts.mine },
     ...(isReviewer ? [{ id: 'pending', label: 'Por aprobar', icon: <ClipboardCheck size={14} />, count: counts.pending }] : []),
     ...(hasTasks ? [{ id: 'tasks', label: 'Por gestionar', icon: <Package size={14} />, count: counts.tasks }] : []),
-    ...(catalogs?.can_view_all ? [{ id: 'all', label: 'Todas', icon: <Layers size={14} /> }] : []),
+    ...(catalogs?.can_approve_accounting ? [{ id: 'accounting', label: 'Contabilidad', icon: <Calculator size={14} />, count: counts.accounting }] : []),
+    ...(catalogs?.can_view_all || catalogs?.can_approve_accounting ? [{ id: 'all', label: 'Todas', icon: <Layers size={14} /> }] : []),
   ], [counts, isReviewer, hasTasks, catalogs]);
 
   const hasFilters = Boolean(filters.search || filters.status || filters.project_id);
@@ -67,7 +70,13 @@ export default function OrdenesPage() {
 
   const handleUploadDocument = async (id: number, payload: OrdenDocumentPayload) => {
     const orden = await uploadDocument(id, payload);
-    showNotification(orden.status === 'completada' ? 'Entrada cargada. La orden quedó completada.' : 'Documento cargado y notificado.', 'success');
+    showNotification(orden.status === 'pendiente_aprobacion_contable' ? 'Entrada cargada. La orden pasó a la aprobación de Contabilidad.' : 'Documento cargado y notificado.', 'success');
+    return orden;
+  };
+
+  const handleReviewAccounting = async (id: number, decision: 'aprobar' | 'devolver', comment?: string) => {
+    const orden = await reviewAccounting(id, decision, comment);
+    showNotification(decision === 'aprobar' ? 'Orden aprobada. Pasó a cuentas por pagar.' : 'Orden devuelta a Almacén.', 'success');
     return orden;
   };
 
@@ -123,13 +132,16 @@ export default function OrdenesPage() {
       className: 'text-right',
       accessor: (o: Orden) => {
         // Acción principal según lo que el usuario puede hacer con la orden
-        const highlighted = o.can_review || o.can_resubmit || o.can_upload_step;
-        const label = o.can_review ? 'Aprobar' : o.can_resubmit ? 'Corregir' : o.can_upload_step ? 'Cargar' : 'Ver';
+        // Orden esperando factura: el residente responsable la asocia desde Facturas del mes (igual que en cortes)
+        const pendingInvoice = o.status === 'pendiente_factura' && o.created_by?.id === user?.id;
+        const canUpload = o.can_upload_step && o.current_step !== 'factura';
+        const highlighted = o.can_review || o.can_resubmit || canUpload || pendingInvoice || o.can_review_accounting;
+        const label = o.can_review || o.can_review_accounting ? 'Aprobar' : o.can_resubmit ? 'Corregir' : pendingInvoice ? 'Asociar factura' : canUpload ? 'Cargar' : 'Ver';
         return (
           <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setDetailId(o.id)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap ${highlighted ? 'bg-[#EE9D4C] text-white hover:bg-[#e08a35]' : 'text-[#004C6C] hover:bg-blue-50'}`}>
-              {o.can_upload_step ? <Upload size={15} /> : <Eye size={15} />} {label}
+              {pendingInvoice ? <Receipt size={15} /> : canUpload ? <Upload size={15} /> : <Eye size={15} />} {label}
             </button>
           </div>
         );
@@ -149,7 +161,7 @@ export default function OrdenesPage() {
           <div>
             <h1 className="text-2xl md:text-3xl font-black tracking-tight">Registro de Orden</h1>
             <p className="text-xs font-bold text-white/60 uppercase tracking-widest mt-1">
-              Director de Obra · Gerencia · Orden ERP · Factura · Entrada
+              Director de Obra · Gerencia · Orden ERP · Factura · Entrada · Contabilidad
             </p>
           </div>
         </div>
@@ -214,6 +226,7 @@ export default function OrdenesPage() {
         emptyMessage={
           scope === 'pending' ? 'No tienes órdenes pendientes de aprobación.'
             : scope === 'tasks' ? 'No tienes documentos de órdenes por cargar.'
+            : scope === 'accounting' ? 'No hay órdenes pendientes de la aprobación de Contabilidad.'
             : 'Aún no hay órdenes registradas.'
         }
       />
@@ -243,8 +256,8 @@ export default function OrdenesPage() {
         onReview={handleReview}
         onResubmit={openResubmit}
         onUploadDocument={handleUploadDocument}
+        onReviewAccounting={handleReviewAccounting}
         steps={catalogs?.steps ?? []}
-        contractors={catalogs?.contractors ?? []}
         maxUploadMb={catalogs?.max_upload_mb ?? 1024}
       />
     </div>

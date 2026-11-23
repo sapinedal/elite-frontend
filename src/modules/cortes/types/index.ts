@@ -8,7 +8,10 @@ export type CorteStatus =
 
 export type CorteStageKey = 'interventor' | 'director_obra' | 'gerencia';
 
-export type CorteScope = 'mine' | 'pending' | 'all' | 'billing' | 'multifox';
+export type CorteScope = 'mine' | 'pending' | 'all' | 'billing' | 'multifox' | 'accounting';
+
+/** Aprobación de Contabilidad de la factura cargada en Multifox (null: aún no se carga en Multifox) */
+export type InvoiceAccountingStatus = 'pendiente' | 'aprobada' | 'devuelta' | null;
 
 export type InvoiceDocumentType = 'factura_inicial' | 'nota_credito' | 'factura_reemplazo';
 
@@ -40,6 +43,8 @@ export interface CorteCatalogs {
   can_invoice: boolean;
   /** Registra las facturas en Multifox y confirma la carga (cargo de Paula) */
   can_confirm_multifox: boolean;
+  /** Contabilidad (cortes.aprobar_contabilidad): aprueba las facturas cargadas en Multifox */
+  can_approve_accounting: boolean;
   invoice_document_types: { key: InvoiceDocumentType; label: string }[];
   stages: { key: CorteStageKey; label: string; status: CorteStatus }[];
   statuses: { key: CorteStatus; label: string }[];
@@ -55,7 +60,7 @@ export interface CorteProgressStep {
 
 export interface CorteHistoryEntry {
   id: number;
-  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'factura' | 'multifox';
+  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'factura' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta';
   stage: CorteStageKey | null;
   stage_label: string | null;
   comment: string | null;
@@ -113,6 +118,11 @@ export interface CorteInvoice {
   /** Soporte de Multifox que cargó Paula al confirmar (queda en la carpeta del corte) */
   multifox_file_name: string | null;
   multifox_file_size: number | null;
+  accounting_status: InvoiceAccountingStatus;
+  accounting_by: string | null;
+  accounting_at: string | null;
+  accounting_comment: string | null;
+  can_review_accounting: boolean;
   file_name: string;
   file_size: number;
   uploaded_by: string | null;
@@ -151,4 +161,6 @@ export interface CorteCounts {
   billing: number;
   /** Cortes con facturas por confirmar en Multifox */
   multifox: number;
+  /** Cortes con facturas cargadas en Multifox por aprobar en Contabilidad */
+  accounting: number;
 }

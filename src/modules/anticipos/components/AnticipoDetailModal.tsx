@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HandCoins, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Download, Database, FileText, Wallet } from 'lucide-react';
+import { AccountingReviewPanel } from '../../../components/ui/AccountingReviewPanel';
 import { HistoryButton, HistoryModal } from '../../../components/ui/HistoryModal';
 import { ModalShell, inputClass, labelClass } from '../../../components/ui/ModalShell';
 import { formatDateTime } from '../../../utils/dateUtils';
@@ -18,6 +19,7 @@ interface AnticipoDetailModalProps {
   onReview: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Anticipo>;
   onResubmit: (anticipo: Anticipo) => void;
   onRegisterMultifox: (id: number, payload: MultifoxPayload) => Promise<Anticipo>;
+  onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Anticipo>;
 }
 
 const STEP_STYLES: Record<AnticipoProgressStep['state'], { icon: React.ReactNode; tone: string }> = {
@@ -38,6 +40,8 @@ const ACTION_LABELS: Record<AnticipoHistoryEntry['action'], { label: string; ton
   aprobado: { label: 'Aprobado', tone: 'text-green-600' },
   devuelto: { label: 'Devuelto', tone: 'text-red-600' },
   multifox: { label: 'Generado en Multifox', tone: 'text-teal-700' },
+  contabilidad_aprobada: { label: 'Aprobado por Contabilidad', tone: 'text-green-700' },
+  contabilidad_devuelta: { label: 'Devuelto por Contabilidad', tone: 'text-red-600' },
 };
 
 /**
@@ -50,7 +54,7 @@ export const AnticipoDetailModal: React.FC<AnticipoDetailModalProps> = ({ antici
 );
 
 const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { anticipoId: number }> = ({
-  anticipoId, maxUploadMb, onClose, onReview, onResubmit, onRegisterMultifox,
+  anticipoId, maxUploadMb, onClose, onReview, onResubmit, onRegisterMultifox, onReviewAccounting,
 }) => {
   const [anticipo, setAnticipo] = useState<Anticipo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -173,8 +177,8 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
               <HistoryButton count={anticipo.history?.length} onClick={() => setHistoryOpen(true)} />
             </div>
 
-            {/* Fases: Director, Gerencia y anticipo en Multifox */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Fases: Director, Gerencia, anticipo en Multifox y aprobación de Contabilidad */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {(anticipo.progress ?? []).map((step, index) => {
                 const style = STEP_STYLES[step.state];
                 return (
@@ -275,7 +279,7 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
                   <Database size={18} className="text-teal-600" />
                   <h3 className="font-black text-[#004C6C] tracking-tight">Cargar anticipo generado en Multifox</h3>
                 </div>
-                <p className="text-xs font-bold text-slate-500">Al cargarlo, el anticipo pasa al cuadro de pagos por {formatMoney(anticipo.amount)}.</p>
+                <p className="text-xs font-bold text-slate-500">Al cargarlo pasa a la aprobación de Contabilidad; con ella entra al cuadro de pagos por {formatMoney(anticipo.amount)}.</p>
                 <div className="space-y-2">
                   <label className={labelClass}>N.º del anticipo en Multifox *</label>
                   <input disabled={saving} className={inputClass} placeholder="Ej: AN-0123"
@@ -291,9 +295,17 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
                 <button type="button" onClick={handleMultifox} disabled={saving}
                   className="w-full px-6 py-4 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2 disabled:opacity-60">
                   {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                  {saving && progress !== null && progress < 100 ? `Subiendo soporte... ${progress}%` : 'Cargar y pasar al cuadro de pagos'}
+                  {saving && progress !== null && progress < 100 ? `Subiendo soporte... ${progress}%` : 'Cargar y enviar a Contabilidad'}
                 </button>
               </div>
+            )}
+
+            {anticipo.can_review_accounting && (
+              <AccountingReviewPanel
+                subject={`Anticipo ${anticipo.code}${anticipo.multifox_number ? ` (Multifox N.º ${anticipo.multifox_number})` : ''}`}
+                returnsTo="Multifox"
+                approvesTo="el cuadro de pagos"
+                onSubmit={async (decision, comment) => setAnticipo(await onReviewAccounting(anticipo.id, decision, comment))} />
             )}
           </>
         )}

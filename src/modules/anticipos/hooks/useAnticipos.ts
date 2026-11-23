@@ -11,7 +11,7 @@ const EMPTY_FILTERS: AnticipoFilters = { search: '', status: '', project_id: '' 
 export function useAnticipos() {
   const [catalogs, setCatalogs] = useState<AnticipoCatalogs | null>(null);
   const [anticipos, setAnticipos] = useState<Anticipo[]>([]);
-  const [counts, setCounts] = useState<AnticipoCounts>({ mine: 0, pending: 0, accounting: 0 });
+  const [counts, setCounts] = useState<AnticipoCounts>({ mine: 0, pending: 0, accounting: 0, accounting_approval: 0 });
   const [scope, setScopeState] = useState<AnticipoScope>('mine');
   const [filters, setFilters] = useState<AnticipoFilters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
@@ -99,6 +99,9 @@ export function useAnticipos() {
   const registerMultifox = useCallback((id: number, payload: MultifoxPayload) =>
     run(() => anticipoService.registerMultifox(id, payload), 'Error al cargar el anticipo de Multifox.'), [run]);
 
+  const reviewAccounting = useCallback((id: number, decision: 'aprobar' | 'devolver', comment?: string) =>
+    run(() => anticipoService.reviewAccounting(id, decision, comment), 'Error al registrar la aprobación de Contabilidad.'), [run]);
+
   return {
     catalogs,
     anticipos,
@@ -120,5 +123,6 @@ export function useAnticipos() {
     resubmitAnticipo,
     reviewAnticipo,
     registerMultifox,
+    reviewAccounting,
   };
 }

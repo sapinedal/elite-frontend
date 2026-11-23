@@ -3,11 +3,12 @@ export type AnticipoStatus =
   | 'pendiente_gerencia'
   | 'devuelto'
   | 'pendiente_contabilidad'
+  | 'pendiente_aprobacion_contable'
   | 'completado';
 
 export type AnticipoStageKey = 'director_obra' | 'gerencia';
 
-export type AnticipoScope = 'mine' | 'pending' | 'accounting' | 'all';
+export type AnticipoScope = 'mine' | 'pending' | 'accounting' | 'accounting_approval' | 'all';
 
 export interface AnticipoContractOption {
   id: number;
@@ -30,6 +31,8 @@ export interface AnticipoCatalogs {
   can_create: boolean;
   /** Contabilidad: genera el anticipo en Multifox y lo carga */
   can_contabilizar: boolean;
+  /** Aprueba en Contabilidad los anticipos cargados en Multifox (anticipos.aprobar_contabilidad) */
+  can_approve_accounting: boolean;
   stages: { key: AnticipoStageKey; label: string; status: AnticipoStatus }[];
   statuses: { key: AnticipoStatus; label: string }[];
 }
@@ -45,7 +48,7 @@ export interface AnticipoProgressStep {
 
 export interface AnticipoHistoryEntry {
   id: number;
-  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'multifox';
+  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
@@ -84,6 +87,7 @@ export interface Anticipo {
   can_review: boolean;
   can_resubmit: boolean;
   can_register_multifox: boolean;
+  can_review_accounting: boolean;
   // Solo en el detalle
   storage_path?: string | null;
   multifox_file_name?: string | null;
@@ -128,4 +132,5 @@ export interface AnticipoCounts {
   mine: number;
   pending: number;
   accounting: number;
+  accounting_approval: number;
 }

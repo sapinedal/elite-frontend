@@ -11,7 +11,7 @@ const EMPTY_FILTERS: OrdenFilters = { search: '', status: '', project_id: '' };
 export function useOrdenes() {
   const [catalogs, setCatalogs] = useState<OrdenCatalogs | null>(null);
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
-  const [counts, setCounts] = useState<OrdenCounts>({ mine: 0, pending: 0, tasks: 0 });
+  const [counts, setCounts] = useState<OrdenCounts>({ mine: 0, pending: 0, tasks: 0, accounting: 0 });
   const [scope, setScopeState] = useState<OrdenScope>('mine');
   const [filters, setFilters] = useState<OrdenFilters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
@@ -95,6 +95,9 @@ export function useOrdenes() {
   const uploadDocument = useCallback((id: number, payload: OrdenDocumentPayload) =>
     run(() => ordenService.uploadDocument(id, payload), 'Error al cargar el documento.'), [run]);
 
+  const reviewAccounting = useCallback((id: number, decision: 'aprobar' | 'devolver', comment?: string) =>
+    run(() => ordenService.reviewAccounting(id, decision, comment), 'Error al registrar la aprobación de Contabilidad.'), [run]);
+
   return {
     catalogs,
     ordenes,
@@ -116,5 +119,6 @@ export function useOrdenes() {
     resubmitOrden,
     reviewOrden,
     uploadDocument,
+    reviewAccounting,
   };
 }

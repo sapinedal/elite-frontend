@@ -4,11 +4,12 @@ export type CuentaCobroStatus =
   | 'devuelta'
   | 'pendiente_revision'
   | 'pendiente_multifox'
+  | 'pendiente_aprobacion_contable'
   | 'en_pagos';
 
 export type CuentaCobroStageKey = 'director_obra' | 'gerencia';
 
-export type CuentaCobroScope = 'mine' | 'pending' | 'multifox' | 'all';
+export type CuentaCobroScope = 'mine' | 'pending' | 'multifox' | 'accounting_approval' | 'all';
 
 export interface CuentaCobroTipo {
   id: number;
@@ -32,6 +33,8 @@ export interface CuentaCobroCatalogs {
   can_create: boolean;
   /** Paula: decide si requiere Multifox y la carga */
   can_handle_multifox: boolean;
+  /** Aprueba en Contabilidad antes del cuadro de pagos (cuentas_cobro.aprobar_contabilidad) */
+  can_approve_accounting: boolean;
   /** CRUD de tipos */
   can_parametrize: boolean;
   stages: { key: CuentaCobroStageKey; label: string; status: CuentaCobroStatus }[];
@@ -49,7 +52,7 @@ export interface CuentaCobroProgressStep {
 
 export interface CuentaCobroHistoryEntry {
   id: number;
-  action: 'radicada' | 'aprobado' | 'devuelto' | 'reenviada' | 'sin_multifox' | 'requiere_multifox' | 'multifox';
+  action: 'radicada' | 'aprobado' | 'devuelto' | 'reenviada' | 'sin_multifox' | 'requiere_multifox' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
@@ -93,6 +96,7 @@ export interface CuentaCobro {
   can_review: boolean;
   can_resubmit: boolean;
   can_handle_multifox: boolean;
+  can_review_accounting: boolean;
   // Solo en el detalle
   adjuntos?: { id: number; file_name: string; file_size: number; uploaded_by: string | null; created_at: string }[];
   multifox_file_name?: string | null;
@@ -150,4 +154,5 @@ export interface CuentaCobroCounts {
   mine: number;
   pending: number;
   multifox: number;
+  accounting_approval: number;
 }

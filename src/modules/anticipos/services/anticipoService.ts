@@ -69,6 +69,12 @@ export const anticipoService = {
     return data.data;
   },
 
+  /** Contabilidad aprueba el anticipo cargado en Multifox (pasa al cuadro de pagos) o lo devuelve a Multifox */
+  reviewAccounting: async (id: number, decision: 'aprobar' | 'devolver', comment?: string): Promise<Anticipo> => {
+    const { data } = await api.post(`${BASE}/${id}/accounting`, { decision, comment: comment || null });
+    return data.data;
+  },
+
   getDownloadUrl: async (id: number, file: 'cuenta' | 'multifox' = 'cuenta'): Promise<string> => {
     const { data } = await api.get(`${BASE}/${id}/download`, { params: { file } });
     return data.data.download_url;

@@ -18,6 +18,7 @@ interface CorteDetailModalProps {
   onReview: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Corte>;
   onResubmit: (corte: Corte) => void;
   onConfirmMultifox: (invoiceId: number, file: File, onProgress?: (percent: number) => void) => Promise<Corte>;
+  onReviewAccounting: (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Corte>;
 }
 
 const STEP_STYLES: Record<CorteProgressStep['state'], { icon: React.ReactNode; tone: string; text: string }> = {
@@ -34,6 +35,8 @@ const ACTION_LABELS: Record<CorteHistoryEntry['action'], { label: string; tone: 
   devuelto: { label: 'Devuelto', tone: 'text-red-600' },
   factura: { label: 'Documento de facturación cargado', tone: 'text-teal-700' },
   multifox: { label: 'Cargada en Multifox', tone: 'text-green-700' },
+  contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
+  contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
 };
 
 // El contenido se monta por cada corte abierto (`key`), así arranca sin datos del corte anterior
@@ -44,7 +47,7 @@ export const CorteDetailModal: React.FC<CorteDetailModalProps> = ({ corteId, ...
 );
 
 const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { corteId: number }> = ({
-  corteId, onClose, onReview, onResubmit, onConfirmMultifox,
+  corteId, onClose, onReview, onResubmit, onConfirmMultifox, onReviewAccounting,
 }) => {
   const { user } = useAuth();
   const [corte, setCorte] = useState<Corte | null>(null);
@@ -232,6 +235,7 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
                   canAssociate={isInvoiceable && corte.created_by?.id === user?.id}
                   onCreated={setCorte}
                   onConfirmMultifox={onConfirmMultifox}
+                  onReviewAccounting={onReviewAccounting}
                 />
               )}
             </>

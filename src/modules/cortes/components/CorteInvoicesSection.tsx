@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Receipt, Download, Loader2, AlertCircle, CheckCircle2, Clock, ArrowRight, Paperclip } from 'lucide-react';
+import { Receipt, Download, Loader2, AlertCircle, CheckCircle2, Clock, ArrowRight, Paperclip, Undo2 } from 'lucide-react';
 import { FileDrop } from '../../../components/ui/FileDrop';
+import { AccountingReviewPanel } from '../../../components/ui/AccountingReviewPanel';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { formatMoney } from '../../../utils/money';
 import { corteService, getApiErrorMessage } from '../services/corteService';
@@ -15,6 +16,8 @@ interface CorteInvoicesSectionProps {
   onCreated: (corte: Corte) => void;
   /** Paula confirma que la factura quedó cargada en Multifox con su soporte (pasa a cuentas por pagar) */
   onConfirmMultifox: (invoiceId: number, file: File, onProgress?: (percent: number) => void) => Promise<Corte>;
+  /** Contabilidad aprueba la factura cargada en Multifox (pasa a cuentas por pagar) o la devuelve a Multifox */
+  onReviewAccounting: (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Corte>;
 }
 
 const TYPE_STYLES: Record<InvoiceDocumentType, string> = {
@@ -27,9 +30,10 @@ const TYPE_STYLES: Record<InvoiceDocumentType, string> = {
  * Facturas del corte aprobado: listado con descarga y confirmación de Multifox. Las facturas no se cargan aquí:
  * Contabilidad las sube en Facturas del mes y el residente responsable solo las asocia a su corte.
  * Paula confirma la carga en Multifox adjuntando el soporte, que queda en la carpeta del corte
- * (05 CORTES/CORTE N), y la factura pasa a cuentas por pagar.
+ * (05 CORTES/CORTE N), y la factura pasa a la aprobación de Contabilidad: si la aprueba pasa a cuentas por pagar,
+ * si la devuelve vuelve a Multifox.
  */
-export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ corte, canAssociate, onCreated, onConfirmMultifox }) => {
+export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ corte, canAssociate, onCreated, onConfirmMultifox, onReviewAccounting }) => {
   const invoices = corte.invoices ?? [];
   // Factura cuyo soporte de Multifox se está adjuntando
   const [multifoxId, setMultifoxId] = useState<number | null>(null);
@@ -117,13 +121,33 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                   )}
                 </div>
                 {invoice.multifox_confirmed_at ? (
-                  <p className="flex items-center gap-1 text-[11px] font-bold text-green-600">
-                    <CheckCircle2 size={13} /> En Multifox y cuentas por pagar · {invoice.multifox_confirmed_by} · {formatDateTime(invoice.multifox_confirmed_at)}
-                  </p>
+                  <>
+                    <p className="flex items-center gap-1 text-[11px] font-bold text-green-600">
+                      <CheckCircle2 size={13} /> Cargada en Multifox · {invoice.multifox_confirmed_by} · {formatDateTime(invoice.multifox_confirmed_at)}
+                    </p>
+                    {invoice.accounting_status === 'aprobada' ? (
+                      <p className="flex items-center gap-1 text-[11px] font-bold text-green-600">
+                        <CheckCircle2 size={13} /> Aprobada por Contabilidad y en cuentas por pagar
+                        {invoice.accounting_by ? ` · ${invoice.accounting_by}` : ''}{invoice.accounting_at ? ` · ${formatDateTime(invoice.accounting_at)}` : ''}
+                      </p>
+                    ) : (
+                      <p className="flex items-center gap-1 text-[11px] font-bold text-orange-600">
+                        <Clock size={13} /> Pendiente de aprobación de Contabilidad
+                      </p>
+                    )}
+                  </>
                 ) : (
-                  <p className="flex items-center gap-1 text-[11px] font-bold text-orange-600">
-                    <Clock size={13} /> Pendiente de cargar en Multifox
-                  </p>
+                  <>
+                    {invoice.accounting_status === 'devuelta' && (
+                      <p className="flex items-start gap-1 text-[11px] font-bold text-red-600">
+                        <Undo2 size={13} className="shrink-0 mt-px" />
+                        <span>Devuelta por Contabilidad{invoice.accounting_by ? ` (${invoice.accounting_by})` : ''}{invoice.accounting_comment ? `: ${invoice.accounting_comment}` : ''}</span>
+                      </p>
+                    )}
+                    <p className="flex items-center gap-1 text-[11px] font-bold text-orange-600">
+                      <Clock size={13} /> Pendiente de cargar en Multifox
+                    </p>
+                  </>
                 )}
                 {invoice.observation && <p className="text-xs font-medium text-slate-600 whitespace-pre-line">{invoice.observation}</p>}
                 <p className="text-[11px] font-bold text-slate-400 truncate">
@@ -153,6 +177,15 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
               </div>
             </div>
 
+            {invoice.can_review_accounting && (
+              <div className="border-t border-slate-200 pt-3">
+                <AccountingReviewPanel compact
+                  subject={`${invoice.document_type_label} N.º ${invoice.invoice_number}`}
+                  returnsTo="Multifox"
+                  onSubmit={async (decision, comment) => onCreated(await onReviewAccounting(invoice.id, decision, comment))} />
+              </div>
+            )}
+
             {multifoxId === invoice.id && invoice.can_confirm_multifox && (
               <div className="border-t border-slate-200 pt-3 space-y-3">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
@@ -168,7 +201,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                   <button type="button" onClick={() => handleConfirmMultifox(invoice.id)} disabled={confirming || !multifoxFile}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#004C6C] hover:bg-[#003a53] text-white text-xs font-bold disabled:opacity-60">
                     {confirming ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                    {confirming && progress !== null && progress < 100 ? `Subiendo... ${progress}%` : 'Confirmar y pasar a cuentas por pagar'}
+                    {confirming && progress !== null && progress < 100 ? `Subiendo... ${progress}%` : 'Confirmar y enviar a Contabilidad'}
                   </button>
                 </div>
               </div>

@@ -1,9 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link2, Loader2, UploadCloud, FileText, Trash2, AlertCircle, Scissors, ShoppingCart, CheckCircle2, Paperclip } from 'lucide-react';
-import { CustomSelect } from '../../../components/ui/CustomSelect';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link2, Loader2, AlertCircle, Scissors, ShoppingCart, CheckCircle2 } from 'lucide-react';
 import { formatMoney, formatMoneyInput, parseMoney } from '../../../utils/money';
 import { formatDate } from '../../../utils/dateUtils';
-import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { facturacionService, getApiErrorMessage } from '../services/facturacionService';
 import { ModalShell, inputClass, labelClass } from '../../../components/ui/ModalShell';
 import type { Factura, FacturacionCatalogs, FacturaTargets } from '../types';
@@ -18,9 +16,9 @@ interface AssociateModalProps {
 type TargetType = 'corte' | 'orden';
 
 /**
- * El residente asocia la factura a su corte (con las tres aprobaciones) o a su orden pendiente de factura.
- * Al corte solo se asocia: el soporte de Multifox lo carga Paula al confirmar y queda en la carpeta del corte.
- * A la orden se pueden adjuntar soportes (opcional): capturas de las aprobaciones y la entrada generada en Multifox.
+ * El residente asocia la factura a su corte (con las tres aprobaciones) o a su orden pendiente de factura, con los
+ * mismos datos en ambos casos: solo el valor si Contabilidad no lo registró y una observación opcional. El proveedor
+ * sale de la factura del mes (no se pide) y los soportes los carga después quien sigue en el flujo.
  * Reemplaza el cambio de nombre que hacían en Drive para indicar que la factura quedó procesada por obra.
  */
 export const AssociateModal: React.FC<AssociateModalProps> = ({ factura, ...props }) => (
@@ -28,28 +26,24 @@ export const AssociateModal: React.FC<AssociateModalProps> = ({ factura, ...prop
   factura ? <AssociateContent key={factura.id} factura={factura} {...props} /> : null
 );
 
-const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = ({ factura, catalogs, onClose, onAssociated }) => {
+const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = ({ factura, onClose, onAssociated }) => {
   const [targets, setTargets] = useState<FacturaTargets | null>(null);
   const [targetType, setTargetType] = useState<TargetType>('corte');
   const [targetId, setTargetId] = useState<number | null>(null);
   const [amount, setAmount] = useState('');
-  const [contractorId, setContractorId] = useState<number | null>(null);
   const [comment, setComment] = useState('');
-  const [files, setFiles] = useState<File[]>([]);
-  const [progress, setProgress] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    facturacionService.getTargets()
+    facturacionService.getTargets(factura.id)
       .then((data) => {
         setTargets(data);
         // Sin cortes pero con órdenes, arranca en órdenes
         if (!data.cortes.length && data.ordenes.length) setTargetType('orden');
       })
       .catch((err) => setError(getApiErrorMessage(err, 'Error al cargar tus cortes y órdenes.')));
-  }, []);
+  }, [factura.id]);
 
   // Primero los cortes del mismo proveedor de la factura
   const cortes = useMemo(() => {
@@ -60,53 +54,26 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
   const ordenes = targets?.ordenes ?? [];
   const isOrdenCompatible = factura.document_type === 'factura' || factura.document_type === 'cuenta_cobro';
 
-  const addFiles = (list: FileList | null) => {
-    if (!list?.length) return;
-    const valid = Array.from(list).filter((f) => f.size <= catalogs.max_upload_mb * 1024 * 1024);
-    setError(valid.length < list.length ? `Se omitieron archivos que superan ${formatMaxSize(catalogs.max_upload_mb)}.` : null);
-    setFiles((prev) => [...prev, ...valid.filter((f) => !prev.some((p) => p.name === f.name && p.size === f.size))]);
-  };
-
-  // Pegar capturas con Ctrl+V
-  const handlePaste = (e: React.ClipboardEvent) => {
-    if (targetType !== 'orden') return;
-    const images = Array.from(e.clipboardData.files);
-    if (!images.length) return;
-    const dt = new DataTransfer();
-    images.forEach((img, i) => dt.items.add(new File([img], img.name === 'image.png' ? `captura-${Date.now()}-${i + 1}.png` : img.name, { type: img.type })));
-    addFiles(dt.files);
-  };
-
   const handleSubmit = async () => {
     if (!targetId) return setError(targetType === 'corte' ? 'Elige el corte de la factura.' : 'Elige la orden de la factura.');
     if (factura.amount === null && !parseMoney(amount)) return setError('Indica el valor de la factura.');
-    if (targetType === 'orden' && !factura.contractor && !contractorId) return setError('Indica el proveedor de la factura.');
-    // Solo la orden admite soportes al asociar (opcionales); el del corte lo carga Paula en el paso de Multifox
-    const uploads = targetType === 'orden' ? files : [];
 
     setSubmitting(true);
     setError(null);
     try {
-      const tokens: string[] = [];
-      for (const [i, file] of uploads.entries()) {
-        setProgress(`Subiendo soporte ${i + 1} de ${uploads.length}...`);
-        tokens.push(await facturacionService.uploadFile(file));
-      }
-      setProgress('Asociando...');
       const updated = await facturacionService.associate(factura.id, {
         target_type: targetType,
         target_id: targetId,
         amount: factura.amount === null ? parseMoney(amount) : null,
-        contractor_id: factura.contractor ? null : contractorId,
+        contractor_id: null,
         comment: comment.trim() || null,
-        support_tokens: tokens,
+        support_tokens: [],
       });
       onAssociated(updated);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Error al asociar la factura.'));
     } finally {
       setSubmitting(false);
-      setProgress(null);
     }
   };
 
@@ -141,11 +108,11 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
         <button type="button" onClick={handleSubmit} disabled={submitting || !targets}
           className="w-full px-6 py-3.5 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-60">
           {submitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-          {progress ?? 'Asociar y marcar como procesada por obra'}
+          {submitting ? 'Asociando...' : 'Asociar y Marcar'}
         </button>
       }
     >
-      <div onPaste={handlePaste} className="space-y-5">
+      <div className="space-y-5">
         {error && (
           <div className="p-3 bg-red-50 border border-red-100 rounded-2xl text-xs font-bold text-red-600 flex items-center gap-2">
             <AlertCircle size={16} className="shrink-0" /> <span className="whitespace-pre-line">{error}</span>
@@ -170,7 +137,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
                 targetId === c.id,
                 <><span className="font-black text-[#004C6C]">{c.label}</span><span className="text-xs font-bold text-slate-500">{c.contractor ?? 'Sin proveedor'}</span></>,
                 [c.project, c.tower, c.contract_code && `Contrato ${c.contract_code}`, c.approved_at && `Aprobado ${formatDate(c.approved_at)}`,
-                  c.invoices_count ? `${c.invoices_count} factura(s) ya asociada(s)` : 'Sin factura'].filter(Boolean).join(' · '),
+                  c.invoices_count ? `${c.invoices_count} factura(s) asociada(s)` : 'Pendiente de factura'].filter(Boolean).join(' · '),
                 factura.contractor && c.contractor_id === factura.contractor.id
                   ? <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-green-50 text-green-700">Mismo proveedor</span>
                   : undefined,
@@ -178,7 +145,9 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
             </ul>
           ) : (
             <p className="text-sm font-bold text-slate-400 bg-white rounded-2xl p-4 border border-slate-100">
-              No tienes cortes con las tres aprobaciones. La factura se asocia cuando el corte quede aprobado.
+              {factura.document_type === 'nota_credito' || factura.document_type === 'factura_reemplazo'
+                ? 'No tienes cortes con factura asociada que este documento pueda afectar.'
+                : 'No tienes cortes con las tres aprobaciones pendientes de factura. La factura se asocia cuando el corte quede aprobado.'}
             </p>
           )
         ) : ordenes.length ? (
@@ -196,60 +165,15 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
           </p>
         )}
 
-        {(factura.amount === null || (targetType === 'orden' && !factura.contractor)) && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {factura.amount === null && (
-              <div className="space-y-1.5">
-                <label className={labelClass}>Valor de la factura *</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
-                  <input disabled={submitting} inputMode="numeric" className={`${inputClass} pl-8`} placeholder="Contabilidad no lo registró"
-                    value={amount} onChange={(e) => setAmount(formatMoneyInput(e.target.value))} />
-                </div>
-              </div>
-            )}
-            {targetType === 'orden' && !factura.contractor && (
-              <div className="space-y-1.5">
-                <label className={labelClass}>Proveedor *</label>
-                <CustomSelect pyClass="py-3" placeholder="Buscar proveedor" disabled={submitting}
-                  options={catalogs.contractors.map((c) => ({ value: c.id, label: c.name, sublabel: c.nit ? `NIT ${c.nit}` : undefined }))}
-                  value={contractorId} onChange={(v) => setContractorId(Number(v))} />
-              </div>
-            )}
+        {factura.amount === null && (
+          <div className="space-y-1.5">
+            <label className={labelClass}>Valor de la factura *</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
+              <input disabled={submitting} inputMode="numeric" className={`${inputClass} pl-8`} placeholder="Contabilidad no lo registró"
+                value={amount} onChange={(e) => setAmount(formatMoneyInput(e.target.value))} />
+            </div>
           </div>
-        )}
-
-        {/* Al corte solo se asocia: el soporte de Multifox lo carga Paula al confirmar y queda en la carpeta del corte */}
-        {targetType === 'orden' && (
-        <div className="space-y-2">
-          <label className={labelClass}>Soportes (opcional: aprobaciones y entrada de Multifox)</label>
-          <div onClick={() => !submitting && fileInputRef.current?.click()}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => { e.preventDefault(); if (!submitting) addFiles(e.dataTransfer.files); }}
-            className="border-2 border-dashed border-slate-300 hover:border-[#004C6C]/60 hover:bg-blue-50/30 rounded-3xl p-4 flex flex-col items-center justify-center gap-1 text-center cursor-pointer bg-white transition-all">
-            <input ref={fileInputRef} type="file" multiple className="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp"
-              onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
-            <UploadCloud size={22} className="text-slate-400" />
-            <p className="text-sm font-bold text-slate-500">Arrastra los archivos, haz clic o pega las capturas (Ctrl+V)</p>
-          </div>
-          {files.length > 0 && (
-            <ul className="space-y-1.5">
-              {files.map((file, i) => (
-                <li key={`${file.name}-${i}`} className="flex items-center justify-between gap-2 bg-white rounded-xl border border-slate-100 px-3 py-2">
-                  <span className="flex items-center gap-2 min-w-0">
-                    {file.type.startsWith('image/') ? <Paperclip size={14} className="text-slate-400 shrink-0" /> : <FileText size={14} className="text-slate-400 shrink-0" />}
-                    <span className="text-xs font-bold text-slate-700 truncate">{file.name}</span>
-                    <span className="text-[11px] font-bold text-slate-400 shrink-0">{formatBytes(file.size)}</span>
-                  </span>
-                  <button type="button" disabled={submitting} onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50" title="Quitar">
-                    <Trash2 size={14} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
         )}
 
         <div className="space-y-1.5">
@@ -261,11 +185,11 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
 
         {targetType === 'corte' && (
           <p className="text-[11px] font-bold text-slate-400">
-            Al asociarla, la factura se copia a la carpeta del corte (05 CORTES), el corte pasa a Facturado y se avisa para el registro en Multifox y cuentas por pagar.
+            Al asociarla, la factura se copia a la carpeta del corte (05 CORTES), el corte pasa a Facturado y se avisa para el registro en Multifox. Con la aprobación de Contabilidad pasa a cuentas por pagar.
           </p>
         )}
         {targetType === 'orden' && (
-          <p className="text-[11px] font-bold text-slate-400">Al asociarla, la factura se copia a la carpeta de la orden y la orden pasa a la entrada de almacén.</p>
+          <p className="text-[11px] font-bold text-slate-400">Al asociarla, la factura se copia a la carpeta de la orden y la orden pasa a la entrada de almacén. Con la aprobación de Contabilidad pasa a cuentas por pagar.</p>
         )}
       </div>
     </ModalShell>

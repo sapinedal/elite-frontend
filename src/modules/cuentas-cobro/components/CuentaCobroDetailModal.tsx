@@ -4,6 +4,7 @@ import {
   Receipt, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Download, Database, FileText, Paperclip, Wallet, ArrowRight,
 } from 'lucide-react';
 import { HistoryButton, HistoryModal } from '../../../components/ui/HistoryModal';
+import { AccountingReviewPanel } from '../../../components/ui/AccountingReviewPanel';
 import { FileDrop } from '../../../components/ui/FileDrop';
 import { ModalShell, inputClass, labelClass } from '../../../components/ui/ModalShell';
 import { formatDateTime } from '../../../utils/dateUtils';
@@ -21,6 +22,7 @@ interface CuentaCobroDetailModalProps {
   onResubmit: (cuenta: CuentaCobro) => void;
   onDecideMultifox: (id: number, requiresMultifox: boolean, comment?: string) => Promise<CuentaCobro>;
   onRegisterMultifox: (id: number, payload: CuentaCobroMultifoxPayload) => Promise<CuentaCobro>;
+  onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<CuentaCobro>;
 }
 
 const STEP_STYLES: Record<CuentaCobroProgressStep['state'], { icon: React.ReactNode; tone: string }> = {
@@ -43,6 +45,8 @@ const ACTION_LABELS: Record<CuentaCobroHistoryEntry['action'], { label: string; 
   sin_multifox: { label: 'No requiere Multifox', tone: 'text-teal-700' },
   requiere_multifox: { label: 'Requiere Multifox', tone: 'text-purple-700' },
   multifox: { label: 'Cargada en Multifox', tone: 'text-teal-700' },
+  contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
+  contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
 };
 
 /**
@@ -55,7 +59,7 @@ export const CuentaCobroDetailModal: React.FC<CuentaCobroDetailModalProps> = ({ 
 );
 
 const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { cuentaId: number }> = ({
-  cuentaId, maxUploadMb, onClose, onReview, onResubmit, onDecideMultifox, onRegisterMultifox,
+  cuentaId, maxUploadMb, onClose, onReview, onResubmit, onDecideMultifox, onRegisterMultifox, onReviewAccounting,
 }) => {
   const [cuenta, setCuenta] = useState<CuentaCobro | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -161,7 +165,7 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
               <HistoryButton count={cuenta.history?.length} onClick={() => setHistoryOpen(true)} />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {(cuenta.progress ?? []).map((step, index) => {
                 const style = STEP_STYLES[step.state];
                 return (
@@ -271,13 +275,13 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
                 {cuenta.status === 'pendiente_revision' && !multifoxOpen && (
                   <>
                     <p className="text-xs font-bold text-slate-500">
-                      Si no requiere Multifox pasa de una vez al cuadro de pagos. Si requiere, pasa cuando la cargues.
+                      En ambos casos pasa a la aprobación de Contabilidad antes del cuadro de pagos: de una vez si no requiere Multifox, o cuando la cargues si sí.
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <button type="button" disabled={saving}
                         onClick={() => act(() => onDecideMultifox(cuenta.id, false), 'Error al registrar la decisión.')}
                         className="px-4 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-60">
-                        <ArrowRight size={18} /> No requiere: al cuadro de pagos
+                        <ArrowRight size={18} /> No requiere: a Contabilidad
                       </button>
                       <button type="button" disabled={saving} onClick={() => setMultifoxOpen(true)}
                         className="px-4 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-[#004C6C] text-white hover:bg-[#003a53] disabled:opacity-60">
@@ -311,11 +315,19 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
                       className={`${inputClass} resize-none`} placeholder="Observación (opcional)" />
                     <button type="button" onClick={handleMultifox} disabled={saving}
                       className="w-full px-6 py-4 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2 disabled:opacity-60">
-                      {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />} Cargada en Multifox: pasar al cuadro de pagos
+                      {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />} Cargada en Multifox: enviar a Contabilidad
                     </button>
                   </>
                 )}
               </div>
+            )}
+
+            {cuenta.can_review_accounting && (
+              <AccountingReviewPanel
+                subject={`Cuenta de cobro ${cuenta.code}${cuenta.multifox_number ? ` (Multifox N.º ${cuenta.multifox_number})` : cuenta.requires_multifox === false ? ' (no requiere Multifox)' : ''}`}
+                returnsTo="Multifox"
+                approvesTo="el cuadro de pagos"
+                onSubmit={async (decision, comment) => setCuenta(await onReviewAccounting(cuenta.id, decision, comment))} />
             )}
           </>
         )}
