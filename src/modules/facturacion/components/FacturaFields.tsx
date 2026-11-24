@@ -1,7 +1,7 @@
 import React from 'react';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { formatMoneyInput } from '../../../utils/money';
-import { affectsAnother, type FacturaDraft } from '../utils/draft';
+import { affectsAnother, isIndirecto, type FacturaDraft } from '../utils/draft';
 import { inputClass, labelClass } from '../../../components/ui/ModalShell';
 import type { FacturacionCatalogs, FacturaDocumentType } from '../types';
 
@@ -11,13 +11,16 @@ interface FacturaFieldsProps {
   catalogs: FacturacionCatalogs;
   disabled?: boolean;
   compact?: boolean;
+  /** Al corregir una factura ya cargada no se ofrece Indirecto (se elimina y se carga de nuevo) */
+  allowIndirecto?: boolean;
 }
 
 /**
  * Campos de la factura que diligencia Contabilidad: tipo, número, proveedor (del catálogo o como viene en el
- * archivo), valor y, en notas crédito y facturas de reemplazo, el documento que afectan.
+ * archivo), valor y, en notas crédito y facturas de reemplazo, el documento que afectan. El indirecto exige el valor
+ * porque pasa directo a cuentas por pagar.
  */
-export const FacturaFields: React.FC<FacturaFieldsProps> = ({ draft, onChange, catalogs, disabled, compact }) => {
+export const FacturaFields: React.FC<FacturaFieldsProps> = ({ draft, onChange, catalogs, disabled, compact, allowIndirecto = true }) => {
   const prefix = catalogs.document_types.find((t) => t.key === draft.documentType)?.prefix;
 
   return (
@@ -26,7 +29,9 @@ export const FacturaFields: React.FC<FacturaFieldsProps> = ({ draft, onChange, c
         <label className={labelClass}>Tipo *</label>
         <select disabled={disabled} className={inputClass} value={draft.documentType}
           onChange={(e) => onChange({ documentType: e.target.value as FacturaDocumentType })}>
-          {catalogs.document_types.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+          {catalogs.document_types
+            .filter((t) => allowIndirecto || t.key !== 'indirecto' || draft.documentType === 'indirecto')
+            .map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
         </select>
       </div>
       <div className="space-y-1.5">
@@ -51,10 +56,10 @@ export const FacturaFields: React.FC<FacturaFieldsProps> = ({ draft, onChange, c
         />
       </div>
       <div className="space-y-1.5">
-        <label className={labelClass}>Valor</label>
+        <label className={labelClass}>{isIndirecto(draft.documentType) ? 'Valor *' : 'Valor'}</label>
         <div className="relative">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
-          <input disabled={disabled} inputMode="numeric" className={`${inputClass} pl-8`} placeholder="Opcional"
+          <input disabled={disabled} inputMode="numeric" className={`${inputClass} pl-8`} placeholder={isIndirecto(draft.documentType) ? '0' : 'Opcional'}
             value={draft.amount} onChange={(e) => onChange({ amount: formatMoneyInput(e.target.value) })} />
         </div>
       </div>
@@ -64,6 +69,11 @@ export const FacturaFields: React.FC<FacturaFieldsProps> = ({ draft, onChange, c
           <input disabled={disabled} className={inputClass} placeholder="Ej: FE 335"
             value={draft.relatedDocument} onChange={(e) => onChange({ relatedDocument: e.target.value })} />
         </div>
+      )}
+      {isIndirecto(draft.documentType) && (
+        <p className={`text-[11px] font-bold text-amber-700 bg-amber-50 rounded-xl px-3 py-2 ${compact ? 'lg:col-span-4' : 'sm:col-span-2'}`}>
+          Indirecto: no se asocia a corte, orden ni entrada. Al cargarlo pasa directo a cuentas por pagar (frente Indirectos).
+        </p>
       )}
       {!compact && (
         <div className="space-y-1.5 sm:col-span-2">

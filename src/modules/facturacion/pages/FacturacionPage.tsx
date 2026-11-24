@@ -274,7 +274,17 @@ export default function FacturacionPage() {
             onClose={() => { setUploadOpen(false); clearNew(); }}
             catalogs={catalogs}
             defaultPeriod={currentPeriod}
-            onUploaded={(count) => { showNotification(`${count} factura(s) cargada(s). Quedan pendientes de obra.`, 'success'); refresh(); }}
+            onUploaded={(count, indirectos) => {
+              showNotification(
+                indirectos === count
+                  ? `${count} indirecto(s) cargado(s). Pasaron directo a cuentas por pagar.`
+                  : indirectos
+                    ? `${count} factura(s) cargada(s): ${indirectos} indirecto(s) a cuentas por pagar y ${count - indirectos} pendiente(s) de obra.`
+                    : `${count} factura(s) cargada(s). Quedan pendientes de obra.`,
+                'success'
+              );
+              refresh();
+            }}
           />
           <AssociateModal
             factura={associating}
@@ -283,9 +293,11 @@ export default function FacturacionPage() {
             onAssociated={(f) => {
               setAssociating(null);
               showNotification(
-                f.target?.type === 'orden'
-                  ? `${f.document_number} asociada a la ${f.target.label}. Pasa a la entrada de almacén.`
-                  : `${f.document_number} asociada al ${f.target?.label}. Se notificó para Multifox.`,
+                f.target?.type === 'anticipo'
+                  ? `${f.document_number} radicada como anticipo ${f.target.label}. Se notificó al Director de Obra.`
+                  : f.target?.type === 'orden'
+                    ? `${f.document_number} asociada a la ${f.target.label}. Pasa a la entrada de almacén.`
+                    : `${f.document_number} asociada al ${f.target?.label}. Se notificó para Multifox.`,
                 'success'
               );
               refresh();

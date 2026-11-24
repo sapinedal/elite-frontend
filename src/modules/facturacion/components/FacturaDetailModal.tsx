@@ -52,7 +52,12 @@ const DetailContent: React.FC<{ facturaId: number; onClose: () => void }> = ({ f
   };
 
   const targetHref = factura?.target
-    ? factura.target.type === 'corte' ? `/app/contratacion/cortes?corte=${factura.target.id}` : '/app/contratacion/ordenes'
+    ? {
+      corte: `/app/contratacion/cortes?corte=${factura.target.id}`,
+      orden: '/app/contratacion/ordenes',
+      anticipo: `/app/contratacion/anticipos?anticipo=${factura.target.id}`,
+      pagos: '/app/contratacion/cuentas-por-pagar',
+    }[factura.target.type]
     : null;
 
   return (
@@ -99,7 +104,7 @@ const DetailContent: React.FC<{ facturaId: number; onClose: () => void }> = ({ f
                 </div>
                 {targetHref && (
                   <Link to={targetHref} className="flex items-center gap-1 text-xs font-bold text-[#004C6C] hover:bg-blue-50 px-3 py-2 rounded-xl">
-                    Ver {factura.target.type === 'corte' ? 'corte' : 'orden'} <ArrowRight size={14} />
+                    Ver {factura.target.type === 'pagos' ? 'cuentas por pagar' : factura.target.type} <ArrowRight size={14} />
                   </Link>
                 )}
               </div>

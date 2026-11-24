@@ -3,6 +3,9 @@ import type { ContractorOption, FacturaDocumentType } from '../types';
 const PREFIXES: [RegExp, FacturaDocumentType][] = [
   [/^C-?C$/i, 'cuenta_cobro'],
   [/^NC$/i, 'nota_credito'],
+  [/^RE$/i, 'reembolso'],
+  [/^COT$/i, 'cotizacion'],
+  [/^IND$/i, 'indirecto'],
   [/^FE?$/i, 'factura'],
 ];
 
@@ -16,6 +19,8 @@ const NOISE = new Set(['SAS', 'S', 'A', 'LTDA', 'SA', 'DE', 'Y', 'EL', 'LA', 'DE
  * Lee el nombre con el que Contabilidad nombra las facturas en la carpeta del mes:
  *   "FE 335 INVALGO SAS.pdf"        -> factura, 335, INVALGO SAS
  *   "C-C 15102026 D PROYECTOS.pdf"  -> cuenta de cobro, 15102026, D PROYECTOS
+ *   "RE 12 INVALGO SAS.pdf"         -> reembolso;  "COT 88 INVALGO SAS.pdf" -> cotización;
+ *   "IND 901 INVALGO SAS.pdf"       -> indirecto
  * Si no reconoce el formato, deja el nombre como proveedor para que lo completen a mano.
  */
 export function parseInvoiceFileName(fileName: string): { documentType: FacturaDocumentType; invoiceNumber: string; supplierName: string } {

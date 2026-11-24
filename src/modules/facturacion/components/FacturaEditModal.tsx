@@ -72,7 +72,7 @@ const EditContent: React.FC<FacturaEditModalProps & { factura: Factura }> = ({ f
       <p className="text-xs font-bold text-slate-400">
         Mes: {factura.period_label}. Si la factura quedó en un mes equivocado, elimínala y vuelve a cargarla en el correcto.
       </p>
-      <FacturaFields catalogs={catalogs} draft={draft} disabled={saving} onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
+      <FacturaFields catalogs={catalogs} allowIndirecto={false} draft={draft} disabled={saving} onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} />
     </ModalShell>
   );
 };

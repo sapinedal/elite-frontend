@@ -1,4 +1,7 @@
-export type FacturaDocumentType = 'factura' | 'cuenta_cobro' | 'nota_credito' | 'factura_reemplazo';
+export type FacturaDocumentType = 'factura' | 'cuenta_cobro' | 'nota_credito' | 'factura_reemplazo' | 'reembolso' | 'cotizacion' | 'indirecto';
+
+/** A dónde va el documento: la cotización se radica como anticipo; el indirecto pasa directo a cuentas por pagar */
+export type FacturaTargetType = 'corte' | 'orden' | 'anticipo' | 'pagos';
 
 export type FacturaStatus = 'pendiente' | 'procesada';
 
@@ -20,7 +23,7 @@ export interface FacturacionCatalogs {
   s3_root: string;
   /** Contabilidad (cortes.facturar): carga facturas y ve el panel */
   can_manage: boolean;
-  /** Residente (cortes.crear / ordenes.crear): asocia facturas a sus cortes y órdenes */
+  /** Residente (cortes.crear / ordenes.crear / anticipos.crear): asocia facturas a sus cortes y órdenes, y radica cotizaciones como anticipo */
   can_associate: boolean;
 }
 
@@ -45,7 +48,7 @@ export interface Factura {
   days_pending: number | null;
   status: FacturaStatus;
   status_label: string;
-  target: { type: 'corte' | 'orden'; id: number; code: string | null; label: string } | null;
+  target: { type: FacturaTargetType; id: number; code: string | null; label: string } | null;
   processed_by: string | null;
   processed_at: string | null;
   processed_comment: string | null;
@@ -94,13 +97,27 @@ export interface OrdenTarget {
   approved_at: string | null;
 }
 
+/** Contrato al que se radica la cotización como anticipo */
+export interface ContratoTarget {
+  id: number;
+  contract_code: string;
+  contractor_id: number | null;
+  contractor_name: string | null;
+  object: string | null;
+  project: string | null;
+  tower: string | null;
+}
+
 export interface FacturaTargets {
   cortes: CorteTarget[];
   ordenes: OrdenTarget[];
+  /** Solo para cotizaciones */
+  contratos: ContratoTarget[];
 }
 
 export interface AssociatePayload {
-  target_type: 'corte' | 'orden';
+  target_type: FacturaTargetType;
+  /** Corte, orden o, para el anticipo, el contrato */
   target_id: number;
   amount: number | null;
   contractor_id: number | null;

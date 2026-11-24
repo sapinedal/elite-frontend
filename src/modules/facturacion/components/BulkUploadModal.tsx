@@ -15,7 +15,8 @@ interface BulkUploadModalProps {
   catalogs: FacturacionCatalogs;
   defaultPeriod: string;
   /** Se llama al terminar si se cargó al menos una factura */
-  onUploaded: (count: number) => void;
+  /** indirectos: cuántas de las cargadas pasaron directo a cuentas por pagar */
+  onUploaded: (count: number, indirectos: number) => void;
 }
 
 interface Row extends FacturaDraft {
@@ -81,11 +82,11 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
 
   const close = () => {
     if (running) return;
-    const uploaded = rows.filter((r) => r.state === 'cargada').length;
+    const done = rows.filter((r) => r.state === 'cargada');
     setRows([]);
     setError(null);
     onClose();
-    if (uploaded) onUploaded(uploaded);
+    if (done.length) onUploaded(done.length, done.filter((r) => r.documentType === 'indirecto').length);
   };
 
   const handleUpload = async () => {

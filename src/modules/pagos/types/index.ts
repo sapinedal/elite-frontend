@@ -4,7 +4,7 @@ export type PagoPriority = 'alta' | 'media' | 'baja';
 
 export type PagoScope = 'por_priorizar' | 'programadas' | 'pagadas' | 'todas';
 
-export type PagoSource = 'corte' | 'orden' | 'anticipo' | 'cuenta_cobro' | 'manual';
+export type PagoSource = 'corte' | 'orden' | 'anticipo' | 'cuenta_cobro' | 'manual' | 'indirecto';
 
 export interface PagoCatalogs {
   projects: { id: number; name: string }[];
