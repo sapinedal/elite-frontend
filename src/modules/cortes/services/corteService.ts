@@ -91,13 +91,14 @@ export const corteService = {
   },
 
   /** URL de descarga de la factura, o de su soporte de Multifox con `multifox` */
-  getInvoiceDownloadUrl: async (invoiceId: number, multifox = false): Promise<string> => {
-    const { data } = await api.get(`${BASE}/invoices/${invoiceId}/download`, { params: multifox ? { multifox: 1 } : {} });
+  /** inline: URL para ver el archivo en el navegador (PDF) en lugar de descargarlo */
+  getInvoiceDownloadUrl: async (invoiceId: number, multifox = false, inline = false): Promise<string> => {
+    const { data } = await api.get(`${BASE}/invoices/${invoiceId}/download`, { params: { ...(multifox ? { multifox: 1 } : {}), ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },
 
-  getDownloadUrl: async (id: number): Promise<string> => {
-    const { data } = await api.get(`${BASE}/${id}/download`);
+  getDownloadUrl: async (id: number, inline = false): Promise<string> => {
+    const { data } = await api.get(`${BASE}/${id}/download`, { params: { ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },
 };

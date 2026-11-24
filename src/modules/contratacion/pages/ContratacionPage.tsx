@@ -21,7 +21,7 @@ const STATUS_STYLES: Record<string, string> = {
   'En ejecución': 'bg-blue-50 text-[#004C6C]',
   Suspendido: 'bg-orange-50 text-orange-600',
   Terminado: 'bg-green-50 text-green-600',
-  Liquidado: 'bg-purple-50 text-purple-600',
+  Liquidado: 'bg-[#004C6C] text-white',
 };
 
 const formatDate = (value: string | null) => {

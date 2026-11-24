@@ -17,6 +17,7 @@ import { FacturaDetailModal } from '../components/FacturaDetailModal';
 import { FacturaEditModal } from '../components/FacturaEditModal';
 import { FacturaStatusBadge } from '../components/FacturaStatusBadge';
 import { FacturacionPanel } from '../components/FacturacionPanel';
+import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import type { Factura, FacturaScope } from '../types';
 
 type Tab = FacturaScope | 'panel';
@@ -147,6 +148,7 @@ export default function FacturacionPage() {
               <Eye size={15} /> Ver
             </button>
           )}
+          <ViewPdfButton fileName={f.file_name} getUrl={() => facturacionService.getDownloadUrl(f.id, true)} title="Ver PDF de la factura" />
           <button onClick={() => handleDownload(f)} className="p-2 rounded-xl text-[#004C6C] hover:bg-blue-50" title="Descargar factura">
             {downloadingId === f.id ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
           </button>

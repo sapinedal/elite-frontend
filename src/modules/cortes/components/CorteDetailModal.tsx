@@ -10,6 +10,7 @@ import { corteService, getApiErrorMessage } from '../services/corteService';
 import { CorteStatusBadge } from './CorteStatusBadge';
 import { CorteInvoicesSection } from './CorteInvoicesSection';
 import { formatBytes } from '../utils/format';
+import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import type { Corte, CorteHistoryEntry, CorteProgressStep } from '../types';
 
 interface CorteDetailModalProps {
@@ -33,7 +34,7 @@ const ACTION_LABELS: Record<CorteHistoryEntry['action'], { label: string; tone: 
   reenviado: { label: 'Reenviado', tone: 'text-[#004C6C]' },
   aprobado: { label: 'Aprobado', tone: 'text-green-600' },
   devuelto: { label: 'Devuelto', tone: 'text-red-600' },
-  factura: { label: 'Documento de facturación cargado', tone: 'text-teal-700' },
+  factura: { label: 'Documento de facturación cargado', tone: 'text-[#004C6C]' },
   multifox: { label: 'Cargada en Multifox', tone: 'text-green-700' },
   contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
@@ -180,10 +181,14 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
                       <p className="text-[11px] font-bold text-slate-400">{formatBytes(corte.file_size)}</p>
                     </div>
                   </div>
-                  <button onClick={handleDownload} disabled={downloading}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#004C6C] text-white text-xs font-bold hover:bg-[#003a53] disabled:opacity-60 shrink-0">
-                    {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Descargar
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <ViewPdfButton fileName={corte.file_name} getUrl={() => corteService.getDownloadUrl(corte.id, true)} size={14} label="Ver"
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#004C6C]/20 bg-white text-[#004C6C] text-xs font-bold hover:bg-blue-50" />
+                    <button onClick={handleDownload} disabled={downloading}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#004C6C] text-white text-xs font-bold hover:bg-[#003a53] disabled:opacity-60 shrink-0">
+                      {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Descargar
+                    </button>
+                  </div>
                 </div>
               </div>
 

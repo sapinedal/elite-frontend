@@ -38,18 +38,18 @@ import { useProject } from '../../../context/ProjectContext';
 const areaColors = [
     '#004C6C', // Azul Principal Elite
     '#EE9D4C', // Naranja/Ocre Elite
-    '#0EA5E9', // Sky Blue
-    '#10B981', // Emerald Green
-    '#6366F1', // Indigo
-    '#8B5CF6', // Violet
-    '#EC4899', // Pink
-    '#14B8A6', // Teal
+    '#3D7A96', // Azul Elite medio
+    '#94A3B8', // Gris pizarra
+    '#7FA6B8', // Azul Elite claro
+    '#C2701F', // Naranja Elite oscuro
+    '#003850', // Azul Elite oscuro
+    '#F6C99B', // Naranja Elite claro
 ];
 
 const statusColors: Record<TaskStatus, string> = {
     'Por hacer': '#EE9D4C', // Naranja/Ocre Elite
     'En espera': '#FBBF24', // Amarillo/Ambar
-    'En progreso': '#0EA5E9', // Azul Sky
+    'En progreso': '#004C6C', // Azul Principal Elite
     'Completada': '#10B981'  // Emerald Green
 };
 

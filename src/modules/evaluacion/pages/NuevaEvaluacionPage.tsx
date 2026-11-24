@@ -1116,7 +1116,7 @@ export default function NuevaEvaluacionPage() {
               <button
                 onClick={handleGenerateAIAnalysis}
                 disabled={isGeneratingAI || !evaluation?.results?.some(r => r.real_value !== null)}
-                className="flex items-center gap-2 px-5 py-2 bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                className="flex items-center gap-2 px-5 py-2 bg-linear-to-r from-blue-600 to-[#003850] text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
               >
                 {isGeneratingAI ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

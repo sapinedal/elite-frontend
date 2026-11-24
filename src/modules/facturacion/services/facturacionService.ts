@@ -80,13 +80,14 @@ export const facturacionService = {
     return data.data;
   },
 
-  getDownloadUrl: async (id: number): Promise<string> => {
-    const { data } = await api.get(`${BASE}/${id}/download`);
+  /** inline: URL para ver el archivo en el navegador (PDF) en lugar de descargarlo */
+  getDownloadUrl: async (id: number, inline = false): Promise<string> => {
+    const { data } = await api.get(`${BASE}/${id}/download`, { params: { ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },
 
-  getSupportDownloadUrl: async (supportId: number): Promise<string> => {
-    const { data } = await api.get(`${BASE}/supports/${supportId}/download`);
+  getSupportDownloadUrl: async (supportId: number, inline = false): Promise<string> => {
+    const { data } = await api.get(`${BASE}/supports/${supportId}/download`, { params: { ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },
 };

@@ -8,6 +8,7 @@ import { formatMoney } from '../../../utils/money';
 import { inputClass, labelClass } from '../../../components/ui/ModalShell';
 import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { ordenService, getApiErrorMessage } from '../services/ordenService';
+import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import type { Orden, OrdenCatalogs, OrdenDocumentPayload, OrdenStepKey } from '../types';
 
 interface OrdenDocumentsSectionProps {
@@ -22,8 +23,8 @@ interface OrdenDocumentsSectionProps {
 
 const STEP_STYLES: Record<OrdenStepKey, string> = {
   orden_erp: 'bg-blue-50 text-[#004C6C]',
-  factura: 'bg-teal-50 text-teal-700',
-  entrada: 'bg-purple-50 text-purple-700',
+  factura: 'bg-blue-50 text-[#004C6C]',
+  entrada: 'bg-blue-50 text-[#004C6C]',
 };
 
 // Indicaciones para quien carga cada documento de Almacén
@@ -117,10 +118,10 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-teal-100 p-6 space-y-5">
+    <div className="bg-white rounded-3xl border border-blue-100 p-6 space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Receipt size={18} className="text-teal-600" />
+          <Receipt size={18} className="text-[#004C6C]" />
           <h3 className="font-black text-[#004C6C] tracking-tight">Facturación y recepción</h3>
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             {documents.length} de {steps.length} documentos
@@ -151,7 +152,7 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
                     {doc.step_label}
                   </span>
                   <span className="font-black text-slate-700">N.º {doc.number}</span>
-                  {doc.amount !== null && <span className="font-black text-teal-700">{formatMoney(doc.amount)}</span>}
+                  {doc.amount !== null && <span className="font-black text-[#004C6C]">{formatMoney(doc.amount)}</span>}
                 </div>
                 {doc.contractor && <p className="text-xs font-bold text-slate-600">{doc.contractor.name}{doc.contractor.nit ? ` · NIT ${doc.contractor.nit}` : ''}</p>}
                 {doc.observation && <p className="text-xs font-medium text-slate-600 whitespace-pre-line">{doc.observation}</p>}
@@ -159,6 +160,7 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
                   {doc.file_name} · {formatBytes(doc.file_size)} · {doc.uploaded_by ?? '—'} · {formatDateTime(doc.created_at)}
                 </p>
               </div>
+              <ViewPdfButton fileName={doc.file_name} getUrl={() => ordenService.getDocumentDownloadUrl(doc.id, true)} size={16} className="p-2.5 rounded-xl text-[#004C6C] hover:bg-blue-50 shrink-0" />
               <button type="button" onClick={() => handleDownload(doc.id)} disabled={downloadingId === doc.id}
                 className="p-2.5 rounded-xl text-[#004C6C] hover:bg-blue-50 shrink-0" title="Descargar">
                 {downloadingId === doc.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}

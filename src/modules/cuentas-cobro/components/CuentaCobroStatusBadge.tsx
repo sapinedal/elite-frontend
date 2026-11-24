@@ -6,8 +6,8 @@ const STYLES: Record<CuentaCobroStatus, string> = {
   pendiente_gerencia: 'bg-orange-50 text-orange-700 border-orange-100',
   devuelta: 'bg-red-50 text-red-600 border-red-100',
   pendiente_revision: 'bg-blue-50 text-[#004C6C] border-blue-100',
-  pendiente_multifox: 'bg-purple-50 text-purple-700 border-purple-100',
-  pendiente_aprobacion_contable: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+  pendiente_multifox: 'bg-[#004C6C] text-white border-[#004C6C]',
+  pendiente_aprobacion_contable: 'bg-[#004C6C]/15 text-[#004C6C] border-[#004C6C]/20',
   en_pagos: 'bg-green-50 text-green-700 border-green-100',
 };
 

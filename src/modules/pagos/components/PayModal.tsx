@@ -96,7 +96,7 @@ const PayContent: React.FC<Omit<PayModalProps, 'cuenta'> & { cuenta: PagoCuenta 
               <input disabled={saving} inputMode="numeric" className={`${inputClass} pl-9`}
                 value={amount} onChange={(e) => setAmount(formatMoneyInput(e.target.value))} />
             </div>
-            {isPartial && <p className="text-[11px] font-bold text-purple-600 ml-1">Abono: quedará un saldo de {formatMoney(cuenta.balance - value)} por priorizar.</p>}
+            {isPartial && <p className="text-[11px] font-bold text-[#004C6C] ml-1">Abono: quedará un saldo de {formatMoney(cuenta.balance - value)} por priorizar.</p>}
           </div>
           <div className="space-y-2">
             <label className={labelClass}>Fecha de pago *</label>

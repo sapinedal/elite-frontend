@@ -81,8 +81,9 @@ export const pagoService = {
     URL.revokeObjectURL(url);
   },
 
-  getSupportDownloadUrl: async (movimientoId: number): Promise<string> => {
-    const { data } = await api.get(`${BASE}/movimientos/${movimientoId}/download`);
+  /** inline: URL para ver el archivo en el navegador (PDF) en lugar de descargarlo */
+  getSupportDownloadUrl: async (movimientoId: number, inline = false): Promise<string> => {
+    const { data } = await api.get(`${BASE}/movimientos/${movimientoId}/download`, { params: { ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },
 };

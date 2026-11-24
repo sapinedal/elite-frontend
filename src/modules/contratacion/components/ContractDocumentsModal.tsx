@@ -8,6 +8,7 @@ import { contratacionService, getApiErrorMessage } from '../services/contratacio
 import type { Contract, ContractDocument, ContratacionCatalogs } from '../types';
 import { S3FolderPickerModal } from './S3FolderPickerModal';
 
+import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import { useConfirm } from '../../../context/ConfirmContext';
 interface ContractDocumentsModalProps {
   isOpen: boolean;
@@ -217,6 +218,7 @@ export const ContractDocumentsModal: React.FC<ContractDocumentsModalProps> = ({
           {formatBytes(doc.size)}{doc.uploaded_by ? ` · ${doc.uploaded_by}` : ''}
         </p>
       </div>
+      <ViewPdfButton fileName={doc.name} getUrl={() => contratacionService.getDownloadUrl(doc.id, true)} className="p-2 text-[#004C6C] hover:bg-white rounded-lg" />
       <button onClick={() => handleDownload(doc)} className="p-2 text-[#004C6C] hover:bg-white rounded-lg" title="Descargar">
         <Download size={15} />
       </button>

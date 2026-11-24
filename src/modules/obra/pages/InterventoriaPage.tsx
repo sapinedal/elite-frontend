@@ -305,12 +305,12 @@ export default function InterventoriaPage() {
                 <div className="bg-amber-500 h-full" style={{ width: `${saldoPct ?? 0}%` }} />
               </div>
             </div>
-            <div className={`bg-white p-6 rounded-3xl border-l-4 ${expiredPolicies.length ? 'border-l-rose-600' : 'border-l-indigo-600'} border border-slate-100 shadow-sm space-y-2`}>
+            <div className={`bg-white p-6 rounded-3xl border-l-4 ${expiredPolicies.length ? 'border-l-rose-600' : 'border-l-[#004C6C]'} border border-slate-100 shadow-sm space-y-2`}>
               <div className="flex items-center justify-between">
-                <span className={`text-[11px] font-extrabold uppercase tracking-wider ${expiredPolicies.length ? 'text-rose-600' : 'text-indigo-600'}`}>Pólizas vencidas</span>
-                <ShieldAlert className={`w-5 h-5 ${expiredPolicies.length ? 'text-rose-600' : 'text-indigo-600'}`} />
+                <span className={`text-[11px] font-extrabold uppercase tracking-wider ${expiredPolicies.length ? 'text-rose-600' : 'text-[#004C6C]'}`}>Pólizas vencidas</span>
+                <ShieldAlert className={`w-5 h-5 ${expiredPolicies.length ? 'text-rose-600' : 'text-[#004C6C]'}`} />
               </div>
-              <p className={`text-xl md:text-2xl font-black ${expiredPolicies.length ? 'text-rose-700' : 'text-indigo-900'}`}>
+              <p className={`text-xl md:text-2xl font-black ${expiredPolicies.length ? 'text-rose-700' : 'text-[#004C6C]'}`}>
                 {report.polizas.length ? `${expiredPolicies.length} de ${report.polizas.length}` : '—'}
               </p>
               <p className="text-[11px] font-bold text-slate-500">{report.polizas.length ? 'Según el informe de interventoría' : 'El informe no reporta pólizas'}</p>

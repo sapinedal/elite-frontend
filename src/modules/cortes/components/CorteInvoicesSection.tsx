@@ -7,6 +7,7 @@ import { formatDateTime } from '../../../utils/dateUtils';
 import { formatMoney } from '../../../utils/money';
 import { corteService, getApiErrorMessage } from '../services/corteService';
 import { formatBytes } from '../utils/format';
+import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import type { Corte, InvoiceDocumentType } from '../types';
 
 interface CorteInvoicesSectionProps {
@@ -23,7 +24,7 @@ interface CorteInvoicesSectionProps {
 const TYPE_STYLES: Record<InvoiceDocumentType, string> = {
   factura_inicial: 'bg-blue-50 text-[#004C6C]',
   nota_credito: 'bg-orange-50 text-orange-700',
-  factura_reemplazo: 'bg-purple-50 text-purple-700',
+  factura_reemplazo: 'bg-blue-50 text-[#004C6C]',
 };
 
 /**
@@ -79,10 +80,10 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-teal-100 p-6 space-y-5">
+    <div className="bg-white rounded-3xl border border-blue-100 p-6 space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Receipt size={18} className="text-teal-600" />
+          <Receipt size={18} className="text-[#004C6C]" />
           <h3 className="font-black text-[#004C6C] tracking-tight">Facturación</h3>
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             {invoices.length ? `${invoices.length} documento(s)` : 'Sin facturas'}
@@ -115,7 +116,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                     {invoice.document_type_label}
                   </span>
                   <span className="font-black text-slate-700">N.º {invoice.invoice_number}</span>
-                  {invoice.amount !== null && <span className="font-black text-teal-700">{formatMoney(invoice.amount)}</span>}
+                  {invoice.amount !== null && <span className="font-black text-[#004C6C]">{formatMoney(invoice.amount)}</span>}
                   {invoice.related_document && (
                     <span className="text-xs font-bold text-slate-500">→ afecta a {invoice.related_document}</span>
                   )}
@@ -154,12 +155,16 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                   {invoice.file_name} · {formatBytes(invoice.file_size)} · {invoice.uploaded_by ?? '—'} · {formatDateTime(invoice.created_at)}
                 </p>
                 {invoice.multifox_file_name && (
+                  <span className="flex items-center gap-1 max-w-full">
                   <button type="button" onClick={() => handleDownload(invoice.id, true)} disabled={downloadingId === `${invoice.id}:true`}
                     className="flex items-center gap-1 text-[11px] font-bold text-[#004C6C] hover:underline max-w-full" title="Descargar el soporte de Multifox">
                     {downloadingId === `${invoice.id}:true` ? <Loader2 size={12} className="animate-spin shrink-0" /> : <Paperclip size={12} className="shrink-0" />}
                     <span className="truncate">Soporte Multifox: {invoice.multifox_file_name}</span>
                     {invoice.multifox_file_size !== null && <span className="text-slate-400 shrink-0">· {formatBytes(invoice.multifox_file_size)}</span>}
                   </button>
+                  <ViewPdfButton fileName={invoice.multifox_file_name} getUrl={() => corteService.getInvoiceDownloadUrl(invoice.id, true, true)} size={12}
+                    className="p-1 rounded-md text-[#004C6C] hover:bg-blue-50 shrink-0" title="Ver el soporte de Multifox" />
+                  </span>
                 )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
@@ -170,6 +175,8 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                     <CheckCircle2 size={14} /> Cargada en Multifox
                   </button>
                 )}
+                <ViewPdfButton fileName={invoice.file_name} getUrl={() => corteService.getInvoiceDownloadUrl(invoice.id, false, true)} size={16}
+                  className="p-2.5 rounded-xl text-[#004C6C] hover:bg-blue-50" title="Ver factura" />
                 <button type="button" onClick={() => handleDownload(invoice.id)} disabled={downloadingId === `${invoice.id}:false`}
                   className="p-2.5 rounded-xl text-[#004C6C] hover:bg-blue-50" title="Descargar factura">
                   {downloadingId === `${invoice.id}:false` ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}

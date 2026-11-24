@@ -111,17 +111,17 @@ const getActionBadge = (action: string) => {
     case 'update':
       return <span className={`${badgeBase} bg-emerald-50 text-emerald-700 border-emerald-100`}><PencilLine className="w-3 h-3" /> Reemplazado</span>;
     case 'move':
-      return <span className={`${badgeBase} bg-violet-50 text-violet-700 border-violet-100`}><ArrowUpRight className="w-3 h-3" /> Movido</span>;
+      return <span className={`${badgeBase} bg-blue-50 text-[#004C6C] border-blue-100`}><ArrowUpRight className="w-3 h-3" /> Movido</span>;
     case 'copy':
-      return <span className={`${badgeBase} bg-violet-50 text-violet-700 border-violet-100`}><Copy className="w-3 h-3" /> Copiado</span>;
+      return <span className={`${badgeBase} bg-blue-50 text-[#004C6C] border-blue-100`}><Copy className="w-3 h-3" /> Copiado</span>;
     case 'rename':
-      return <span className={`${badgeBase} bg-violet-50 text-violet-700 border-violet-100`}><Edit2 className="w-3 h-3" /> Renombrado</span>;
+      return <span className={`${badgeBase} bg-blue-50 text-[#004C6C] border-blue-100`}><Edit2 className="w-3 h-3" /> Renombrado</span>;
     case 'delete':
       return <span className={`${badgeBase} bg-rose-50 text-rose-700 border-rose-100`}><Trash2 className="w-3 h-3" /> Eliminado</span>;
     case 'denied':
       return <span className={`${badgeBase} bg-red-600 text-white border-red-600`}><ShieldAlert className="w-3 h-3" /> Negado</span>;
     case 'restrictions':
-      return <span className={`${badgeBase} bg-violet-50 text-violet-700 border-violet-100`}><Lock className="w-3 h-3" /> Restricción</span>;
+      return <span className={`${badgeBase} bg-blue-50 text-[#004C6C] border-blue-100`}><Lock className="w-3 h-3" /> Restricción</span>;
     case 'settings':
       return <span className={`${badgeBase} bg-slate-100 text-slate-700 border-slate-200`}><Settings className="w-3 h-3" /> Configuración</span>;
     default:

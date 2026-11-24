@@ -4,7 +4,7 @@ import { FTRA_STATUS_LABELS, type FtraRecordStatus } from '../types';
 // Mismos tonos que los estados de Cortes
 const STATUS_STYLES: Record<FtraRecordStatus, string> = {
   Registrada: 'bg-blue-50 text-[#004C6C]',
-  Seguimiento: 'bg-indigo-50 text-indigo-600',
+  Seguimiento: 'bg-[#004C6C]/15 text-[#004C6C]',
   Devuelta: 'bg-red-50 text-red-600',
   Aprobada: 'bg-green-50 text-green-600',
   Rechazada: 'bg-red-50 text-red-600',

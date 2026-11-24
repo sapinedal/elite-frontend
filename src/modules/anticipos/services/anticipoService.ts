@@ -75,8 +75,9 @@ export const anticipoService = {
     return data.data;
   },
 
-  getDownloadUrl: async (id: number, file: 'cuenta' | 'multifox' = 'cuenta'): Promise<string> => {
-    const { data } = await api.get(`${BASE}/${id}/download`, { params: { file } });
+  /** inline: URL para ver el archivo en el navegador (PDF) en lugar de descargarlo */
+  getDownloadUrl: async (id: number, file: 'cuenta' | 'multifox' = 'cuenta', inline = false): Promise<string> => {
+    const { data } = await api.get(`${BASE}/${id}/download`, { params: { file, ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },
 };

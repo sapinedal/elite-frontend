@@ -108,8 +108,9 @@ export const contratacionService = {
     return data.data;
   },
 
-  getDownloadUrl: async (documentId: number): Promise<string> => {
-    const { data } = await api.get(`${BASE}/documents/${documentId}/download`);
+  /** inline: URL para ver el archivo en el navegador (PDF) en lugar de descargarlo */
+  getDownloadUrl: async (documentId: number, inline = false): Promise<string> => {
+    const { data } = await api.get(`${BASE}/documents/${documentId}/download`, { params: { ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },
 

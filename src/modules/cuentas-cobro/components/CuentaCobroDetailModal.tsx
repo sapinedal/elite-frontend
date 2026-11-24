@@ -12,6 +12,7 @@ import { formatMoney } from '../../../utils/money';
 import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { cuentaCobroService, getApiErrorMessage } from '../services/cuentaCobroService';
 import { CuentaCobroStatusBadge } from './CuentaCobroStatusBadge';
+import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import type { CuentaCobro, CuentaCobroHistoryEntry, CuentaCobroMultifoxPayload, CuentaCobroProgressStep } from '../types';
 
 interface CuentaCobroDetailModalProps {
@@ -42,9 +43,9 @@ const ACTION_LABELS: Record<CuentaCobroHistoryEntry['action'], { label: string; 
   reenviada: { label: 'Reenviada', tone: 'text-[#004C6C]' },
   aprobado: { label: 'Aprobada', tone: 'text-green-600' },
   devuelto: { label: 'Devuelta', tone: 'text-red-600' },
-  sin_multifox: { label: 'No requiere Multifox', tone: 'text-teal-700' },
-  requiere_multifox: { label: 'Requiere Multifox', tone: 'text-purple-700' },
-  multifox: { label: 'Cargada en Multifox', tone: 'text-teal-700' },
+  sin_multifox: { label: 'No requiere Multifox', tone: 'text-[#004C6C]' },
+  requiere_multifox: { label: 'Requiere Multifox', tone: 'text-[#004C6C]' },
+  multifox: { label: 'Cargada en Multifox', tone: 'text-[#004C6C]' },
   contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
 };
@@ -125,7 +126,7 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
     }, 'Error al cargar en Multifox.');
   };
 
-  const fileRow = (key: string, label: string, name: string, size: number | null | undefined, icon: React.ReactNode, onDownload: () => void) => (
+  const fileRow = (key: string, label: string, name: string, size: number | null | undefined, icon: React.ReactNode, onDownload: () => void, getViewUrl?: () => Promise<string>) => (
     <div key={key} className="flex items-center justify-between gap-3 bg-slate-50 rounded-2xl p-3">
       <span className="flex items-center gap-2 min-w-0">
         {icon}
@@ -134,9 +135,12 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
           <span className="block text-xs font-bold text-slate-700 truncate">{name}{size ? ` · ${formatBytes(size)}` : ''}</span>
         </span>
       </span>
-      <button type="button" onClick={onDownload} className="p-2 rounded-xl text-[#004C6C] hover:bg-blue-50 shrink-0" title="Descargar">
-        {downloading === key ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-      </button>
+      <span className="flex items-center gap-1 shrink-0">
+        {getViewUrl && <ViewPdfButton fileName={name} getUrl={getViewUrl} size={16} />}
+        <button type="button" onClick={onDownload} className="p-2 rounded-xl text-[#004C6C] hover:bg-blue-50 shrink-0" title="Descargar">
+          {downloading === key ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+        </button>
+      </span>
     </div>
   );
 
@@ -209,11 +213,11 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
                 </div>
               )}
               <div className="space-y-2">
-                {fileRow('cuenta', 'Cuenta de cobro', cuenta.file_name, cuenta.file_size, <FileText size={18} className="text-slate-400 shrink-0" />, () => download('cuenta', 'cuenta'))}
+                {fileRow('cuenta', 'Cuenta de cobro', cuenta.file_name, cuenta.file_size, <FileText size={18} className="text-slate-400 shrink-0" />, () => download('cuenta', 'cuenta'), () => cuentaCobroService.getDownloadUrl(cuenta.id, 'cuenta', undefined, true))}
                 {(cuenta.adjuntos ?? []).map((a) => fileRow(`a${a.id}`, 'Adjunto', a.file_name, a.file_size,
-                  <Paperclip size={18} className="text-slate-400 shrink-0" />, () => download(`a${a.id}`, 'adjunto', a.id)))}
+                  <Paperclip size={18} className="text-slate-400 shrink-0" />, () => download(`a${a.id}`, 'adjunto', a.id), () => cuentaCobroService.getDownloadUrl(cuenta.id, 'adjunto', a.id, true)))}
                 {cuenta.multifox_file_name && fileRow('multifox', 'Soporte Multifox', cuenta.multifox_file_name, cuenta.multifox_file_size,
-                  <Database size={18} className="text-slate-400 shrink-0" />, () => download('multifox', 'multifox'))}
+                  <Database size={18} className="text-slate-400 shrink-0" />, () => download('multifox', 'multifox'), () => cuentaCobroService.getDownloadUrl(cuenta.id, 'multifox', undefined, true))}
               </div>
               {cuenta.status === 'en_pagos' && (
                 <Link to="/app/contratacion/cuentas-por-pagar" className="inline-flex items-center gap-1.5 text-xs font-black text-[#004C6C] hover:underline">
@@ -264,9 +268,9 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
 
             {/* Paula: ¿requiere Multifox? */}
             {cuenta.can_handle_multifox && (
-              <div className="bg-white rounded-3xl border border-teal-100 p-6 space-y-4">
+              <div className="bg-white rounded-3xl border border-blue-100 p-6 space-y-4">
                 <div className="flex items-center gap-2">
-                  <Database size={18} className="text-teal-600" />
+                  <Database size={18} className="text-[#004C6C]" />
                   <h3 className="font-black text-[#004C6C] tracking-tight">
                     {cuenta.status === 'pendiente_revision' ? '¿Requiere cargue en Multifox?' : 'Cargar en Multifox'}
                   </h3>
@@ -289,7 +293,7 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
                       </button>
                       <button type="button" disabled={saving}
                         onClick={() => act(() => onDecideMultifox(cuenta.id, true), 'Error al registrar la decisión.')}
-                        className="px-4 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-purple-50 text-purple-700 hover:bg-purple-100 disabled:opacity-60">
+                        className="px-4 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-blue-50 text-[#004C6C] hover:bg-blue-100 disabled:opacity-60">
                         <Clock size={18} /> Requiere: cargar después
                       </button>
                     </div>

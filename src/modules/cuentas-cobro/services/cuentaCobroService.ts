@@ -84,8 +84,9 @@ export const cuentaCobroService = {
     return data.data;
   },
 
-  getDownloadUrl: async (id: number, file: 'cuenta' | 'multifox' | 'adjunto' = 'cuenta', adjuntoId?: number): Promise<string> => {
-    const { data } = await api.get(`${BASE}/${id}/download`, { params: { file, adjunto: adjuntoId } });
+  /** inline: URL para ver el archivo en el navegador (PDF) en lugar de descargarlo */
+  getDownloadUrl: async (id: number, file: 'cuenta' | 'multifox' | 'adjunto' = 'cuenta', adjuntoId?: number, inline = false): Promise<string> => {
+    const { data } = await api.get(`${BASE}/${id}/download`, { params: { file, adjunto: adjuntoId, ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },
 

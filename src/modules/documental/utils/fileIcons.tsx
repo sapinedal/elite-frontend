@@ -42,11 +42,11 @@ const CONFIG: Record<Kind, Omit<FileIconConfig, 'icon'> & { Icon: React.ElementT
   doc: { Icon: FileText, iconClass: 'text-[#004C6C]', colorClass: 'bg-sky-50 border-sky-100', badgeBg: 'bg-sky-100', badgeText: 'text-[#004C6C]', label: 'Documento', accent: '#004C6C' },
   slide: { Icon: Presentation, iconClass: 'text-[#D97F2A]', colorClass: 'bg-orange-50 border-orange-100', badgeBg: 'bg-orange-100', badgeText: 'text-orange-700', label: 'Presentación', accent: '#EE9D4C' },
   pdf: { Icon: FileText, iconClass: 'text-rose-500', colorClass: 'bg-rose-50 border-rose-100', badgeBg: 'bg-rose-100', badgeText: 'text-rose-700', label: 'PDF', accent: '#F43F5E' },
-  image: { Icon: FileImage, iconClass: 'text-violet-500', colorClass: 'bg-violet-50 border-violet-100', badgeBg: 'bg-violet-100', badgeText: 'text-violet-700', label: 'Imagen', accent: '#8B5CF6' },
+  image: { Icon: FileImage, iconClass: 'text-[#004C6C]', colorClass: 'bg-blue-50 border-blue-100', badgeBg: 'bg-blue-100', badgeText: 'text-[#004C6C]', label: 'Imagen', accent: '#004C6C' },
   archive: { Icon: FileArchive, iconClass: 'text-amber-600', colorClass: 'bg-amber-50 border-amber-100', badgeBg: 'bg-amber-100', badgeText: 'text-amber-700', label: 'Comprimido', accent: '#D97706' },
-  video: { Icon: FileVideo, iconClass: 'text-indigo-500', colorClass: 'bg-indigo-50 border-indigo-100', badgeBg: 'bg-indigo-100', badgeText: 'text-indigo-700', label: 'Video', accent: '#6366F1' },
-  audio: { Icon: FileAudio, iconClass: 'text-pink-500', colorClass: 'bg-pink-50 border-pink-100', badgeBg: 'bg-pink-100', badgeText: 'text-pink-700', label: 'Audio', accent: '#EC4899' },
-  code: { Icon: FileCode, iconClass: 'text-cyan-600', colorClass: 'bg-cyan-50 border-cyan-100', badgeBg: 'bg-cyan-100', badgeText: 'text-cyan-700', label: 'Código', accent: '#0891B2' },
+  video: { Icon: FileVideo, iconClass: 'text-[#004C6C]', colorClass: 'bg-blue-50 border-blue-100', badgeBg: 'bg-blue-100', badgeText: 'text-[#004C6C]', label: 'Video', accent: '#004C6C' },
+  audio: { Icon: FileAudio, iconClass: 'text-[#D97F2A]', colorClass: 'bg-orange-50 border-orange-100', badgeBg: 'bg-orange-100', badgeText: 'text-orange-700', label: 'Audio', accent: '#EE9D4C' },
+  code: { Icon: FileCode, iconClass: 'text-slate-500', colorClass: 'bg-slate-50 border-slate-200', badgeBg: 'bg-slate-100', badgeText: 'text-slate-600', label: 'Código', accent: '#64748B' },
   other: { Icon: FileDefault, iconClass: 'text-slate-400', colorClass: 'bg-slate-50 border-slate-200', badgeBg: 'bg-slate-100', badgeText: 'text-slate-600', label: 'Archivo', accent: '#94A3B8' },
 };
 

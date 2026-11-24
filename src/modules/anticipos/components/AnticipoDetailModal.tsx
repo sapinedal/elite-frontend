@@ -10,6 +10,7 @@ import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { anticipoService, getApiErrorMessage } from '../services/anticipoService';
 import { AnticipoStatusBadge } from './AnticipoStatusBadge';
 import { FileDrop } from '../../../components/ui/FileDrop';
+import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import type { Anticipo, AnticipoHistoryEntry, AnticipoProgressStep, MultifoxPayload } from '../types';
 
 interface AnticipoDetailModalProps {
@@ -39,7 +40,7 @@ const ACTION_LABELS: Record<AnticipoHistoryEntry['action'], { label: string; ton
   reenviado: { label: 'Reenviado', tone: 'text-[#004C6C]' },
   aprobado: { label: 'Aprobado', tone: 'text-green-600' },
   devuelto: { label: 'Devuelto', tone: 'text-red-600' },
-  multifox: { label: 'Generado en Multifox', tone: 'text-teal-700' },
+  multifox: { label: 'Generado en Multifox', tone: 'text-[#004C6C]' },
   contabilidad_aprobada: { label: 'Aprobado por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelto por Contabilidad', tone: 'text-red-600' },
 };
@@ -146,9 +147,12 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
           <span className="block text-xs font-bold text-slate-700 truncate">{name}{size ? ` · ${formatBytes(size)}` : ''}</span>
         </span>
       </span>
+      <span className="flex items-center gap-1 shrink-0">
+      <ViewPdfButton fileName={name} getUrl={() => anticipoService.getDownloadUrl(anticipo!.id, key, true)} size={16} />
       <button type="button" onClick={() => download(key)} className="p-2 rounded-xl text-[#004C6C] hover:bg-blue-50 shrink-0" title="Descargar">
         {downloading === key ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
       </button>
+      </span>
     </div>
   );
 
@@ -274,9 +278,9 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
 
             {/* Contabilidad: anticipo generado en Multifox */}
             {anticipo.can_register_multifox && (
-              <div className="bg-white rounded-3xl border border-teal-100 p-6 space-y-4">
+              <div className="bg-white rounded-3xl border border-blue-100 p-6 space-y-4">
                 <div className="flex items-center gap-2">
-                  <Database size={18} className="text-teal-600" />
+                  <Database size={18} className="text-[#004C6C]" />
                   <h3 className="font-black text-[#004C6C] tracking-tight">Cargar anticipo generado en Multifox</h3>
                 </div>
                 <p className="text-xs font-bold text-slate-500">Al cargarlo pasa a la aprobación de Contabilidad; con ella entra al cuadro de pagos por {formatMoney(anticipo.amount)}.</p>

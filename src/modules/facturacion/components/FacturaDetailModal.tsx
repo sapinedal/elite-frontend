@@ -7,6 +7,7 @@ import { formatBytes } from '../../cortes/utils/format';
 import { facturacionService, getApiErrorMessage } from '../services/facturacionService';
 import { FacturaStatusBadge } from './FacturaStatusBadge';
 import { ModalShell } from '../../../components/ui/ModalShell';
+import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import type { Factura } from '../types';
 
 interface FacturaDetailModalProps {
@@ -87,10 +88,13 @@ const DetailContent: React.FC<{ facturaId: number; onClose: () => void }> = ({ f
             {factura.observation && <div className="col-span-2 md:col-span-3"><Field label="Observación de Contabilidad"><span className="whitespace-pre-line">{factura.observation}</span></Field></div>}
             <div className="col-span-2 md:col-span-3 flex items-center justify-between gap-3 bg-slate-50 rounded-2xl p-3">
               <span className="text-xs font-bold text-slate-500 truncate">{factura.file_name} · {formatBytes(factura.file_size)}</span>
+              <span className="flex items-center gap-1 shrink-0">
+              <ViewPdfButton fileName={factura.file_name} getUrl={() => facturacionService.getDownloadUrl(factura.id, true)} size={16} title="Ver PDF de la factura" />
               <button type="button" onClick={() => download('file', () => facturacionService.getDownloadUrl(factura.id))}
                 className="p-2 rounded-xl text-[#004C6C] hover:bg-blue-50 shrink-0" title="Descargar factura">
                 {downloading === 'file' ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
               </button>
+              </span>
             </div>
           </div>
 
@@ -117,10 +121,14 @@ const DetailContent: React.FC<{ facturaId: number; onClose: () => void }> = ({ f
                       <span className="text-xs font-bold text-slate-700 truncate">{s.file_name}</span>
                       <span className="text-[11px] font-bold text-slate-400 shrink-0">{formatBytes(s.file_size)}</span>
                     </span>
+                    <span className="flex items-center gap-1 shrink-0">
+                    <ViewPdfButton fileName={s.file_name} getUrl={() => facturacionService.getSupportDownloadUrl(s.id, true)} size={14}
+                      className="p-1.5 rounded-lg text-[#004C6C] hover:bg-blue-50" title="Ver soporte" />
                     <button type="button" onClick={() => download(`s${s.id}`, () => facturacionService.getSupportDownloadUrl(s.id))}
                       className="p-1.5 rounded-lg text-[#004C6C] hover:bg-blue-50" title="Descargar soporte">
                       {downloading === `s${s.id}` ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                     </button>
+                    </span>
                   </li>
                 ))}
               </ul>

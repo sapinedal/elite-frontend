@@ -2,11 +2,11 @@ import React from 'react';
 import type { OrdenStatus } from '../types';
 
 const STATUS_STYLES: Record<OrdenStatus, string> = {
-  pendiente_director: 'bg-indigo-50 text-indigo-600',
-  pendiente_gerencia: 'bg-purple-50 text-purple-600',
+  pendiente_director: 'bg-[#004C6C]/15 text-[#004C6C]',
+  pendiente_gerencia: 'bg-[#004C6C] text-white',
   devuelto: 'bg-red-50 text-red-600',
   pendiente_erp: 'bg-orange-50 text-orange-700',
-  pendiente_factura: 'bg-teal-50 text-teal-700',
+  pendiente_factura: 'bg-[#EE9D4C] text-white',
   pendiente_entrada: 'bg-blue-50 text-[#004C6C]',
   pendiente_aprobacion_contable: 'bg-amber-50 text-amber-700',
   completada: 'bg-green-50 text-green-600',

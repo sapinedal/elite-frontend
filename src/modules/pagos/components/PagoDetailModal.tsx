@@ -7,6 +7,7 @@ import { formatMoney } from '../../../utils/money';
 import { pagoService, getApiErrorMessage } from '../services/pagoService';
 import { PagoModalShell, inputClass } from './PagoModalShell';
 import { PagoPriorityBadge, PagoStatusBadge } from './PagoStatusBadge';
+import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import type { PagoCuenta, PagoMovimiento } from '../types';
 
 interface PagoDetailModalProps {
@@ -24,8 +25,8 @@ const ACTION_LABELS: Record<PagoMovimiento['action'], { label: string; tone: str
   priorizada: { label: 'Priorizada', tone: 'text-[#004C6C]' },
   desprogramada: { label: 'Desprogramada', tone: 'text-orange-600' },
   pago: { label: 'Pago registrado', tone: 'text-green-600' },
-  nota_credito: { label: 'Nota crédito', tone: 'text-purple-600' },
-  reemplazo: { label: 'Factura reemplazada', tone: 'text-purple-600' },
+  nota_credito: { label: 'Nota crédito', tone: 'text-[#004C6C]' },
+  reemplazo: { label: 'Factura reemplazada', tone: 'text-[#004C6C]' },
   anulada: { label: 'Anulada', tone: 'text-red-600' },
 };
 
@@ -201,10 +202,13 @@ const PagoDetailContent: React.FC<Omit<PagoDetailModalProps, 'cuentaId' | 'versi
                       {m.comment && <p className="mt-1 text-xs font-medium text-slate-600 bg-slate-50 rounded-xl px-3 py-2 whitespace-pre-line">{m.comment}</p>}
                     </div>
                     {m.file_name && (
+                      <span className="flex items-center gap-1 shrink-0">
+                      <ViewPdfButton fileName={m.file_name} getUrl={() => pagoService.getSupportDownloadUrl(m.id, true)} size={16} />
                       <button onClick={() => handleDownload(m.id)} disabled={downloadingId === m.id} title={`Descargar ${m.file_name}`}
                         className="p-2 rounded-xl text-[#004C6C] hover:bg-blue-50 shrink-0">
                         {downloadingId === m.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                       </button>
+                      </span>
                     )}
                   </div>
                 </li>

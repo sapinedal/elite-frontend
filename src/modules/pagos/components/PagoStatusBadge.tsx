@@ -4,7 +4,7 @@ import type { PagoPriority, PagoStatus } from '../types';
 const STATUS_STYLES: Record<PagoStatus, string> = {
   pendiente: 'bg-orange-50 text-orange-700',
   priorizada: 'bg-blue-50 text-[#004C6C]',
-  parcial: 'bg-purple-50 text-purple-600',
+  parcial: 'bg-[#004C6C] text-white',
   pagada: 'bg-green-50 text-green-600',
   anulada: 'bg-slate-100 text-slate-500',
 };

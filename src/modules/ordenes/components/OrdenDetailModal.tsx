@@ -39,7 +39,7 @@ const ACTION_LABELS: Record<OrdenHistoryEntry['action'], { label: string; tone: 
   reenviada: { label: 'Reenviada', tone: 'text-[#004C6C]' },
   aprobado: { label: 'Aprobada', tone: 'text-green-600' },
   devuelto: { label: 'Devuelta', tone: 'text-red-600' },
-  documento: { label: 'Documento cargado', tone: 'text-teal-700' },
+  documento: { label: 'Documento cargado', tone: 'text-[#004C6C]' },
   contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
 };
