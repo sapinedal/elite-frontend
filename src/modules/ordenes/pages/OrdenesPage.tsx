@@ -49,9 +49,9 @@ export default function OrdenesPage() {
 
   const tabs = useMemo(() => [
     { id: 'mine', label: 'Mis registros', icon: <FileText size={14} />, count: counts.mine },
-    ...(isReviewer ? [{ id: 'pending', label: 'Por aprobar', icon: <ClipboardCheck size={14} />, count: counts.pending }] : []),
-    ...(hasTasks ? [{ id: 'tasks', label: 'Por gestionar', icon: <Package size={14} />, count: counts.tasks }] : []),
-    ...(catalogs?.can_approve_accounting ? [{ id: 'accounting', label: 'Contabilidad', icon: <Calculator size={14} />, count: counts.accounting }] : []),
+    ...(isReviewer ? [{ id: 'pending', label: 'Por aprobar', icon: <ClipboardCheck size={14} />, count: counts.pending, alert: true }] : []),
+    ...(hasTasks ? [{ id: 'tasks', label: 'Por gestionar', icon: <Package size={14} />, count: counts.tasks, alert: true }] : []),
+    ...(catalogs?.can_approve_accounting ? [{ id: 'accounting', label: 'Contabilidad', icon: <Calculator size={14} />, count: counts.accounting, alert: true }] : []),
     ...(catalogs?.can_view_all || catalogs?.can_approve_accounting ? [{ id: 'all', label: 'Todas', icon: <Layers size={14} /> }] : []),
   ], [counts, isReviewer, hasTasks, catalogs]);
 

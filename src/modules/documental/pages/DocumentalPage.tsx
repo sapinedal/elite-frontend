@@ -376,7 +376,29 @@ export default function DocumentalPage() {
     setItemToDelete({ name: item.name, path: item.path, type });
     setIsDeleteOpen(true);
   };
+  // Los PDF se abren en una pestaña con el visor del navegador (no en ONLYOFFICE ni en el modal)
+  const openPdfInBrowser = async (file: FileItem) => {
+    // La pestaña se abre en el mismo clic para que el navegador no la bloquee como ventana emergente
+    const tab = window.open('', '_blank');
+    try {
+      const url = await documentalService.getViewUrl(file.path);
+      if (tab) {
+        tab.opener = null;
+        tab.location.href = url;
+      } else if (!window.open(url, '_blank', 'noopener')) {
+        showNotification('El navegador bloqueó la pestaña nueva. Permite las ventanas emergentes de este sitio para abrir los PDF.', 'error');
+      }
+    } catch (err: any) {
+      tab?.close();
+      showNotification(getErrorMessage(err, 'Error al abrir el PDF'), 'error');
+    }
+  };
+
   const openPreview = (file: FileItem) => {
+    if (file.extension.toLowerCase() === 'pdf') {
+      openPdfInBrowser(file);
+      return;
+    }
     setSelectedFileForPreview(file);
     setIsPreviewOpen(true);
   };

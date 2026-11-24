@@ -41,11 +41,11 @@ export default function PagosPage() {
   const allSelected = cuentas.length > 0 && cuentas.every((c) => selected.includes(c.id));
 
   const tabs = useMemo(() => [
-    { id: 'por_priorizar', label: 'Por priorizar', icon: <ListTodo size={14} />, count: counts.por_priorizar },
+    { id: 'por_priorizar', label: 'Por priorizar', icon: <ListTodo size={14} />, count: counts.por_priorizar, alert: Boolean(catalogs?.can_prioritize) },
     { id: 'programadas', label: 'Programadas', icon: <CalendarClock size={14} />, count: counts.programadas },
     { id: 'pagadas', label: 'Pagadas', icon: <CheckCircle2 size={14} />, count: counts.pagadas },
     { id: 'todas', label: 'Todas', icon: <Layers size={14} /> },
-  ], [counts]);
+  ], [counts, catalogs]);
 
   const hasFilters = Object.values(filters).some(Boolean);
 

@@ -6,6 +6,8 @@ export interface TabItem {
   icon?: React.ReactNode;
   count?: number;
   badge?: string;
+  /** Pestaña de pendientes por revisar/gestionar: con count > 0 el contador se ve en rojo con el número en blanco */
+  alert?: boolean;
 }
 
 export interface TabsProps {
@@ -47,8 +49,11 @@ export const Tabs: React.FC<TabsProps> = ({
                 <span
                   className={`
                     px-2 py-0.5 rounded-full text-[10px] font-black transition-colors
-                    ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}
+                    ${tab.alert && tab.count > 0
+                      ? 'bg-red-600 text-white shadow-sm shadow-red-900/20'
+                      : isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}
                   `}
+                  aria-label={tab.alert && tab.count > 0 ? `${tab.count} pendiente(s)` : undefined}
                 >
                   {tab.count}
                 </span>

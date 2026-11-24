@@ -57,9 +57,9 @@ export default function CuentasCobroPage() {
 
   const tabs = useMemo(() => [
     ...(catalogs?.can_create ? [{ id: 'mine', label: 'Mis cuentas', icon: <FileText size={14} />, count: counts.mine }] : []),
-    ...(isReviewer ? [{ id: 'pending', label: 'Por aprobar', icon: <ClipboardCheck size={14} />, count: counts.pending }] : []),
-    ...(catalogs?.can_handle_multifox ? [{ id: 'multifox', label: 'Multifox', icon: <Database size={14} />, count: counts.multifox }] : []),
-    ...(catalogs?.can_approve_accounting ? [{ id: 'accounting_approval', label: 'Aprobación Contabilidad', icon: <Calculator size={14} />, count: counts.accounting_approval }] : []),
+    ...(isReviewer ? [{ id: 'pending', label: 'Por aprobar', icon: <ClipboardCheck size={14} />, count: counts.pending, alert: true }] : []),
+    ...(catalogs?.can_handle_multifox ? [{ id: 'multifox', label: 'Multifox', icon: <Database size={14} />, count: counts.multifox, alert: true }] : []),
+    ...(catalogs?.can_approve_accounting ? [{ id: 'accounting_approval', label: 'Aprobación Contabilidad', icon: <Calculator size={14} />, count: counts.accounting_approval, alert: true }] : []),
     ...(catalogs?.can_view_all || catalogs?.can_handle_multifox || catalogs?.can_approve_accounting ? [{ id: 'all', label: 'Todas', icon: <Layers size={14} /> }] : []),
     ...(catalogs?.can_parametrize ? [{ id: 'tipos', label: 'Tipos', icon: <Tags size={14} /> }] : []),
   ], [counts, isReviewer, catalogs]);

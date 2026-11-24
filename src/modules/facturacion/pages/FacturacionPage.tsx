@@ -48,7 +48,7 @@ export default function FacturacionPage() {
   const currentPeriod = catalogs?.current_period ?? '';
 
   const tabs = useMemo(() => [
-    { id: 'pending', label: canManage ? 'Pendientes de obra' : 'Por asociar', icon: <Clock size={14} />, count: counts.pending },
+    { id: 'pending', label: canManage ? 'Pendientes de obra' : 'Por asociar', icon: <Clock size={14} />, count: counts.pending, alert: !canManage },
     { id: 'processed', label: canManage ? 'Procesadas' : 'Asociadas por mí', icon: <CheckCircle2 size={14} /> },
     ...(canManage ? [
       { id: 'all', label: 'Todas', icon: <Layers size={14} /> },

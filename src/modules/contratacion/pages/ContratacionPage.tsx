@@ -218,21 +218,26 @@ export default function ContratacionPage() {
       {/* Indicadores */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Contratos', value: stats.total, icon: <Layers size={20} />, tone: 'text-[#004C6C] bg-blue-50' },
-          { label: 'Con adjuntos faltantes', value: stats.missing, icon: <AlertTriangle size={20} />, tone: 'text-orange-600 bg-orange-50' },
-          { label: 'Pólizas por vencer', value: stats.policies, icon: <ShieldAlert size={20} />, tone: 'text-red-600 bg-red-50' },
+          { label: 'Contratos', value: stats.total, icon: <Layers size={20} />, tone: 'text-[#004C6C] bg-blue-50', alert: false },
+          { label: 'Con adjuntos faltantes', value: stats.missing, icon: <AlertTriangle size={20} />, tone: 'text-orange-600 bg-orange-50', alert: canEdit },
+          { label: 'Pólizas por vencer', value: stats.policies, icon: <ShieldAlert size={20} />, tone: 'text-red-600 bg-red-50', alert: canEdit },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-[28px] border border-slate-100 shadow-sm p-5 flex items-center gap-4">
             <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${s.tone}`}>{s.icon}</div>
             <div>
-              <p className="text-2xl font-black text-slate-800">{s.value}</p>
+              {/* Pendientes por atender: número en blanco sobre rojo */}
+              {s.alert && s.value > 0 ? (
+                <p className="inline-flex min-w-9 justify-center px-2.5 py-0.5 rounded-full bg-red-600 text-white text-xl font-black shadow-sm shadow-red-900/20">{s.value}</p>
+              ) : (
+                <p className="text-2xl font-black text-slate-800">{s.value}</p>
+              )}
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {alerts && <ContractAlertsPanel alerts={alerts} onOpenContract={setDocumentsContractId} />}
+      {alerts && <ContractAlertsPanel alerts={alerts} onOpenContract={setDocumentsContractId} highlight={canEdit} />}
 
       {/* Filtros */}
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 items-end">

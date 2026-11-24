@@ -39,13 +39,14 @@ export const FileCard: React.FC<FileCardProps> = ({
 }) => {
   const iconConfig = getFileIconConfig(file.extension, 'w-7 h-7');
   const canPreview = isBrowserPreviewable(file.extension);
+  const isPdf = file.extension.toLowerCase() === 'pdf';
   const canEdit = editorMode === 'edit' && permissions.can_upload;
 
   // Acción principal: editor (como Google Drive) > vista previa > descarga
   const primary = editorMode
     ? { label: canEdit ? 'Abrir y editar' : 'Abrir', icon: canEdit ? <PencilLine size={14} /> : <Eye size={14} />, run: () => onOpenEditor(file) }
     : canPreview
-      ? { label: 'Vista previa', icon: <Eye size={14} />, run: () => onPreview(file) }
+      ? { label: isPdf ? 'Abrir' : 'Vista previa', icon: <Eye size={14} />, run: () => onPreview(file) }
       : { label: 'Descargar', icon: <Download size={14} />, run: () => onDownload(file) };
 
   return (
@@ -63,7 +64,7 @@ export const FileCard: React.FC<FileCardProps> = ({
           <ActionMenu
             items={[
               { key: 'editor', label: canEdit ? 'Abrir y editar' : 'Abrir en el visor', icon: canEdit ? <PencilLine size={14} className="text-[#EE9D4C]" /> : <Eye size={14} className="text-[#004C6C]" />, onClick: () => onOpenEditor(file), hidden: !editorMode },
-              { key: 'preview', label: 'Vista previa', icon: <Eye size={14} className="text-[#004C6C]" />, onClick: () => onPreview(file), hidden: !canPreview || !!editorMode },
+              { key: 'preview', label: isPdf ? 'Abrir en el navegador' : 'Vista previa', icon: <Eye size={14} className="text-[#004C6C]" />, onClick: () => onPreview(file), hidden: !canPreview || !!editorMode },
               { key: 'download', label: 'Descargar', icon: <Download size={14} className="text-emerald-600" />, onClick: () => onDownload(file) },
               { key: 'link', label: 'Copiar enlace permanente', icon: <LinkIcon size={14} className="text-slate-400" />, onClick: () => onCopyLink(file) },
               { key: 'unlink', label: 'Revocar enlace público', icon: <Link2Off size={14} className="text-slate-400" />, onClick: () => onRevokeLink(file) },

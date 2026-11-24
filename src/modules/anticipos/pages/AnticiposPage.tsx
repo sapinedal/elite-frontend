@@ -51,9 +51,9 @@ export default function AnticiposPage() {
 
   const tabs = useMemo(() => [
     ...(catalogs?.can_create ? [{ id: 'mine', label: 'Mis anticipos', icon: <FileText size={14} />, count: counts.mine }] : []),
-    ...(isReviewer ? [{ id: 'pending', label: 'Por aprobar', icon: <ClipboardCheck size={14} />, count: counts.pending }] : []),
-    ...(catalogs?.can_contabilizar ? [{ id: 'accounting', label: 'Por generar en Multifox', icon: <Database size={14} />, count: counts.accounting }] : []),
-    ...(catalogs?.can_approve_accounting ? [{ id: 'accounting_approval', label: 'Aprobación Contabilidad', icon: <Calculator size={14} />, count: counts.accounting_approval }] : []),
+    ...(isReviewer ? [{ id: 'pending', label: 'Por aprobar', icon: <ClipboardCheck size={14} />, count: counts.pending, alert: true }] : []),
+    ...(catalogs?.can_contabilizar ? [{ id: 'accounting', label: 'Por generar en Multifox', icon: <Database size={14} />, count: counts.accounting, alert: true }] : []),
+    ...(catalogs?.can_approve_accounting ? [{ id: 'accounting_approval', label: 'Aprobación Contabilidad', icon: <Calculator size={14} />, count: counts.accounting_approval, alert: true }] : []),
     ...(catalogs?.can_view_all || catalogs?.can_contabilizar || catalogs?.can_approve_accounting ? [{ id: 'all', label: 'Todos', icon: <Layers size={14} /> }] : []),
   ], [counts, isReviewer, catalogs]);
 

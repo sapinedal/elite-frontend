@@ -170,7 +170,7 @@ export const FileTable: React.FC<FileTableProps> = ({
                       <ActionMenu
                         items={[
                           { key: 'editor', label: canEdit ? 'Abrir y editar' : 'Abrir en el visor', icon: canEdit ? <PencilLine size={14} className="text-[#EE9D4C]" /> : <Eye size={14} className="text-[#004C6C]" />, onClick: () => onOpenEditor(file), hidden: !editorMode },
-                          { key: 'preview', label: 'Vista previa', icon: <Eye size={14} className="text-[#004C6C]" />, onClick: () => onPreviewFile(file), hidden: !canPreview || !!editorMode },
+                          { key: 'preview', label: file.extension.toLowerCase() === 'pdf' ? 'Abrir en el navegador' : 'Vista previa', icon: <Eye size={14} className="text-[#004C6C]" />, onClick: () => onPreviewFile(file), hidden: !canPreview || !!editorMode },
                           { key: 'link', label: 'Copiar enlace permanente', icon: <LinkIcon size={14} className="text-slate-400" />, onClick: () => onCopyLink(file) },
                           { key: 'unlink', label: 'Revocar enlace público', icon: <Link2Off size={14} className="text-slate-400" />, onClick: () => onRevokeLink(file) },
                           { key: 'rename', label: 'Renombrar', icon: <Edit2 size={14} className="text-slate-400" />, onClick: () => onRenameFile(file), hidden: !permissions.can_rename },

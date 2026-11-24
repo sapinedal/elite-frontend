@@ -5,6 +5,8 @@ import type { ContratacionAlerts } from '../types';
 interface ContractAlertsPanelProps {
   alerts: ContratacionAlerts;
   onOpenContract: (contractId: number) => void;
+  /** Quien gestiona los contratos ve los contadores en rojo (le toca atenderlos); los demás, como texto */
+  highlight?: boolean;
 }
 
 const formatDate = (value: string) => {
@@ -15,7 +17,11 @@ const formatDate = (value: string) => {
 /**
  * Alertas del proyecto: pólizas próximas a vencer y contratos con adjuntos faltantes.
  */
-export const ContractAlertsPanel: React.FC<ContractAlertsPanelProps> = ({ alerts, onOpenContract }) => {
+export const ContractAlertsPanel: React.FC<ContractAlertsPanelProps> = ({ alerts, onOpenContract, highlight = false }) => {
+  const countClass = highlight
+    ? 'px-2 py-0.5 rounded-full bg-red-600 text-white text-[11px] font-black'
+    : 'text-sm font-black';
+
   const { expiring_policies: policies, missing_documents: missing } = alerts;
   if (policies.length === 0 && missing.length === 0) return null;
 
@@ -25,7 +31,8 @@ export const ContractAlertsPanel: React.FC<ContractAlertsPanelProps> = ({ alerts
         <div className="bg-white rounded-[32px] border border-red-100 shadow-sm p-6 space-y-4">
           <div className="flex items-center gap-2 text-red-600">
             <ShieldAlert size={20} />
-            <h3 className="font-black tracking-tight">Pólizas por vencer ({policies.length})</h3>
+            <h3 className="font-black tracking-tight">Pólizas por vencer</h3>
+            <span className={countClass}>{highlight ? policies.length : `(${policies.length})`}</span>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               Próximos {alerts.policy_alert_days} días
             </span>
@@ -60,7 +67,9 @@ export const ContractAlertsPanel: React.FC<ContractAlertsPanelProps> = ({ alerts
         <div className="bg-white rounded-[32px] border border-orange-100 shadow-sm p-6 space-y-4">
           <div className="flex items-center gap-2 text-orange-600">
             <AlertTriangle size={20} />
-            <h3 className="font-black tracking-tight">Adjuntos faltantes ({missing.length} contratos)</h3>
+            <h3 className="font-black tracking-tight">Adjuntos faltantes</h3>
+            <span className={countClass}>{highlight ? missing.length : `(${missing.length})`}</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">contratos</span>
           </div>
           <ul className="space-y-2 max-h-64 overflow-y-auto pr-1">
             {missing.map((m) => (

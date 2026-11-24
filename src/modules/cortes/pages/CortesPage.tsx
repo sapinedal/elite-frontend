@@ -49,10 +49,10 @@ export default function CortesPage() {
 
   const tabs = useMemo(() => [
     { id: 'mine', label: 'Mis registros', icon: <FileText size={14} />, count: counts.mine },
-    ...(isReviewer ? [{ id: 'pending', label: 'Por revisar', icon: <ClipboardCheck size={14} />, count: counts.pending }] : []),
-    ...(catalogs?.can_invoice ? [{ id: 'billing', label: 'Facturación', icon: <Receipt size={14} />, count: counts.billing }] : []),
-    ...(catalogs?.can_confirm_multifox ? [{ id: 'multifox', label: 'Multifox', icon: <Database size={14} />, count: counts.multifox }] : []),
-    ...(catalogs?.can_approve_accounting ? [{ id: 'accounting', label: 'Contabilidad', icon: <Calculator size={14} />, count: counts.accounting }] : []),
+    ...(isReviewer ? [{ id: 'pending', label: 'Por revisar', icon: <ClipboardCheck size={14} />, count: counts.pending, alert: true }] : []),
+    ...(catalogs?.can_invoice ? [{ id: 'billing', label: 'Facturación', icon: <Receipt size={14} />, count: counts.billing, alert: true }] : []),
+    ...(catalogs?.can_confirm_multifox ? [{ id: 'multifox', label: 'Multifox', icon: <Database size={14} />, count: counts.multifox, alert: true }] : []),
+    ...(catalogs?.can_approve_accounting ? [{ id: 'accounting', label: 'Contabilidad', icon: <Calculator size={14} />, count: counts.accounting, alert: true }] : []),
     ...(catalogs?.can_view_all ? [{ id: 'all', label: 'Todos', icon: <Layers size={14} /> }] : []),
   ], [counts, isReviewer, catalogs]);
 

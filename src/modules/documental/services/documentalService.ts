@@ -90,6 +90,14 @@ export const documentalService = {
     return response.data.data;
   },
 
+  /** URL firmada para ver el archivo en el visor del navegador (PDF) en lugar de descargarlo */
+  async getViewUrl(path: string): Promise<string> {
+    const response = await api.get('/v1/documental/download', {
+      params: { path, inline: 1 },
+    });
+    return response.data.data.download_url;
+  },
+
   /**
    * Enlace público permanente (no caduca) de un archivo; si ya existe uno activo lo reutiliza.
    */

@@ -140,6 +140,9 @@ const getDetail = (log: DocumentActivityLog): string | null => {
     return `Inició sesión desde Office con ${String(d.method ?? 'contraseña')}`;
   }
   const fromDesktop = d.source === 'escritorio' ? 'Desde la unidad de red del escritorio' : null;
+  if (log.action === 'download' && d.inline) {
+    return 'Abierto en el navegador';
+  }
   const contract = d.contract_code ? `Contrato ${String(d.contract_code)}` : null;
   if ((log.action === 'rename' || log.action === 'move') && d.from) {
     return [`Antes: ${String(d.from)}`, fromDesktop, contract].filter(Boolean).join(' · ');
