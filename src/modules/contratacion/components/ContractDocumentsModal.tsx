@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  X, FolderOpen, Upload, Download, Trash2, Loader2, AlertTriangle, CheckCircle2, FileText,
+  X, FolderOpen, Upload, Download, Trash2, Loader2, AlertTriangle, CheckCircle2, FileText, Link2, Unlink, FolderSearch,
 } from 'lucide-react';
 import { Portal } from '../../../components/ui/Portal';
 import { useNotification } from '../../../context/NotificationContext';
 import { contratacionService, getApiErrorMessage } from '../services/contratacionService';
 import type { Contract, ContractDocument, ContratacionCatalogs } from '../types';
+import { S3FolderPickerModal } from './S3FolderPickerModal';
 
 import { useConfirm } from '../../../context/ConfirmContext';
 interface ContractDocumentsModalProps {
@@ -17,6 +18,8 @@ interface ContractDocumentsModalProps {
   catalogs: ContratacionCatalogs | null;
   canUpload: boolean;
   canDelete: boolean;
+  /** Elegir carpetas existentes del gestor documental (contratacion.editar) */
+  canLinkFolders: boolean;
 }
 
 const formatBytes = (bytes: number) => {
@@ -34,6 +37,7 @@ export const ContractDocumentsModal: React.FC<ContractDocumentsModalProps> = ({
   catalogs,
   canUpload,
   canDelete,
+  canLinkFolders,
 }) => {
   const { showNotification } = useNotification();
   const confirm = useConfirm();
@@ -44,6 +48,9 @@ export const ContractDocumentsModal: React.FC<ContractDocumentsModalProps> = ({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingTarget = useRef<{ folder: string; documentType?: string } | null>(null);
+  // Qué se está asociando con el selector: la carpeta del contrato o la de un tipo de documento
+  const [pickerTarget, setPickerTarget] = useState<{ kind: 'contract' } | { kind: 'folder'; key: string; name: string } | null>(null);
+  const [unlinkingKey, setUnlinkingKey] = useState<string | null>(null);
 
   const loadContract = useCallback(async () => {
     if (!contractId) return;
@@ -130,6 +137,74 @@ export const ContractDocumentsModal: React.FC<ContractDocumentsModalProps> = ({
     }
   };
 
+  const handlePickFolder = async (path: string) => {
+    if (!contractId || !pickerTarget) return;
+    try {
+      const result = pickerTarget.kind === 'contract'
+        ? await contratacionService.setContractFolder(contractId, path)
+        : await contratacionService.setFolderLink(contractId, pickerTarget.key, path);
+      setContract(result.contract);
+      setPickerTarget(null);
+      showNotification(result.message, 'success');
+      onChanged();
+    } catch (err) {
+      showNotification(getApiErrorMessage(err, 'Error al asociar la carpeta.'), 'error');
+    }
+  };
+
+  const handleUnlink = async (key: string, name: string) => {
+    if (!contractId) return;
+    if (!(await confirm({
+      title: 'Quitar carpeta vinculada',
+      message: `${name} volverá a usar su subcarpeta dentro de la carpeta del contrato. No se borra ningún archivo.`,
+      confirmText: 'Quitar vínculo',
+    }))) return;
+    setUnlinkingKey(key);
+    try {
+      const result = await contratacionService.setFolderLink(contractId, key, null);
+      setContract(result.contract);
+      showNotification(result.message, 'success');
+      onChanged();
+    } catch (err) {
+      showNotification(getApiErrorMessage(err, 'Error al quitar el vínculo.'), 'error');
+    } finally {
+      setUnlinkingKey(null);
+    }
+  };
+
+  const folderLinks = contract?.folder_links ?? {};
+
+  // Vínculo de un tipo de documento a una carpeta existente: ruta vinculada + acciones
+  const linkControls = (key: string, name: string) => {
+    const linked = folderLinks[key];
+    if (!linked && !canLinkFolders) return null;
+    return (
+      <div className="flex items-center gap-2 min-w-0">
+        {linked ? (
+          <>
+            <Link2 size={12} className="text-[#004C6C] shrink-0" />
+            <span className="text-[10px] font-bold text-slate-500 truncate flex-1" title={linked}>{linked}</span>
+            {canLinkFolders && (
+              <>
+                <button onClick={() => setPickerTarget({ kind: 'folder', key, name })}
+                  className="text-[10px] font-black text-[#004C6C] hover:underline shrink-0">Cambiar</button>
+                <button onClick={() => handleUnlink(key, name)} disabled={unlinkingKey === key}
+                  className="p-1 text-slate-400 hover:text-red-500 rounded-md shrink-0 disabled:opacity-50" title="Quitar vínculo" aria-label="Quitar vínculo">
+                  {unlinkingKey === key ? <Loader2 size={12} className="animate-spin" /> : <Unlink size={12} />}
+                </button>
+              </>
+            )}
+          </>
+        ) : (
+          <button onClick={() => setPickerTarget({ kind: 'folder', key, name })}
+            className="flex items-center gap-1 text-[10px] font-black text-slate-400 hover:text-[#004C6C]">
+            <Link2 size={12} /> Vincular carpeta existente
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const documents = contract?.documents ?? [];
   const missingKeys = new Set((contract?.missing_documents ?? []).map((m) => m.key));
 
@@ -190,9 +265,17 @@ export const ContractDocumentsModal: React.FC<ContractDocumentsModalProps> = ({
                 <h2 className="text-2xl font-black text-[#004C6C] tracking-tight truncate">
                   Adjuntos {contract ? `· ${contract.contract_code}` : ''}
                 </h2>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate" title={contract?.s3_path ?? ''}>
-                  {contract?.s3_path ?? 'Cargando...'}
-                </p>
+                <div className="flex items-center gap-3 mt-0.5 min-w-0">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate" title={contract?.s3_path ?? ''}>
+                    {contract ? (contract.s3_path ?? 'Sin carpeta: se crea al subir el primer archivo') : 'Cargando...'}
+                  </p>
+                  {contract && canLinkFolders && (
+                    <button onClick={() => setPickerTarget({ kind: 'contract' })}
+                      className="flex items-center gap-1 text-[10px] font-black text-[#004C6C] hover:underline shrink-0">
+                      <FolderSearch size={12} /> {contract.s3_path ? 'Cambiar carpeta' : 'Asociar carpeta existente'}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             <button onClick={onClose} className="p-3 text-slate-300 hover:bg-slate-50 rounded-2xl transition-all cursor-pointer">
@@ -230,6 +313,7 @@ export const ContractDocumentsModal: React.FC<ContractDocumentsModalProps> = ({
                             <h3 className="font-black text-[#004C6C] text-sm tracking-tight">{folder.name}</h3>
                             {statusBadge(hasMissing, true)}
                           </div>
+                          {linkControls(folder.key, folder.name)}
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {catalogs.legal_documents.map((ld) => {
                               const key = `legal.${ld.key}`;
@@ -263,6 +347,7 @@ export const ContractDocumentsModal: React.FC<ContractDocumentsModalProps> = ({
                             {uploadButton(folder.key, folder.key)}
                           </div>
                         </div>
+                        {linkControls(folder.key, folder.name)}
                         {folderDocs.length > 0 ? (
                           <ul className="space-y-1.5">{folderDocs.map(renderFile)}</ul>
                         ) : (
@@ -277,6 +362,20 @@ export const ContractDocumentsModal: React.FC<ContractDocumentsModalProps> = ({
           </div>
         </div>
       </div>
+
+      <S3FolderPickerModal
+        isOpen={pickerTarget !== null}
+        onClose={() => setPickerTarget(null)}
+        onSelect={handlePickFolder}
+        contractId={contractId}
+        title={pickerTarget?.kind === 'folder' ? `Vincular ${pickerTarget.name}` : 'Carpeta del contrato'}
+        description={pickerTarget?.kind === 'folder'
+          ? 'Los archivos de esta carpeta (y sus subcarpetas) quedarán como adjuntos de este tipo, y lo que se suba aquí se guardará en ella.'
+          : 'Los adjuntos se tomarán de esta carpeta y lo que se suba irá a sus subcarpetas. No se mueve ni se borra ningún archivo.'}
+        initialPath={pickerTarget?.kind === 'folder'
+          ? (folderLinks[pickerTarget.key] ?? contract?.s3_path)
+          : (contract?.s3_path ? contract.s3_path.split('/').slice(0, -1).join('/') : null)}
+      />
     </Portal>
   );
 };

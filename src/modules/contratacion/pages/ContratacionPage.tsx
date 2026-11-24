@@ -327,6 +327,7 @@ export default function ContratacionPage() {
         catalogs={catalogs}
         canUpload={canCreate || canEdit}
         canDelete={canEdit}
+        canLinkFolders={canEdit}
       />
 
       <ContractTypesModal

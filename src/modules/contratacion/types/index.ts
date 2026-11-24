@@ -67,6 +67,8 @@ export interface Contract {
   created_at: string;
   // Solo en el detalle
   documents?: ContractDocument[];
+  /** Carpetas de S3 vinculadas por tipo de documento: { legal: 'tecnica/...' } */
+  folder_links?: Record<string, string>;
   created_by?: string | null;
 }
 
@@ -154,4 +156,13 @@ export interface ContractPage {
   last_page: number;
   per_page: number;
   total: number;
+}
+
+/** Carpeta del gestor documental para elegir una existente desde Contratación */
+export interface S3FolderListing {
+  path: string;
+  root: string;
+  parent: string | null;
+  folders: { name: string; path: string }[];
+  files_count: number;
 }

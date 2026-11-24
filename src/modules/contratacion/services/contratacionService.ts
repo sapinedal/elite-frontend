@@ -11,6 +11,7 @@ import type {
   ContratacionCatalogs,
   ContractorContract,
   ContractorOption,
+  S3FolderListing,
 } from '../types';
 
 const BASE = '/v1/contratacion';
@@ -114,6 +115,26 @@ export const contratacionService = {
 
   deleteDocument: async (documentId: number): Promise<void> => {
     await api.delete(`${BASE}/documents/${documentId}`);
+  },
+
+  /** Subcarpetas del gestor documental (sin ruta: la carpeta de contratos del proyecto del contrato) */
+  browseFolders: async (path?: string | null, contractId?: number | null): Promise<S3FolderListing> => {
+    const { data } = await api.get(`${BASE}/folders`, {
+      params: { ...(path ? { path } : {}), ...(contractId ? { contract_id: contractId } : {}) },
+    });
+    return data.data;
+  },
+
+  /** Cambia la carpeta principal del contrato por una existente; devuelve el contrato actualizado */
+  setContractFolder: async (contractId: number, path: string): Promise<{ contract: Contract; message: string }> => {
+    const { data } = await api.put(`${BASE}/contracts/${contractId}/folder`, { path });
+    return { contract: data.data, message: data.message };
+  },
+
+  /** Vincula un tipo de documento a una carpeta existente; path null quita el vínculo */
+  setFolderLink: async (contractId: number, folder: string, path: string | null): Promise<{ contract: Contract; message: string }> => {
+    const { data } = await api.put(`${BASE}/contracts/${contractId}/folders/${folder}`, { path });
+    return { contract: data.data, message: data.message };
   },
 };
 
