@@ -20,6 +20,8 @@ import {
   Eye,
   FilePlus2,
   Building2,
+  Copy,
+  Boxes,
 } from 'lucide-react';
 import { documentalService } from '../services/documentalService';
 import type { DocumentActivityLog, DocumentLogFilters } from '../types/documental.types';
@@ -49,9 +51,24 @@ const ACTION_OPTIONS = [
   { value: 'update', label: 'Archivos reemplazados' },
   { value: 'rename', label: 'Renombrados' },
   { value: 'move', label: 'Movidos' },
+  { value: 'copy', label: 'Copiados' },
   { value: 'delete', label: 'Eliminaciones' },
   { value: 'restrictions', label: 'Cambios de restricciones' },
   { value: 'settings', label: 'Cambios de configuración' },
+];
+
+// Módulos que guardan archivos en el bucket y quedan en esta auditoría (details.module)
+const MODULE_OPTIONS = [
+  { value: '', label: 'Todos los módulos' },
+  { value: 'documental', label: 'Gestión documental' },
+  { value: 'Contratación', label: 'Contratación' },
+  { value: 'Cortes', label: 'Cortes' },
+  { value: 'Anticipos', label: 'Anticipos' },
+  { value: 'Cuentas de cobro', label: 'Cuentas de cobro' },
+  { value: 'Facturación', label: 'Facturación' },
+  { value: 'Órdenes', label: 'Órdenes' },
+  { value: 'Pagos', label: 'Pagos' },
+  { value: 'Interventoría', label: 'Interventoría' },
 ];
 
 const ATTEMPTED_LABELS: Record<string, string> = {
@@ -95,6 +112,8 @@ const getActionBadge = (action: string) => {
       return <span className={`${badgeBase} bg-emerald-50 text-emerald-700 border-emerald-100`}><PencilLine className="w-3 h-3" /> Reemplazado</span>;
     case 'move':
       return <span className={`${badgeBase} bg-violet-50 text-violet-700 border-violet-100`}><ArrowUpRight className="w-3 h-3" /> Movido</span>;
+    case 'copy':
+      return <span className={`${badgeBase} bg-violet-50 text-violet-700 border-violet-100`}><Copy className="w-3 h-3" /> Copiado</span>;
     case 'rename':
       return <span className={`${badgeBase} bg-violet-50 text-violet-700 border-violet-100`}><Edit2 className="w-3 h-3" /> Renombrado</span>;
     case 'delete':
@@ -121,8 +140,18 @@ const getDetail = (log: DocumentActivityLog): string | null => {
     return `Inició sesión desde Office con ${String(d.method ?? 'contraseña')}`;
   }
   const fromDesktop = d.source === 'escritorio' ? 'Desde la unidad de red del escritorio' : null;
+  const contract = d.contract_code ? `Contrato ${String(d.contract_code)}` : null;
   if ((log.action === 'rename' || log.action === 'move') && d.from) {
-    return [`Antes: ${String(d.from)}`, fromDesktop].filter(Boolean).join(' · ');
+    return [`Antes: ${String(d.from)}`, fromDesktop, contract].filter(Boolean).join(' · ');
+  }
+  if (log.action === 'copy' && d.from) {
+    return `Copiado desde: ${String(d.from)}`;
+  }
+  if (d.type === 'folder' && typeof d.files === 'number') {
+    return `${d.files} archivo(s)${d.replaced ? ' · reemplaza los anteriores' : ''}`;
+  }
+  if (contract) {
+    return contract;
   }
   if (fromDesktop) {
     return fromDesktop;
@@ -228,7 +257,7 @@ export const DocumentLogsModal: React.FC<DocumentLogsModalProps> = ({ isOpen, on
               <div>
                 <h3 className="text-base font-bold text-slate-900">Auditoría de Actividad</h3>
                 <p className="text-xs text-slate-400">
-                  Operaciones, cambios de restricciones e intentos negados en el repositorio
+                  Operaciones del repositorio y de los módulos que guardan archivos en él, cambios de restricciones e intentos negados
                 </p>
               </div>
             </div>
@@ -257,7 +286,7 @@ export const DocumentLogsModal: React.FC<DocumentLogsModalProps> = ({ isOpen, on
             )}
 
             {/* Filtros */}
-            <form onSubmit={applyFilters} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 items-end">
+            <form onSubmit={applyFilters} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2.5 items-end">
               <div className="lg:col-span-1">
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Acción</label>
                 <select
@@ -266,6 +295,18 @@ export const DocumentLogsModal: React.FC<DocumentLogsModalProps> = ({ isOpen, on
                   className={inputClass}
                 >
                   {ACTION_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="lg:col-span-1">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Módulo</label>
+                <select
+                  value={draft.module ?? ''}
+                  onChange={(e) => setDraft({ ...draft, module: e.target.value })}
+                  className={inputClass}
+                >
+                  {MODULE_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
@@ -361,11 +402,16 @@ export const DocumentLogsModal: React.FC<DocumentLogsModalProps> = ({ isOpen, on
                           <td className="p-3 align-top">{getActionBadge(log.action)}</td>
                           <td className="p-3 align-top">
                             <span className="font-bold text-slate-800 block">
-                              {log.user?.name || `Usuario #${log.user_id || 'Sistema'}`}
+                              {log.user?.name || (log.user_id ? `Usuario #${log.user_id}` : 'Sistema')}
                             </span>
                             {log.user?.email && <span className="text-[10px] text-slate-400">{log.user.email}</span>}
                           </td>
                           <td className="p-3 align-top max-w-sm">
+                            {typeof log.details?.module === 'string' && (
+                              <span className={`${badgeBase} bg-amber-50 text-[#D97F2A] border-amber-100 mb-1`}>
+                                <Boxes className="w-3 h-3" /> {log.details.module}
+                              </span>
+                            )}
                             <span className="font-mono text-[11px] text-slate-600 block truncate" title={log.path}>
                               {log.path || '/'}
                             </span>

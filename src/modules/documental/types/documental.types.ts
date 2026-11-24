@@ -126,6 +126,8 @@ export interface PermissionsResponse {
 
 export interface DocumentLogFilters {
   action?: string;
+  /** Módulo de origen (Cortes, Anticipos...) o 'documental' para lo hecho desde el gestor */
+  module?: string;
   user?: string;
   path?: string;
   date_from?: string;
