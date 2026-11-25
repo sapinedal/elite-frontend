@@ -25,7 +25,7 @@ export default function AnticiposPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     catalogs, anticipos, counts, scope, filters, page, perPage, pagination, loading, error,
-    setScope, setFilter, clearFilters, setPage, changePerPage, createAnticipo, resubmitAnticipo, reviewAnticipo, registerMultifox, reviewAccounting,
+    setScope, setFilter, clearFilters, setPage, changePerPage, createAnticipo, resubmitAnticipo, reviewAnticipo, registerMultifox, reviewAccounting, refresh,
   } = useAnticipos();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -258,6 +258,7 @@ export default function AnticiposPage() {
         onResubmit={openResubmit}
         onRegisterMultifox={handleMultifox}
         onReviewAccounting={handleReviewAccounting}
+        onDeleted={() => { closeDetail(); refresh(); }}
       />
     </div>
   );

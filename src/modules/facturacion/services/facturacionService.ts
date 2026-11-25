@@ -60,8 +60,9 @@ export const facturacionService = {
     return data.data;
   },
 
-  deleteFactura: async (id: number): Promise<void> => {
-    await api.delete(`${BASE}/${id}`);
+  /** Pendiente: sin motivo. Procesada: exige facturacion.eliminar y motivo (reversa lo que generó en obra) */
+  deleteFactura: async (id: number, reason?: string): Promise<void> => {
+    await api.delete(`${BASE}/${id}`, reason ? { data: { reason } } : undefined);
   },
 
   /** Cortes y órdenes del residente que admiten la factura `invoiceId` (aprobados sin factura / pendientes de factura) */

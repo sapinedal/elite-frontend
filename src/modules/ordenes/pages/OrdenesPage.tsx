@@ -22,7 +22,7 @@ export default function OrdenesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     catalogs, ordenes, counts, scope, filters, page, perPage, pagination, loading, error,
-    setScope, setFilter, clearFilters, setPage, changePerPage, createOrden, resubmitOrden, reviewOrden, uploadDocument, reviewAccounting,
+    setScope, setFilter, clearFilters, setPage, changePerPage, createOrden, resubmitOrden, reviewOrden, uploadDocument, reviewAccounting, refresh,
   } = useOrdenes();
 
   const isReviewer = (catalogs?.review_stages.length ?? 0) > 0;
@@ -263,6 +263,7 @@ export default function OrdenesPage() {
         onReviewAccounting={handleReviewAccounting}
         steps={catalogs?.steps ?? []}
         maxUploadMb={catalogs?.max_upload_mb ?? 1024}
+        onDeleted={() => { closeDetail(); refresh(); }}
       />
     </div>
   );

@@ -8,6 +8,7 @@ import { formatMoney } from '../../../utils/money';
 import { corteService, getApiErrorMessage } from '../services/corteService';
 import { formatBytes } from '../utils/format';
 import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
+import { DeleteRecordButton } from '../../../components/ui/DeleteRecordButton';
 import type { Corte, InvoiceDocumentType } from '../types';
 
 interface CorteInvoicesSectionProps {
@@ -181,6 +182,14 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                   className="p-2.5 rounded-xl text-[#004C6C] hover:bg-blue-50" title="Descargar factura">
                   {downloadingId === `${invoice.id}:false` ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                 </button>
+                {invoice.can_delete && (
+                  <DeleteRecordButton compact
+                    title={`Eliminar ${invoice.document_type_label} N.º ${invoice.invoice_number}`}
+                    message="Se quita del corte y su factura del mes vuelve a quedar pendiente. Si ya estaba en cuentas por pagar se reversa (no se puede si ya tiene pagos). Si es la única factura, el corte vuelve a Aprobado."
+                    successMessage={`${invoice.document_type_label} N.º ${invoice.invoice_number} eliminada.`}
+                    onDelete={async (reason) => onCreated(await corteService.deleteInvoice(invoice.id, reason))}
+                  />
+                )}
               </div>
             </div>
 

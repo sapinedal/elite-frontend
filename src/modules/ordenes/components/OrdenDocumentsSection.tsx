@@ -1,3 +1,4 @@
+import { DeleteRecordButton } from '../../../components/ui/DeleteRecordButton';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { isAxiosError } from 'axios';
@@ -165,6 +166,15 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
                 className="p-2.5 rounded-xl text-[#004C6C] hover:bg-blue-50 shrink-0" title="Descargar">
                 {downloadingId === doc.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
               </button>
+              {doc.can_delete && (
+                <DeleteRecordButton compact
+                  title={`Eliminar ${doc.step_label} N.º ${doc.number}`}
+                  message="La orden vuelve a este paso para cargar el documento de nuevo. Si ya estaba completada, su cuenta por pagar se anula (no se puede si ya tiene pagos); si es la factura, la factura del mes vuelve a quedar pendiente."
+                  successMessage={`${doc.step_label} eliminada.`}
+                  onDelete={async (reason) => onUploaded(await ordenService.deleteDocument(doc.id, reason))}
+                  className="p-2.5 rounded-xl text-rose-500 hover:bg-rose-50 disabled:opacity-60 shrink-0"
+                />
+              )}
             </li>
           ))}
         </ul>

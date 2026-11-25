@@ -4,6 +4,7 @@ import { Portal } from '../../../components/ui/Portal';
 import { useAuth } from '../../../context/AuthContext';
 import { HistoryButton, HistoryModal } from '../../../components/ui/HistoryModal';
 import { AccountingReviewPanel } from '../../../components/ui/AccountingReviewPanel';
+import { DeleteRecordButton } from '../../../components/ui/DeleteRecordButton';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { ordenService, getApiErrorMessage } from '../services/ordenService';
 import { OrdenStatusBadge } from './OrdenStatusBadge';
@@ -17,6 +18,8 @@ interface OrdenDetailModalProps {
   onResubmit: (orden: Orden) => void;
   onUploadDocument: (id: number, payload: OrdenDocumentPayload) => Promise<Orden>;
   onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => Promise<Orden>;
+  /** Después de eliminar la orden (cerrar y refrescar el listado) */
+  onDeleted?: () => void;
   steps: OrdenCatalogs['steps'];
   maxUploadMb: number;
 }
@@ -42,6 +45,8 @@ const ACTION_LABELS: Record<OrdenHistoryEntry['action'], { label: string; tone: 
   documento: { label: 'Documento cargado', tone: 'text-[#004C6C]' },
   contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
+  documento_eliminado: { label: 'Documento eliminado', tone: 'text-rose-600' },
+  eliminada: { label: 'Orden eliminada', tone: 'text-rose-600' },
 };
 
 // El contenido se monta por cada orden abierta (`key`), así arranca sin datos de la orden anterior
@@ -52,7 +57,7 @@ export const OrdenDetailModal: React.FC<OrdenDetailModalProps> = ({ ordenId, ...
 );
 
 const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { ordenId: number }> = ({
-  ordenId, onClose, onReview, onResubmit, onUploadDocument, onReviewAccounting, steps, maxUploadMb,
+  ordenId, onClose, onReview, onResubmit, onUploadDocument, onReviewAccounting, steps, maxUploadMb, onDeleted,
 }) => {
   const { user } = useAuth();
   const [orden, setOrden] = useState<Orden | null>(null);
@@ -104,6 +109,15 @@ const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { or
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {orden?.can_delete && (
+              <DeleteRecordButton
+                title={`Eliminar orden ${orden.code}`}
+                message="Se elimina la orden en cualquier estado. Su cuenta por pagar se anula (si ya tiene pagos no se podrá eliminar) y su factura del mes vuelve a quedar pendiente."
+                successMessage={`Orden ${orden.code} eliminada.`}
+                onDelete={(reason) => ordenService.deleteOrden(orden.id, reason)}
+                onDeleted={onDeleted ?? onClose}
+              />
+            )}
             {orden && <HistoryButton count={orden.history?.length} onClick={() => setHistoryOpen(true)} />}
             <button onClick={onClose} className="p-3 text-slate-300 hover:bg-slate-50 rounded-2xl transition-all cursor-pointer">
               <X size={24} />
@@ -234,7 +248,7 @@ const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { or
         <HistoryModal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} subtitle={`Orden ${orden.code}`}>
           <ol className="relative border-l-2 border-slate-100 ml-2 space-y-5">
             {(orden.history ?? []).map((entry) => {
-              const action = ACTION_LABELS[entry.action];
+              const action = ACTION_LABELS[entry.action] ?? { label: entry.action, tone: 'text-slate-600' };
               return (
                 <li key={entry.id} className="ml-5">
                   <span className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-white border-2 border-slate-300" />

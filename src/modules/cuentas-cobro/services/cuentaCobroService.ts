@@ -105,6 +105,11 @@ export const cuentaCobroService = {
     const { data } = await api.delete(`${BASE}/tipos/${id}`);
     return data.message;
   },
+
+  /** Elimina la cuenta de cobro cargada por error (cuentas_cobro.eliminar) */
+  deleteCuenta: async (id: number, reason: string): Promise<void> => {
+    await api.delete(`${BASE}/${id}`, { data: { reason } });
+  },
 };
 
 export { getErrorMessage as getApiErrorMessage } from '../../../lib/apiError';

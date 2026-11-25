@@ -53,7 +53,7 @@ export interface OrdenProgressStep {
 
 export interface OrdenHistoryEntry {
   id: number;
-  action: 'registrada' | 'aprobado' | 'devuelto' | 'reenviada' | 'documento' | 'contabilidad_aprobada' | 'contabilidad_devuelta';
+  action: 'registrada' | 'aprobado' | 'devuelto' | 'reenviada' | 'documento' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'documento_eliminado' | 'eliminada';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
@@ -74,6 +74,8 @@ export interface OrdenDocument {
   file_name: string;
   file_size: number;
   uploaded_by: string | null;
+  /** ordenes.eliminar y es el último documento cargado (los pasos son secuenciales) */
+  can_delete?: boolean;
   created_at: string;
 }
 
@@ -102,6 +104,8 @@ export interface Orden {
   completed_at: string | null;
   can_review: boolean;
   can_resubmit: boolean;
+  /** ordenes.eliminar: eliminar la orden cargada por error */
+  can_delete?: boolean;
   can_upload_step: boolean;
   can_review_accounting: boolean;
   // Solo en el detalle

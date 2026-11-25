@@ -22,7 +22,7 @@ export default function CortesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     catalogs, cortes, counts, scope, filters, page, perPage, pagination, loading, error,
-    setScope, setFilter, clearFilters, setPage, changePerPage, createCorte, resubmitCorte, reviewCorte, confirmMultifox, reviewAccounting,
+    setScope, setFilter, clearFilters, setPage, changePerPage, createCorte, resubmitCorte, reviewCorte, confirmMultifox, reviewAccounting, refresh,
   } = useCortes();
 
   const canCreate = useCan('cortes.crear');
@@ -262,6 +262,7 @@ export default function CortesPage() {
         onResubmit={openResubmit}
         onConfirmMultifox={handleConfirmMultifox}
         onReviewAccounting={handleReviewAccounting}
+        onDeleted={() => { closeDetail(); refresh(); }}
       />
     </div>
   );

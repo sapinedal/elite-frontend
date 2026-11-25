@@ -82,6 +82,17 @@ export const ordenService = {
     const { data } = await api.get(`${BASE}/documents/${documentId}/download`, { params: { ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },
+
+  /** Elimina la orden cargada por error (ordenes.eliminar) */
+  deleteOrden: async (id: number, reason: string): Promise<void> => {
+    await api.delete(`${BASE}/${id}`, { data: { reason } });
+  },
+
+  /** Elimina el último documento de la orden (entrada, factura u orden ERP); devuelve la orden actualizada */
+  deleteDocument: async (documentId: number, reason: string): Promise<Orden> => {
+    const { data } = await api.delete(`${BASE}/documents/${documentId}`, { data: { reason } });
+    return data.data;
+  },
 };
 
 export { getErrorMessage as getApiErrorMessage } from '../../../lib/apiError';

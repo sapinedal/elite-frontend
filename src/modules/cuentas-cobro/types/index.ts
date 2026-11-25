@@ -52,7 +52,7 @@ export interface CuentaCobroProgressStep {
 
 export interface CuentaCobroHistoryEntry {
   id: number;
-  action: 'radicada' | 'aprobado' | 'devuelto' | 'reenviada' | 'sin_multifox' | 'requiere_multifox' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta';
+  action: 'radicada' | 'aprobado' | 'devuelto' | 'reenviada' | 'sin_multifox' | 'requiere_multifox' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'eliminada';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
@@ -95,6 +95,8 @@ export interface CuentaCobro {
   completed_at: string | null;
   can_review: boolean;
   can_resubmit: boolean;
+  /** cuentas_cobro.eliminar: eliminar la cuenta de cobro cargada por error */
+  can_delete?: boolean;
   can_handle_multifox: boolean;
   can_review_accounting: boolean;
   // Solo en el detalle

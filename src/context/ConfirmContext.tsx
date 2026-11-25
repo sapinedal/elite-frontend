@@ -8,6 +8,12 @@ import { useEscapeToClose } from '../hooks/useEscapeToClose';
  *
  *   const confirm = useConfirm();
  *   if (!(await confirm({ title: 'Eliminar proyecto', message: '…', confirmText: 'Eliminar', tone: 'danger' }))) return;
+ *
+ * Con motivo obligatorio (eliminaciones de registros aprobados): devuelve el motivo o null si se cancela.
+ *
+ *   const confirmReason = useConfirmReason();
+ *   const reason = await confirmReason({ title: 'Eliminar corte', message: '…', confirmText: 'Eliminar' });
+ *   if (reason === null) return;
  */
 export type ConfirmTone = 'danger' | 'warning' | 'info';
 
@@ -19,17 +25,29 @@ export interface ConfirmOptions {
   tone?: ConfirmTone;
 }
 
+export interface ConfirmReasonOptions extends ConfirmOptions {
+  reasonLabel?: string;
+  reasonPlaceholder?: string;
+  /** Mínimo de caracteres del motivo (por defecto 5, igual que el backend) */
+  minLength?: number;
+}
+
 type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>;
+type ConfirmReasonFn = (options: ConfirmReasonOptions) => Promise<string | null>;
 
-const ConfirmContext = createContext<ConfirmFn | undefined>(undefined);
+const ConfirmContext = createContext<{ confirm: ConfirmFn; confirmReason: ConfirmReasonFn } | undefined>(undefined);
 
-export const useConfirm = (): ConfirmFn => {
+const useConfirmContext = () => {
   const context = useContext(ConfirmContext);
   if (!context) {
     throw new Error('useConfirm must be used within a ConfirmProvider');
   }
   return context;
 };
+
+export const useConfirm = (): ConfirmFn => useConfirmContext().confirm;
+
+export const useConfirmReason = (): ConfirmReasonFn => useConfirmContext().confirmReason;
 
 const TONES: Record<ConfirmTone, { icon: React.ReactNode; iconBox: string; button: string }> = {
   danger: {
@@ -49,19 +67,24 @@ const TONES: Record<ConfirmTone, { icon: React.ReactNode; iconBox: string; butto
   },
 };
 
-interface PendingConfirm extends ConfirmOptions {
-  resolve: (value: boolean) => void;
+interface PendingConfirm extends ConfirmReasonOptions {
+  withReason: boolean;
+  resolve: (value: boolean, reason?: string) => void;
 }
 
-const ConfirmDialog: React.FC<{ pending: PendingConfirm; onAnswer: (value: boolean) => void }> = ({ pending, onAnswer }) => {
+const ConfirmDialog: React.FC<{ pending: PendingConfirm; onAnswer: (value: boolean, reason?: string) => void }> = ({ pending, onAnswer }) => {
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const reasonRef = useRef<HTMLTextAreaElement>(null);
+  const [reason, setReason] = useState('');
   const tone = TONES[pending.tone ?? 'danger'];
+  const minLength = pending.minLength ?? 5;
+  const reasonOk = !pending.withReason || reason.trim().length >= minLength;
 
-  // Escape cancela; al abrir, el foco queda en el botón de confirmar (Enter confirma)
+  // Escape cancela; al abrir, el foco queda en el motivo o en el botón de confirmar (Enter confirma)
   useEscapeToClose(true, () => onAnswer(false));
   useEffect(() => {
-    confirmRef.current?.focus();
-  }, []);
+    (pending.withReason ? reasonRef.current : confirmRef.current)?.focus();
+  }, [pending.withReason]);
 
   return createPortal(
     <div
@@ -90,6 +113,23 @@ const ConfirmDialog: React.FC<{ pending: PendingConfirm; onAnswer: (value: boole
             {pending.title}
           </h3>
           {pending.message && <div className="mt-2 text-sm font-medium text-slate-500 leading-relaxed">{pending.message}</div>}
+          {pending.withReason && (
+            <label className="block mt-4">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                {pending.reasonLabel ?? 'Motivo de la eliminación'} *
+              </span>
+              <textarea
+                ref={reasonRef}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder={pending.reasonPlaceholder ?? 'Ej. Se cargó por error / quedó duplicado'}
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-rose-300 focus:ring-4 focus:ring-rose-50 resize-none"
+              />
+              <span className="text-[11px] text-slate-400">Queda en el historial del registro.</span>
+            </label>
+          )}
         </div>
         <div className="flex flex-col-reverse sm:flex-row gap-3 px-6 pb-6 sm:px-7 sm:pb-7">
           <button
@@ -102,8 +142,9 @@ const ConfirmDialog: React.FC<{ pending: PendingConfirm; onAnswer: (value: boole
           <button
             ref={confirmRef}
             type="button"
-            onClick={() => onAnswer(true)}
-            className={`flex-1 px-5 py-3.5 rounded-2xl text-sm font-bold text-white shadow-lg transition-all outline-none focus-visible:ring-4 focus-visible:ring-slate-200 ${tone.button}`}
+            onClick={() => onAnswer(true, reason.trim())}
+            disabled={!reasonOk}
+            className={`flex-1 px-5 py-3.5 rounded-2xl text-sm font-bold text-white shadow-lg transition-all outline-none focus-visible:ring-4 focus-visible:ring-slate-200 disabled:opacity-50 disabled:cursor-not-allowed ${tone.button}`}
           >
             {pending.confirmText ?? 'Confirmar'}
           </button>
@@ -117,27 +158,35 @@ const ConfirmDialog: React.FC<{ pending: PendingConfirm; onAnswer: (value: boole
 export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [pending, setPending] = useState<PendingConfirm | null>(null);
 
+  const open = useCallback((options: ConfirmReasonOptions, withReason: boolean, resolve: PendingConfirm['resolve']) => {
+    setPending((current) => {
+      // Si había otra confirmación abierta se toma como cancelada
+      current?.resolve(false);
+      return { ...options, withReason, resolve };
+    });
+  }, []);
+
   const confirm = useCallback<ConfirmFn>(
-    (options) =>
-      new Promise<boolean>((resolve) => {
-        setPending((current) => {
-          // Si había otra confirmación abierta se toma como cancelada
-          current?.resolve(false);
-          return { ...options, resolve };
-        });
-      }),
-    []
+    (options) => new Promise<boolean>((resolve) => open(options, false, (value) => resolve(value))),
+    [open]
   );
 
-  const answer = useCallback((value: boolean) => {
+  const confirmReason = useCallback<ConfirmReasonFn>(
+    (options) => new Promise<string | null>((resolve) => open(options, true, (value, reason) => resolve(value && reason ? reason : null))),
+    [open]
+  );
+
+  const answer = useCallback((value: boolean, reason?: string) => {
     setPending((current) => {
-      current?.resolve(value);
+      current?.resolve(value, reason);
       return null;
     });
   }, []);
 
+  const value = React.useMemo(() => ({ confirm, confirmReason }), [confirm, confirmReason]);
+
   return (
-    <ConfirmContext.Provider value={confirm}>
+    <ConfirmContext.Provider value={value}>
       {children}
       {pending && <ConfirmDialog pending={pending} onAnswer={answer} />}
     </ConfirmContext.Provider>

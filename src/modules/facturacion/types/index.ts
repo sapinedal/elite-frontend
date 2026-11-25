@@ -56,6 +56,10 @@ export interface Factura {
   /** Pendiente de un proveedor con cortes del residente esperando factura */
   suggested: boolean;
   can_edit: boolean;
+  /** Pendiente: Contabilidad. Procesada o indirecto en pagos: facturacion.eliminar (reversa lo que generó) */
+  can_delete?: boolean;
+  /** La eliminación pide motivo (ya procesada por obra o en cuentas por pagar) */
+  delete_requires_reason?: boolean;
   can_associate: boolean;
 }
 

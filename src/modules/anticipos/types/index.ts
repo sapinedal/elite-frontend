@@ -48,7 +48,7 @@ export interface AnticipoProgressStep {
 
 export interface AnticipoHistoryEntry {
   id: number;
-  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta';
+  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'eliminado';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
@@ -86,6 +86,8 @@ export interface Anticipo {
   multifox_at: string | null;
   can_review: boolean;
   can_resubmit: boolean;
+  /** anticipos.eliminar: eliminar el anticipo cargado por error */
+  can_delete?: boolean;
   can_register_multifox: boolean;
   can_review_accounting: boolean;
   // Solo en el detalle

@@ -13,6 +13,7 @@ import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { cuentaCobroService, getApiErrorMessage } from '../services/cuentaCobroService';
 import { CuentaCobroStatusBadge } from './CuentaCobroStatusBadge';
 import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
+import { DeleteRecordButton } from '../../../components/ui/DeleteRecordButton';
 import type { CuentaCobro, CuentaCobroHistoryEntry, CuentaCobroMultifoxPayload, CuentaCobroProgressStep } from '../types';
 
 interface CuentaCobroDetailModalProps {
@@ -24,6 +25,8 @@ interface CuentaCobroDetailModalProps {
   onDecideMultifox: (id: number, requiresMultifox: boolean, comment?: string) => Promise<CuentaCobro>;
   onRegisterMultifox: (id: number, payload: CuentaCobroMultifoxPayload) => Promise<CuentaCobro>;
   onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<CuentaCobro>;
+  /** Después de eliminar la cuenta (cerrar y refrescar el listado) */
+  onDeleted?: () => void;
 }
 
 const STEP_STYLES: Record<CuentaCobroProgressStep['state'], { icon: React.ReactNode; tone: string }> = {
@@ -48,6 +51,7 @@ const ACTION_LABELS: Record<CuentaCobroHistoryEntry['action'], { label: string; 
   multifox: { label: 'Cargada en Multifox', tone: 'text-[#004C6C]' },
   contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
+  eliminada: { label: 'Cuenta de cobro eliminada', tone: 'text-rose-600' },
 };
 
 /**
@@ -60,7 +64,7 @@ export const CuentaCobroDetailModal: React.FC<CuentaCobroDetailModalProps> = ({ 
 );
 
 const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { cuentaId: number }> = ({
-  cuentaId, maxUploadMb, onClose, onReview, onResubmit, onDecideMultifox, onRegisterMultifox, onReviewAccounting,
+  cuentaId, maxUploadMb, onClose, onReview, onResubmit, onDecideMultifox, onRegisterMultifox, onReviewAccounting, onDeleted,
 }) => {
   const [cuenta, setCuenta] = useState<CuentaCobro | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -166,7 +170,18 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <CuentaCobroStatusBadge status={cuenta.status} label={cuenta.status_label} />
-              <HistoryButton count={cuenta.history?.length} onClick={() => setHistoryOpen(true)} />
+              <div className="flex items-center gap-2">
+                {cuenta.can_delete && (
+                  <DeleteRecordButton
+                    title={`Eliminar cuenta de cobro ${cuenta.code}`}
+                    message="Se elimina la cuenta de cobro en cualquier estado. Su cuenta por pagar se anula (si ya tiene pagos no se podrá eliminar)."
+                    successMessage={`Cuenta de cobro ${cuenta.code} eliminada.`}
+                    onDelete={(reason) => cuentaCobroService.deleteCuenta(cuenta.id, reason)}
+                    onDeleted={onDeleted ?? onClose}
+                  />
+                )}
+                <HistoryButton count={cuenta.history?.length} onClick={() => setHistoryOpen(true)} />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -341,7 +356,7 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
         <HistoryModal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} subtitle={`Cuenta de cobro ${cuenta.code}`}>
           <ol className="relative border-l-2 border-slate-100 ml-2 space-y-5">
             {(cuenta.history ?? []).map((entry) => {
-              const action = ACTION_LABELS[entry.action];
+              const action = ACTION_LABELS[entry.action] ?? { label: entry.action, tone: 'text-slate-600' };
               return (
                 <li key={entry.id} className="ml-5">
                   <span className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-white border-2 border-slate-300" />

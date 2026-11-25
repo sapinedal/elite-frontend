@@ -80,6 +80,11 @@ export const anticipoService = {
     const { data } = await api.get(`${BASE}/${id}/download`, { params: { file, ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },
+
+  /** Elimina el anticipo cargado por error (anticipos.eliminar) */
+  deleteAnticipo: async (id: number, reason: string): Promise<void> => {
+    await api.delete(`${BASE}/${id}`, { data: { reason } });
+  },
 };
 
 export { getErrorMessage as getApiErrorMessage } from '../../../lib/apiError';

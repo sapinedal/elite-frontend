@@ -18,6 +18,7 @@ import { FacturaEditModal } from '../components/FacturaEditModal';
 import { FacturaStatusBadge } from '../components/FacturaStatusBadge';
 import { FacturacionPanel } from '../components/FacturacionPanel';
 import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
+import { DeleteRecordButton } from '../../../components/ui/DeleteRecordButton';
 import type { Factura, FacturaScope } from '../types';
 
 type Tab = FacturaScope | 'panel';
@@ -157,10 +158,23 @@ export default function FacturacionPage() {
               <button onClick={() => setEditing(f)} className="p-2 rounded-xl text-slate-500 hover:bg-slate-100" title="Editar">
                 <Pencil size={15} />
               </button>
-              <button onClick={() => setDeleting(f)} className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50" title="Eliminar">
-                <Trash2 size={15} />
-              </button>
+              {f.can_delete && !f.delete_requires_reason && (
+                <button onClick={() => setDeleting(f)} className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50" title="Eliminar">
+                  <Trash2 size={15} />
+                </button>
+              )}
             </>
+          )}
+          {/* Ya procesada por obra (o indirecto en cuentas por pagar): facturacion.eliminar, con motivo */}
+          {f.can_delete && f.delete_requires_reason && (
+            <DeleteRecordButton compact
+              title={`Eliminar ${f.document_number}`}
+              message={`Esta factura ya está asociada${f.target ? ` a ${f.target.label}` : ''}. Se elimina con lo que generó: se quita del corte, la orden vuelve a pendiente de factura o se elimina el anticipo, y su cuenta por pagar se anula (no se puede si ya tiene pagos). El archivo se borra de la carpeta del mes.`}
+              successMessage={`${f.document_number} eliminada.`}
+              onDelete={(reason) => facturacionService.deleteFactura(f.id, reason)}
+              onDeleted={refresh}
+              className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-60"
+            />
           )}
         </div>
       ),

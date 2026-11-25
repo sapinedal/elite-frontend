@@ -11,6 +11,7 @@ import { CorteStatusBadge } from './CorteStatusBadge';
 import { CorteInvoicesSection } from './CorteInvoicesSection';
 import { formatBytes } from '../utils/format';
 import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
+import { DeleteRecordButton } from '../../../components/ui/DeleteRecordButton';
 import type { Corte, CorteHistoryEntry, CorteProgressStep } from '../types';
 
 interface CorteDetailModalProps {
@@ -20,6 +21,8 @@ interface CorteDetailModalProps {
   onResubmit: (corte: Corte) => void;
   onConfirmMultifox: (invoiceId: number, file: File, onProgress?: (percent: number) => void) => Promise<Corte>;
   onReviewAccounting: (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => Promise<Corte>;
+  /** Después de eliminar el corte (cerrar y refrescar el listado) */
+  onDeleted?: () => void;
 }
 
 const STEP_STYLES: Record<CorteProgressStep['state'], { icon: React.ReactNode; tone: string; text: string }> = {
@@ -38,6 +41,8 @@ const ACTION_LABELS: Record<CorteHistoryEntry['action'], { label: string; tone: 
   multifox: { label: 'Cargada en Multifox', tone: 'text-green-700' },
   contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
+  factura_eliminada: { label: 'Factura eliminada', tone: 'text-rose-600' },
+  eliminado: { label: 'Corte eliminado', tone: 'text-rose-600' },
 };
 
 // El contenido se monta por cada corte abierto (`key`), así arranca sin datos del corte anterior
@@ -48,7 +53,7 @@ export const CorteDetailModal: React.FC<CorteDetailModalProps> = ({ corteId, ...
 );
 
 const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { corteId: number }> = ({
-  corteId, onClose, onReview, onResubmit, onConfirmMultifox, onReviewAccounting,
+  corteId, onClose, onReview, onResubmit, onConfirmMultifox, onReviewAccounting, onDeleted,
 }) => {
   const { user } = useAuth();
   const [corte, setCorte] = useState<Corte | null>(null);
@@ -118,6 +123,15 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {corte?.can_delete && (
+              <DeleteRecordButton
+                title={`Eliminar ${corte.label}`}
+                message="Se elimina el corte en cualquier estado. Sus cuentas por pagar se anulan (si alguna ya tiene pagos no se podrá eliminar) y sus facturas del mes vuelven a quedar pendientes."
+                successMessage={`${corte.label} eliminado.`}
+                onDelete={(reason) => corteService.deleteCorte(corte.id, reason)}
+                onDeleted={onDeleted ?? onClose}
+              />
+            )}
             {corte && <HistoryButton count={corte.history?.length} onClick={() => setHistoryOpen(true)} />}
             <button onClick={onClose} className="p-3 text-slate-300 hover:bg-slate-50 rounded-2xl transition-all cursor-pointer">
               <X size={24} />
@@ -252,7 +266,7 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
         <HistoryModal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} subtitle={corte.contract ? `${corte.label} · Contrato ${corte.contract.contract_code}` : corte.label}>
           <ol className="relative border-l-2 border-slate-100 ml-2 space-y-5">
             {(corte.history ?? []).map((entry) => {
-              const action = ACTION_LABELS[entry.action];
+              const action = ACTION_LABELS[entry.action] ?? { label: entry.action, tone: 'text-slate-600' };
               return (
                 <li key={entry.id} className="ml-5">
                   <span className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-white border-2 border-slate-300" />

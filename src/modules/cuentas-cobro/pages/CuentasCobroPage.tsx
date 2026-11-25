@@ -29,7 +29,7 @@ export default function CuentasCobroPage() {
   const {
     catalogs, cuentas, counts, scope, filters, page, perPage, pagination, loading, error,
     setScope, setFilter, clearFilters, setPage, changePerPage, reloadCatalogs,
-    createCuenta, resubmitCuenta, reviewCuenta, decideMultifox, registerMultifox, reviewAccounting,
+    createCuenta, resubmitCuenta, reviewCuenta, decideMultifox, registerMultifox, reviewAccounting, refresh,
   } = useCuentasCobro();
 
   const [tiposOpen, setTiposOpen] = useState(false);
@@ -264,6 +264,7 @@ export default function CuentasCobroPage() {
         onDecideMultifox={handleDecide}
         onRegisterMultifox={handleMultifox}
         onReviewAccounting={handleReviewAccounting}
+        onDeleted={() => { closeDetail(); refresh(); }}
       />
     </div>
   );

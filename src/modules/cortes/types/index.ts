@@ -60,7 +60,7 @@ export interface CorteProgressStep {
 
 export interface CorteHistoryEntry {
   id: number;
-  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'factura' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta';
+  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'factura' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'factura_eliminada' | 'eliminado';
   stage: CorteStageKey | null;
   stage_label: string | null;
   comment: string | null;
@@ -96,6 +96,8 @@ export interface Corte {
   approved_at: string | null;
   can_review: boolean;
   can_resubmit: boolean;
+  /** cortes.eliminar: eliminar el corte cargado por error (reversa cuentas por pagar y facturas del mes) */
+  can_delete?: boolean;
   can_invoice: boolean;
   invoices_count: number;
   // Solo en el detalle
@@ -123,6 +125,8 @@ export interface CorteInvoice {
   accounting_at: string | null;
   accounting_comment: string | null;
   can_review_accounting: boolean;
+  /** cortes.eliminar */
+  can_delete?: boolean;
   file_name: string;
   file_size: number;
   uploaded_by: string | null;

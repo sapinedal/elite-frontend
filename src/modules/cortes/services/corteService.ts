@@ -97,6 +97,17 @@ export const corteService = {
     return data.data.download_url;
   },
 
+  /** Elimina el corte cargado por error (cortes.eliminar): reversa cuentas por pagar y facturas del mes */
+  deleteCorte: async (id: number, reason: string): Promise<void> => {
+    await api.delete(`${BASE}/${id}`, { data: { reason } });
+  },
+
+  /** Elimina una factura del corte (cortes.eliminar); devuelve el corte actualizado */
+  deleteInvoice: async (invoiceId: number, reason: string): Promise<Corte> => {
+    const { data } = await api.delete(`${BASE}/invoices/${invoiceId}`, { data: { reason } });
+    return data.data;
+  },
+
   getDownloadUrl: async (id: number, inline = false): Promise<string> => {
     const { data } = await api.get(`${BASE}/${id}/download`, { params: { ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;

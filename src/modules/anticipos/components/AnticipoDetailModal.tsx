@@ -11,6 +11,7 @@ import { anticipoService, getApiErrorMessage } from '../services/anticipoService
 import { AnticipoStatusBadge } from './AnticipoStatusBadge';
 import { FileDrop } from '../../../components/ui/FileDrop';
 import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
+import { DeleteRecordButton } from '../../../components/ui/DeleteRecordButton';
 import type { Anticipo, AnticipoHistoryEntry, AnticipoProgressStep, MultifoxPayload } from '../types';
 
 interface AnticipoDetailModalProps {
@@ -21,6 +22,8 @@ interface AnticipoDetailModalProps {
   onResubmit: (anticipo: Anticipo) => void;
   onRegisterMultifox: (id: number, payload: MultifoxPayload) => Promise<Anticipo>;
   onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Anticipo>;
+  /** Después de eliminar el anticipo (cerrar y refrescar el listado) */
+  onDeleted?: () => void;
 }
 
 const STEP_STYLES: Record<AnticipoProgressStep['state'], { icon: React.ReactNode; tone: string }> = {
@@ -43,6 +46,7 @@ const ACTION_LABELS: Record<AnticipoHistoryEntry['action'], { label: string; ton
   multifox: { label: 'Generado en Multifox', tone: 'text-[#004C6C]' },
   contabilidad_aprobada: { label: 'Aprobado por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelto por Contabilidad', tone: 'text-red-600' },
+  eliminado: { label: 'Anticipo eliminado', tone: 'text-rose-600' },
 };
 
 /**
@@ -55,7 +59,7 @@ export const AnticipoDetailModal: React.FC<AnticipoDetailModalProps> = ({ antici
 );
 
 const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { anticipoId: number }> = ({
-  anticipoId, maxUploadMb, onClose, onReview, onResubmit, onRegisterMultifox, onReviewAccounting,
+  anticipoId, maxUploadMb, onClose, onReview, onResubmit, onRegisterMultifox, onReviewAccounting, onDeleted,
 }) => {
   const [anticipo, setAnticipo] = useState<Anticipo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +182,18 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <AnticipoStatusBadge status={anticipo.status} label={anticipo.status_label} />
-              <HistoryButton count={anticipo.history?.length} onClick={() => setHistoryOpen(true)} />
+              <div className="flex items-center gap-2">
+                {anticipo.can_delete && (
+                  <DeleteRecordButton
+                    title={`Eliminar anticipo ${anticipo.code}`}
+                    message="Se elimina el anticipo en cualquier estado. Su cuenta por pagar se anula (si ya tiene pagos no se podrá eliminar) y, si vino de una cotización, la factura del mes vuelve a quedar pendiente."
+                    successMessage={`Anticipo ${anticipo.code} eliminado.`}
+                    onDelete={(reason) => anticipoService.deleteAnticipo(anticipo.id, reason)}
+                    onDeleted={onDeleted ?? onClose}
+                  />
+                )}
+                <HistoryButton count={anticipo.history?.length} onClick={() => setHistoryOpen(true)} />
+              </div>
             </div>
 
             {/* Fases: Director, Gerencia, anticipo en Multifox y aprobación de Contabilidad */}
@@ -319,7 +334,7 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
         <HistoryModal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} subtitle={`Anticipo ${anticipo.code}`}>
           <ol className="relative border-l-2 border-slate-100 ml-2 space-y-5">
             {(anticipo.history ?? []).map((entry) => {
-              const action = ACTION_LABELS[entry.action];
+              const action = ACTION_LABELS[entry.action] ?? { label: entry.action, tone: 'text-slate-600' };
               return (
                 <li key={entry.id} className="ml-5">
                   <span className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full bg-white border-2 border-slate-300" />
