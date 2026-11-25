@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Search, Edit2, Trash2, Truck, CheckCircle2, XCircle, X, Loader2, Power } from 'lucide-react';
 import { DataTable } from '../../../components/ui/DataTable';
+import { Pagination } from '../../../components/ui/Pagination';
 import { Portal } from '../../../components/ui/Portal';
 import { useAuth } from '../../../context/AuthContext';
 import { useConfirm } from '../../../context/ConfirmContext';
@@ -15,34 +16,54 @@ export default function ProveedoresPage() {
   const confirm = useConfirm();
   const { showNotification } = useNotification();
   const { user } = useAuth();
-  const canEdit = user?.permissions?.includes('configuracion.editar') ?? false;
+  const canEdit = user?.permissions?.includes('proveedores.editar') ?? false;
+  const canDelete = user?.permissions?.includes('proveedores.eliminar') ?? false;
 
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(15);
+  const [meta, setMeta] = useState({ total: 0, lastPage: 1, activeCount: 0 });
   const [editing, setEditing] = useState<Proveedor | null>(null);
+
+  // La búsqueda se hace en el servidor; se espera a que el usuario deje de escribir
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const fetchProveedores = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      setProveedores(await proveedorService.getAll());
+      const result = await proveedorService.getPage({
+        page,
+        per_page: perPage,
+        search: debouncedSearch || undefined,
+      });
+      // Si se eliminó el último registro de la página, se vuelve a la anterior
+      if (result.data.length === 0 && page > 1 && page > result.last_page) {
+        setPage(result.last_page);
+        return;
+      }
+      setProveedores(result.data);
+      setMeta({ total: result.total, lastPage: result.last_page, activeCount: result.active_count });
     } catch (err) {
       setError(getErrorMessage(err, 'Error al cargar los proveedores'));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [page, perPage, debouncedSearch]);
 
   useEffect(() => {
     fetchProveedores();
   }, [fetchProveedores]);
-
-  const search = searchTerm.toLowerCase();
-  const filtered = proveedores.filter(
-    (p) => p.name.toLowerCase().includes(search) || (p.nit || '').toLowerCase().includes(search),
-  );
 
   const handleToggleActive = async (proveedor: Proveedor) => {
     try {
@@ -59,11 +80,15 @@ export default function ProveedoresPage() {
       const deactivate = await confirm({
         title: 'Proveedor en uso',
         message: `${proveedor.name} tiene ${proveedor.usage_count} registro(s) asociados (contratos, cortes, pagos, etc.) y no se puede eliminar. ${
-          proveedor.is_active ? '¿Deseas desactivarlo para que no aparezca en los formularios?' : 'Ya está desactivado.'
+          !proveedor.is_active
+            ? 'Ya está desactivado.'
+            : canEdit
+              ? '¿Deseas desactivarlo para que no aparezca en los formularios?'
+              : 'Pide a alguien con permiso de edición que lo desactive.'
         }`,
-        confirmText: proveedor.is_active ? 'Desactivar' : 'Entendido',
+        confirmText: proveedor.is_active && canEdit ? 'Desactivar' : 'Entendido',
       });
-      if (deactivate && proveedor.is_active) await handleToggleActive(proveedor);
+      if (deactivate && proveedor.is_active && canEdit) await handleToggleActive(proveedor);
       return;
     }
 
@@ -127,34 +152,40 @@ export default function ProveedoresPage() {
         </span>
       ),
     },
-    ...(canEdit
+    ...(canEdit || canDelete
       ? [
           {
             header: 'Acciones',
             className: 'text-right',
             accessor: (p: Proveedor) => (
               <div className="flex items-center gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={() => handleToggleActive(p)}
-                  title={p.is_active ? 'Desactivar' : 'Activar'}
-                  className="p-3 text-slate-400 hover:text-[#004C6C] hover:bg-blue-50 rounded-2xl transition-all"
-                >
-                  <Power size={18} />
-                </button>
-                <button
-                  onClick={() => setEditing(p)}
-                  title="Editar proveedor"
-                  className="p-3 text-slate-400 hover:text-[#EE9D4C] hover:bg-orange-50 rounded-2xl transition-all"
-                >
-                  <Edit2 size={18} />
-                </button>
-                <button
-                  onClick={() => handleDelete(p)}
-                  title="Eliminar proveedor"
-                  className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
-                >
-                  <Trash2 size={18} />
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => handleToggleActive(p)}
+                    title={p.is_active ? 'Desactivar' : 'Activar'}
+                    className="p-3 text-slate-400 hover:text-[#004C6C] hover:bg-blue-50 rounded-2xl transition-all"
+                  >
+                    <Power size={18} />
+                  </button>
+                )}
+                {canEdit && (
+                  <button
+                    onClick={() => setEditing(p)}
+                    title="Editar proveedor"
+                    className="p-3 text-slate-400 hover:text-[#EE9D4C] hover:bg-orange-50 rounded-2xl transition-all"
+                  >
+                    <Edit2 size={18} />
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={() => handleDelete(p)}
+                    title="Eliminar proveedor"
+                    className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
               </div>
             ),
           },
@@ -175,7 +206,7 @@ export default function ProveedoresPage() {
         <div className="bg-white rounded-[32px] p-6 border border-slate-100 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Total Proveedores</p>
-            <p className="text-4xl font-black text-[#004C6C] tracking-tighter">{proveedores.length}</p>
+            <p className="text-4xl font-black text-[#004C6C] tracking-tighter">{meta.total}</p>
           </div>
           <div className="h-14 w-14 bg-blue-50 rounded-[20px] flex items-center justify-center text-[#004C6C] border border-blue-100">
             <Truck size={26} />
@@ -185,7 +216,7 @@ export default function ProveedoresPage() {
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Activos</p>
             <p className="text-4xl font-black text-emerald-600 tracking-tighter">
-              {proveedores.filter((p) => p.is_active).length}
+              {meta.activeCount}
             </p>
           </div>
           <div className="h-14 w-14 bg-emerald-50 rounded-[20px] flex items-center justify-center text-emerald-600 border border-emerald-100">
@@ -213,11 +244,26 @@ export default function ProveedoresPage() {
 
       <DataTable
         columns={columns}
-        data={filtered}
+        data={proveedores}
         isLoading={isLoading}
         emptyMessage="No se encontraron proveedores"
         onRowClick={canEdit ? (p) => setEditing(p) : undefined}
       />
+
+      {meta.total > 0 && (
+        <Pagination
+          currentPage={page}
+          totalPages={meta.lastPage}
+          onPageChange={setPage}
+          totalItems={meta.total}
+          perPage={perPage}
+          onPerPageChange={(value) => {
+            setPerPage(value);
+            setPage(1);
+          }}
+          itemLabel="proveedores"
+        />
+      )}
 
       <ProveedorModal
         proveedor={editing}

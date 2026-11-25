@@ -135,7 +135,7 @@ export const router = createBrowserRouter([
       {
         path: 'proveedores',
         element: (
-          <ProtectedRoute permission="configuracion.ver">
+          <ProtectedRoute permission="proveedores.ver">
             <ProveedoresPage />
           </ProtectedRoute>
         ),

@@ -217,7 +217,7 @@ const eliteMenuItems: SidebarItem[] = [
                 label: 'Proveedores',
                 href: '/app/proveedores',
                 icon: <Truck className="w-4 h-4" />,
-                permission: 'configuracion.ver',
+                permission: 'proveedores.ver',
             },
             {
                 id: 'areas-cargos',

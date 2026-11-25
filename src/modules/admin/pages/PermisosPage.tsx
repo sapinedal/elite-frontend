@@ -16,7 +16,8 @@ import {
   Settings,
   Mail,
   HandCoins,
-  Receipt
+  Receipt,
+  Truck
 } from 'lucide-react';
 import { roleService } from '../../users/services/roleService';
 import type { Role, PermissionCatalogResponse } from '../../users/types';
@@ -31,6 +32,7 @@ const moduleIcons: Record<string, React.ReactNode> = {
   usuarios: <Users className="w-5 h-5 text-emerald-600" />,
   proyectos: <FolderLock className="w-5 h-5 text-sky-600" />,
   contratos: <FileText className="w-5 h-5 text-[#004C6C]" />,
+  proveedores: <Truck className="w-5 h-5 text-[#004C6C]" />,
   configuracion: <Settings className="w-5 h-5 text-slate-600" />,
   roles: <Shield className="w-5 h-5 text-rose-600" />,
   permisos: <Key className="w-5 h-5 text-[#004C6C]" />,

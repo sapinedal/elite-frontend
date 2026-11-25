@@ -8,6 +8,8 @@ interface PaginationProps {
   totalItems: number;
   perPage: number;
   onPerPageChange?: (perPage: number) => void;
+  /** Nombre de los registros en "Mostrando X - Y de Z ..." */
+  itemLabel?: string;
 }
 
 export const Pagination: React.FC<PaginationProps> = ({
@@ -16,7 +18,8 @@ export const Pagination: React.FC<PaginationProps> = ({
   onPageChange,
   totalItems,
   perPage,
-  onPerPageChange
+  onPerPageChange,
+  itemLabel = 'compromisos'
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -59,7 +62,7 @@ export const Pagination: React.FC<PaginationProps> = ({
       
       {/* Sección Izquierda: Mostrando X-Y de Z */}
       <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-        Mostrando <span className="text-[#004C6C] font-black">{fromItem}</span> - <span className="text-[#004C6C] font-black">{toItem}</span> de <span className="text-slate-700 font-black">{totalItems}</span> compromisos
+        Mostrando <span className="text-[#004C6C] font-black">{fromItem}</span> - <span className="text-[#004C6C] font-black">{toItem}</span> de <span className="text-slate-700 font-black">{totalItems}</span> {itemLabel}
       </div>
 
       {/* Sección Derecha: Selector de perPage y Navegación de páginas */}
