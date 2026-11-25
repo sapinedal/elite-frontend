@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Receipt, RotateCcw, Send, Loader2, AlertCircle, Info } from 'lucide-react';
+import { Receipt, RotateCcw, Send, Loader2, AlertCircle, Info, Plus, X } from 'lucide-react';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { FileDrop } from '../../../components/ui/FileDrop';
 import { ModalShell, inputClass, labelClass } from '../../../components/ui/ModalShell';
@@ -8,7 +8,7 @@ import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { cuentaCobroService, getApiErrorMessage } from '../services/cuentaCobroService';
 import { AttachmentsInput } from './AttachmentsInput';
 import { useContractorContracts } from '../../contratacion/hooks/useContractorContracts';
-import type { CuentaCobro, CuentaCobroCatalogs, CuentaCobroPayload } from '../types';
+import type { CuentaCobro, CuentaCobroCatalogs, CuentaCobroPayload, CuentaCobroTipo } from '../types';
 
 interface CuentaCobroFormModalProps {
   isOpen: boolean;
@@ -17,6 +17,8 @@ interface CuentaCobroFormModalProps {
   catalogs: CuentaCobroCatalogs | null;
   /** Cuenta devuelta que se corrige y reenvía; null para radicar una nueva */
   cuenta: CuentaCobro | null;
+  /** Se creó un tipo desde el formulario: recargar los catálogos */
+  onTipoCreated?: (tipo: CuentaCobroTipo) => void;
 }
 
 /**
@@ -28,8 +30,14 @@ export const CuentaCobroFormModal: React.FC<CuentaCobroFormModalProps> = ({ isOp
   isOpen ? <FormContent key={props.cuenta?.id ?? 'new'} {...props} /> : null
 );
 
-const FormContent: React.FC<Omit<CuentaCobroFormModalProps, 'isOpen'>> = ({ onClose, onSave, catalogs, cuenta }) => {
+const FormContent: React.FC<Omit<CuentaCobroFormModalProps, 'isOpen'>> = ({ onClose, onSave, catalogs, cuenta, onTipoCreated }) => {
   const [tipoId, setTipoId] = useState<number | null>(cuenta?.tipo_id ?? null);
+  // Tipos creados aquí mientras los catálogos se recargan
+  const [createdTipos, setCreatedTipos] = useState<CuentaCobroTipo[]>([]);
+  const [newTipoOpen, setNewTipoOpen] = useState(false);
+  const [newTipo, setNewTipo] = useState({ name: '', requires_attachment: false, attachment_hint: '' });
+  const [savingTipo, setSavingTipo] = useState(false);
+  const [tipoError, setTipoError] = useState<string | null>(null);
   const [location, setLocation] = useState(cuenta ? `${cuenta.project_id}:${cuenta.tower_id ?? ''}` : '');
   const [contractId, setContractId] = useState<number | null>(cuenta?.contract_id ?? null);
   const [contractorId, setContractorId] = useState<number | null>(cuenta?.contractor_id ?? null);
@@ -45,7 +53,36 @@ const FormContent: React.FC<Omit<CuentaCobroFormModalProps, 'isOpen'>> = ({ onCl
 
   const isResubmit = cuenta !== null;
   const maxMb = catalogs?.max_upload_mb ?? 100;
-  const tipo = catalogs?.tipos.find((t) => t.id === tipoId) ?? null;
+  const tipos = useMemo(() => [
+    ...(catalogs?.tipos ?? []),
+    ...createdTipos.filter((c) => !(catalogs?.tipos ?? []).some((t) => t.id === c.id)),
+  ], [catalogs, createdTipos]);
+  const tipo = tipos.find((t) => t.id === tipoId) ?? null;
+
+  const handleCreateTipo = async () => {
+    const name = newTipo.name.trim();
+    if (!name) return setTipoError('Escribe el nombre del tipo.');
+    setSavingTipo(true);
+    setTipoError(null);
+    try {
+      const created = await cuentaCobroService.saveTipo({
+        name,
+        description: null,
+        requires_attachment: newTipo.requires_attachment,
+        attachment_hint: newTipo.requires_attachment ? newTipo.attachment_hint.trim() || null : null,
+        is_active: true,
+      });
+      setCreatedTipos((current) => [...current, created]);
+      setTipoId(created.id);
+      setNewTipo({ name: '', requires_attachment: false, attachment_hint: '' });
+      setNewTipoOpen(false);
+      onTipoCreated?.(created);
+    } catch (err) {
+      setTipoError(getApiErrorMessage(err, 'Error al crear el tipo.'));
+    } finally {
+      setSavingTipo(false);
+    }
+  };
   const existingAttachments = cuenta?.adjuntos?.length ?? 0;
   const [projectId, towerId] = location.split(':').map((v) => (v ? Number(v) : null));
 
@@ -160,15 +197,23 @@ const FormContent: React.FC<Omit<CuentaCobroFormModalProps, 'isOpen'>> = ({ onCl
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <CustomSelect
-          pyClass="py-3.5"
-          label="Tipo de cuenta de cobro *"
-          placeholder="Selecciona el tipo"
-          disabled={submitting}
-          options={(catalogs?.tipos ?? []).map((t) => ({ value: t.id, label: t.name, sublabel: t.requires_attachment ? 'Requiere adjunto' : undefined }))}
-          value={tipoId}
-          onChange={(v) => setTipoId(Number(v))}
-        />
+        <div>
+          <CustomSelect
+            pyClass="py-3.5"
+            label="Tipo de cuenta de cobro *"
+            placeholder="Selecciona el tipo"
+            disabled={submitting}
+            options={tipos.map((t) => ({ value: t.id, label: t.name, sublabel: t.requires_attachment ? 'Requiere adjunto' : undefined }))}
+            value={tipoId}
+            onChange={(v) => setTipoId(Number(v))}
+          />
+          {catalogs?.can_create_tipo && !newTipoOpen && (
+            <button type="button" onClick={() => { setNewTipoOpen(true); setTipoError(null); }} disabled={submitting}
+              className="mt-1.5 ml-1 flex items-center gap-1 text-xs font-bold text-[#EE9D4C] hover:text-[#d9822f] disabled:opacity-60">
+              <Plus size={14} /> Crear tipo nuevo
+            </button>
+          )}
+        </div>
         <CustomSelect
           pyClass="py-3.5"
           label="Proyecto / Frente *"
@@ -179,6 +224,46 @@ const FormContent: React.FC<Omit<CuentaCobroFormModalProps, 'isOpen'>> = ({ onCl
           onChange={(v) => { setLocation(String(v)); setContractId(null); }}
         />
       </div>
+
+      {newTipoOpen && (
+        <div className="bg-orange-50/60 border border-orange-100 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-black text-[#004C6C] uppercase tracking-widest">Nuevo tipo de cuenta de cobro</p>
+            <button type="button" onClick={() => setNewTipoOpen(false)} disabled={savingTipo} className="p-1 rounded-lg text-slate-400 hover:bg-white" title="Cancelar">
+              <X size={16} />
+            </button>
+          </div>
+          {tipoError && <p className="text-xs font-bold text-red-600">{tipoError}</p>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>Nombre *</label>
+              <input className={inputClass} value={newTipo.name} maxLength={150} disabled={savingTipo} autoFocus
+                placeholder="Ej. Gestión ambiental"
+                onChange={(e) => setNewTipo((t) => ({ ...t, name: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleCreateTipo(); } }} />
+            </div>
+            {newTipo.requires_attachment && (
+              <div>
+                <label className={labelClass}>Qué adjuntar</label>
+                <input className={inputClass} value={newTipo.attachment_hint} maxLength={255} disabled={savingTipo}
+                  placeholder="Ej. Informe SST y planilla de seguridad social"
+                  onChange={(e) => setNewTipo((t) => ({ ...t, attachment_hint: e.target.value }))} />
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={newTipo.requires_attachment} disabled={savingTipo}
+                onChange={(e) => setNewTipo((t) => ({ ...t, requires_attachment: e.target.checked }))} />
+              Exige adjuntos además de la cuenta de cobro
+            </label>
+            <button type="button" onClick={handleCreateTipo} disabled={savingTipo || !newTipo.name.trim()}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#004C6C] hover:bg-[#003a53] text-white text-xs font-bold disabled:opacity-60">
+              {savingTipo ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Crear y seleccionar
+            </button>
+          </div>
+        </div>
+      )}
 
       {tipo?.requires_attachment && (
         <p className="flex items-start gap-2 text-xs font-bold text-[#004C6C] bg-blue-50 rounded-2xl p-3">

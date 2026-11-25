@@ -37,6 +37,8 @@ export interface CuentaCobroCatalogs {
   can_approve_accounting: boolean;
   /** CRUD de tipos */
   can_parametrize: boolean;
+  /** Crear tipos desde el formulario de radicación (cuentas_cobro.crear o parametrizar) */
+  can_create_tipo?: boolean;
   stages: { key: CuentaCobroStageKey; label: string; status: CuentaCobroStatus }[];
   statuses: { key: CuentaCobroStatus; label: string }[];
 }

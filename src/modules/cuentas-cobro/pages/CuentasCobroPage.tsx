@@ -253,7 +253,8 @@ export default function CuentasCobroPage() {
       )}
 
       <CuentaCobroFormModal isOpen={formOpen || newRequested} onClose={() => { setFormOpen(false); clearNew(); }}
-        onSave={handleSave} catalogs={catalogs} cuenta={newRequested ? null : resubmitting} />
+        onSave={handleSave} catalogs={catalogs} cuenta={newRequested ? null : resubmitting}
+        onTipoCreated={(t) => { showNotification(`Tipo ${t.name} creado.`, 'success'); reloadCatalogs(); }} />
 
       <CuentaCobroDetailModal
         cuentaId={detailId}
