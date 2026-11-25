@@ -20,6 +20,7 @@ import {
     FileSignature,
     Wallet,
     Receipt,
+    Truck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { REGISTRO_ACTIONS } from '../config/registroActions';
@@ -210,6 +211,13 @@ const eliteMenuItems: SidebarItem[] = [
                 href: '/app/proyectos',
                 icon: <FolderLock className="w-4 h-4" />,
                 permission: 'proyectos.ver',
+            },
+            {
+                id: 'proveedores',
+                label: 'Proveedores',
+                href: '/app/proveedores',
+                icon: <Truck className="w-4 h-4" />,
+                permission: 'configuracion.ver',
             },
             {
                 id: 'areas-cargos',

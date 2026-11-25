@@ -22,6 +22,7 @@ import DocumentEditorPage from '../modules/documental/pages/DocumentEditorPage';
 import ProyectosPage from '../modules/admin/pages/ProyectosPage';
 import RolesPage from '../modules/admin/pages/RolesPage';
 import PermisosPage from '../modules/admin/pages/PermisosPage';
+import ProveedoresPage from '../modules/admin/pages/ProveedoresPage';
 import InterventoriaPage from '../modules/obra/pages/InterventoriaPage';
 import ContratacionPage from '../modules/contratacion/pages/ContratacionPage';
 import CortesPage from '../modules/cortes/pages/CortesPage';
@@ -128,6 +129,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute permission="permisos.ver">
             <PermisosPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'proveedores',
+        element: (
+          <ProtectedRoute permission="configuracion.ver">
+            <ProveedoresPage />
           </ProtectedRoute>
         ),
       },
