@@ -78,6 +78,12 @@ export const ordenService = {
   },
 
   /** inline: URL para ver el archivo en el navegador (PDF) en lugar de descargarlo */
+  /** inline: URL para ver el adjunto en el navegador (PDF) en lugar de descargarlo */
+  getAttachmentDownloadUrl: async (adjuntoId: number, inline = false): Promise<string> => {
+    const { data } = await api.get(`${BASE}/adjuntos/${adjuntoId}/download`, { params: { ...(inline ? { inline: 1 } : {}) } });
+    return data.data.download_url;
+  },
+
   getDocumentDownloadUrl: async (documentId: number, inline = false): Promise<string> => {
     const { data } = await api.get(`${BASE}/documents/${documentId}/download`, { params: { ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;

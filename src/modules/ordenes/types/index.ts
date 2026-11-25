@@ -112,6 +112,16 @@ export interface Orden {
   progress?: OrdenProgressStep[];
   history?: OrdenHistoryEntry[];
   documents?: OrdenDocument[];
+  /** Adjuntos opcionales cargados al registrar o reenviar la orden */
+  adjuntos?: OrdenAdjunto[];
+}
+
+export interface OrdenAdjunto {
+  id: number;
+  file_name: string;
+  file_size: number;
+  uploaded_by: string | null;
+  created_at: string;
 }
 
 export interface OrdenPayload {
@@ -121,6 +131,8 @@ export interface OrdenPayload {
   chapter: string;
   activity: string;
   comment?: string | null;
+  /** Adjuntos opcionales ya subidos con uploadFile */
+  attachment_tokens?: string[];
 }
 
 export interface OrdenDocumentPayload {

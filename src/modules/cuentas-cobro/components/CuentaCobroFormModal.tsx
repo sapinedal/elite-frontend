@@ -6,7 +6,7 @@ import { ModalShell, inputClass, labelClass } from '../../../components/ui/Modal
 import { formatMoneyInput, parseMoney } from '../../../utils/money';
 import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { cuentaCobroService, getApiErrorMessage } from '../services/cuentaCobroService';
-import { AttachmentsInput } from './AttachmentsInput';
+import { AttachmentsInput } from '../../../components/ui/AttachmentsInput';
 import { useContractorContracts } from '../../contratacion/hooks/useContractorContracts';
 import type { CuentaCobro, CuentaCobroCatalogs, CuentaCobroPayload, CuentaCobroTipo } from '../types';
 

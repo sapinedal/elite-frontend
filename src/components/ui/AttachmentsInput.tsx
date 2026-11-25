@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Paperclip, Trash2, UploadCloud } from 'lucide-react';
-import { formatBytes } from '../../cortes/utils/format';
+import { formatBytes } from '../../modules/cortes/utils/format';
 
 interface AttachmentsInputProps {
   files: File[];

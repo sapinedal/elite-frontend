@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { X, ShoppingCart, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle } from 'lucide-react';
+import { X, ShoppingCart, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Paperclip, Download } from 'lucide-react';
+import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
+import { formatBytes } from '../../cortes/utils/format';
 import { Portal } from '../../../components/ui/Portal';
 import { useAuth } from '../../../context/AuthContext';
 import { HistoryButton, HistoryModal } from '../../../components/ui/HistoryModal';
@@ -177,6 +179,38 @@ const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { or
                     <p className="font-bold text-slate-700">{value}</p>
                   </div>
                 ))}
+                {(orden.adjuntos?.length ?? 0) > 0 && (
+                  <div className="md:col-span-2 space-y-2">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Adjuntos ({orden.adjuntos!.length})</p>
+                    <ul className="space-y-2">
+                      {orden.adjuntos!.map((a) => (
+                        <li key={a.id} className="flex items-center justify-between gap-3 bg-slate-50 rounded-2xl px-4 py-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Paperclip size={16} className="text-[#004C6C] shrink-0" />
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-700 truncate" title={a.file_name}>{a.file_name}</p>
+                              <p className="text-[11px] font-bold text-slate-400">{formatBytes(a.file_size)} · {a.uploaded_by ?? '—'} · {formatDateTime(a.created_at)}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <ViewPdfButton fileName={a.file_name} getUrl={() => ordenService.getAttachmentDownloadUrl(a.id, true)} size={16}
+                              className="p-2 rounded-xl text-[#004C6C] hover:bg-blue-50" title="Ver adjunto" />
+                            <button type="button" title="Descargar adjunto" className="p-2 rounded-xl text-[#004C6C] hover:bg-blue-50"
+                              onClick={async () => {
+                                try {
+                                  window.open(await ordenService.getAttachmentDownloadUrl(a.id), '_blank', 'noopener');
+                                } catch (err) {
+                                  setError(getApiErrorMessage(err, 'Error al descargar el adjunto.'));
+                                }
+                              }}>
+                              <Download size={16} />
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               {/* Aprobación de la etapa actual */}

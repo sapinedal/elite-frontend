@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { X, Send, ShoppingCart, AlertCircle, Loader2, RotateCcw } from 'lucide-react';
 import { Portal } from '../../../components/ui/Portal';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
+import { AttachmentsInput } from '../../../components/ui/AttachmentsInput';
+import { ordenService } from '../services/ordenService';
 import type { Orden, OrdenCatalogs, OrdenPayload } from '../types';
 
 interface OrdenFormModalProps {
@@ -49,6 +51,9 @@ const OrdenFormContent: React.FC<Omit<OrdenFormModalProps, 'isOpen'>> = ({ onClo
   const [form, setForm] = useState<FormState>(() => initialForm(orden));
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [progress, setProgress] = useState<string | null>(null);
+  const maxMb = catalogs?.max_upload_mb ?? 1024;
 
   const isResubmit = orden !== null;
 
@@ -72,6 +77,13 @@ const OrdenFormContent: React.FC<Omit<OrdenFormModalProps, 'isOpen'>> = ({ onClo
     setSubmitting(true);
     setLocalError(null);
     try {
+      // Los adjuntos se suben directo a S3 antes de registrar la orden
+      const attachmentTokens: string[] = [];
+      for (const [i, attachment] of attachments.entries()) {
+        setProgress(`Subiendo adjunto ${i + 1} de ${attachments.length}...`);
+        attachmentTokens.push(await ordenService.uploadFile(attachment));
+      }
+      setProgress(attachments.length ? 'Guardando...' : null);
       await onSave(
         {
           description: form.description.trim(),
@@ -80,6 +92,7 @@ const OrdenFormContent: React.FC<Omit<OrdenFormModalProps, 'isOpen'>> = ({ onClo
           chapter: form.chapter.trim(),
           activity: form.activity.trim(),
           comment: form.comment.trim() || null,
+          attachment_tokens: attachmentTokens,
         },
         orden?.id
       );
@@ -88,6 +101,7 @@ const OrdenFormContent: React.FC<Omit<OrdenFormModalProps, 'isOpen'>> = ({ onClo
       setLocalError(err instanceof Error ? err.message : 'Error al registrar la orden.');
     } finally {
       setSubmitting(false);
+      setProgress(null);
     }
   };
 
@@ -178,6 +192,14 @@ const OrdenFormContent: React.FC<Omit<OrdenFormModalProps, 'isOpen'>> = ({ onClo
               value={form.comment} onChange={(e) => set('comment', e.target.value)} />
           </div>
 
+          <div className="space-y-2">
+            <label className={labelClass}>
+              Adjuntos (opcional){isResubmit && orden?.adjuntos?.length ? ` · ya tiene ${orden.adjuntos.length}` : ''}
+            </label>
+            <AttachmentsInput files={attachments} onChange={setAttachments} maxMb={maxMb} onError={setLocalError} disabled={submitting}
+              hint="Cotizaciones, fichas técnicas o fotos: arrastra, haz clic o pega capturas" />
+          </div>
+
           <p className="text-xs font-bold text-slate-400">
             Al {isResubmit ? 'reenviar' : 'registrar'} se notificará al Director de Obra. Con su aprobación y la de Gerencia,
             Almacén cargará la orden de compra del ERP.
@@ -191,7 +213,7 @@ const OrdenFormContent: React.FC<Omit<OrdenFormModalProps, 'isOpen'>> = ({ onClo
             <button type="submit" disabled={submitting}
               className="flex-1 px-6 py-4 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-60">
               {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-              {isResubmit ? 'Reenviar orden' : 'Registrar orden'}
+              {progress ?? (isResubmit ? 'Reenviar orden' : 'Registrar orden')}
             </button>
           </div>
         </form>
