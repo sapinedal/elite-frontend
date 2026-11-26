@@ -122,7 +122,28 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                     <span className="text-xs font-bold text-slate-500">→ afecta a {invoice.related_document}</span>
                   )}
                 </div>
-                {invoice.multifox_confirmed_at ? (
+                {invoice.accounting_status === 'anulada' ? (
+                  <p className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
+                    <Undo2 size={13} /> Anulada con nota crédito: no se carga en Multifox ni pasa a cuentas por pagar
+                  </p>
+                ) : invoice.requires_multifox === false ? (
+                  // Nota crédito: no pasa por Multifox, va directo a Contabilidad
+                  invoice.accounting_status === 'aprobada' ? (
+                    <p className="flex items-center gap-1 text-[11px] font-bold text-green-600">
+                      <CheckCircle2 size={13} /> Aprobada por Contabilidad (no requiere Multifox)
+                      {invoice.accounting_by ? ` · ${invoice.accounting_by}` : ''}{invoice.accounting_at ? ` · ${formatDateTime(invoice.accounting_at)}` : ''}
+                    </p>
+                  ) : invoice.accounting_status === 'devuelta' ? (
+                    <p className="flex items-start gap-1 text-[11px] font-bold text-red-600">
+                      <Undo2 size={13} className="shrink-0 mt-px" />
+                      <span>Devuelta por Contabilidad{invoice.accounting_by ? ` (${invoice.accounting_by})` : ''}{invoice.accounting_comment ? `: ${invoice.accounting_comment}` : ''}. Elimínala y asóciala de nuevo corregida.</span>
+                    </p>
+                  ) : (
+                    <p className="flex items-center gap-1 text-[11px] font-bold text-orange-600">
+                      <Clock size={13} /> No requiere Multifox · Pendiente de aprobación de Contabilidad
+                    </p>
+                  )
+                ) : invoice.multifox_confirmed_at ? (
                   <>
                     <p className="flex items-center gap-1 text-[11px] font-bold text-green-600">
                       <CheckCircle2 size={13} /> Cargada en Multifox · {invoice.multifox_confirmed_by} · {formatDateTime(invoice.multifox_confirmed_at)}
@@ -197,7 +218,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
               <div className="border-t border-slate-200 pt-3">
                 <AccountingReviewPanel compact
                   subject={`${invoice.document_type_label} N.º ${invoice.invoice_number}`}
-                  returnsTo="Multifox"
+                  returnsTo={invoice.requires_multifox === false ? 'obra' : 'Multifox'}
                   askAmount
                   currentAmount={invoice.amount}
                   onSubmit={async (decision, comment, amount) => onCreated(await onReviewAccounting(invoice.id, decision, comment, amount))} />

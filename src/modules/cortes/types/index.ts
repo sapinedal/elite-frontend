@@ -11,7 +11,7 @@ export type CorteStageKey = 'interventor' | 'director_obra' | 'gerencia';
 export type CorteScope = 'mine' | 'pending' | 'all' | 'billing' | 'multifox' | 'accounting';
 
 /** Aprobación de Contabilidad de la factura cargada en Multifox (null: aún no se carga en Multifox) */
-export type InvoiceAccountingStatus = 'pendiente' | 'aprobada' | 'devuelta' | null;
+export type InvoiceAccountingStatus = 'pendiente' | 'aprobada' | 'devuelta' | null | 'anulada';
 
 export type InvoiceDocumentType = 'factura_inicial' | 'nota_credito' | 'factura_reemplazo';
 
@@ -124,7 +124,10 @@ export interface CorteInvoice {
   /** Soporte de Multifox que cargó Paula al confirmar (queda en la carpeta del corte) */
   multifox_file_name: string | null;
   multifox_file_size: number | null;
+  /** anulada: factura anulada con nota crédito antes de cuentas por pagar (no se carga en Multifox) */
   accounting_status: InvoiceAccountingStatus;
+  /** La nota crédito y la factura anulada no se cargan en Multifox */
+  requires_multifox?: boolean;
   accounting_by: string | null;
   accounting_at: string | null;
   accounting_comment: string | null;
