@@ -130,7 +130,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                   // Nota crédito: no pasa por Multifox, va directo a Contabilidad
                   invoice.accounting_status === 'aprobada' ? (
                     <p className="flex items-center gap-1 text-[11px] font-bold text-green-600">
-                      <CheckCircle2 size={13} /> Aprobada por Contabilidad (no requiere Multifox)
+                      <CheckCircle2 size={13} /> Nota crédito aplicada{invoice.related_document ? ` a ${invoice.related_document}` : ''} (no requiere Multifox ni aprobación)
                       {invoice.accounting_by ? ` · ${invoice.accounting_by}` : ''}{invoice.accounting_at ? ` · ${formatDateTime(invoice.accounting_at)}` : ''}
                     </p>
                   ) : invoice.accounting_status === 'devuelta' ? (
@@ -140,7 +140,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                     </p>
                   ) : (
                     <p className="flex items-center gap-1 text-[11px] font-bold text-orange-600">
-                      <Clock size={13} /> No requiere Multifox · Pendiente de aprobación de Contabilidad
+                      <Clock size={13} /> Nota crédito pendiente de aplicar por Contabilidad
                     </p>
                   )
                 ) : invoice.multifox_confirmed_at ? (
@@ -219,6 +219,7 @@ export const CorteInvoicesSection: React.FC<CorteInvoicesSectionProps> = ({ cort
                 <AccountingReviewPanel compact
                   subject={`${invoice.document_type_label} N.º ${invoice.invoice_number}`}
                   returnsTo={invoice.requires_multifox === false ? 'obra' : 'Multifox'}
+                  approvesTo={invoice.document_type === 'nota_credito' ? 'aplicar el descuento a la factura que afecta' : 'cuentas por pagar'}
                   askAmount
                   currentAmount={invoice.amount}
                   onSubmit={async (decision, comment, amount) => onCreated(await onReviewAccounting(invoice.id, decision, comment, amount))} />

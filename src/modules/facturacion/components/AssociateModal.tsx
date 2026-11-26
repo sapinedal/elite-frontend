@@ -266,7 +266,9 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
 
         {targetType === 'corte' && (
           <p className="text-[11px] font-bold text-slate-400">
-            Al asociarla, la factura se copia a la carpeta del corte (05 CORTES), el corte pasa a Facturado y se avisa para el registro en Multifox. Con la aprobación de Contabilidad pasa a cuentas por pagar.
+            {factura.document_type === 'nota_credito'
+              ? 'La nota crédito se aplica de una vez, sin Multifox ni aprobación: descuenta de la cuenta por pagar de la factura que afecta (sin valor, la anula completa). Si esa factura aún no estaba en cuentas por pagar, queda anulada y ya no se carga en Multifox.'
+              : 'Al asociarla, la factura se copia a la carpeta del corte (05 CORTES), el corte pasa a Facturado y se avisa para el registro en Multifox. Con la aprobación de Contabilidad pasa a cuentas por pagar.'}
           </p>
         )}
         {targetType === 'anticipo' && (

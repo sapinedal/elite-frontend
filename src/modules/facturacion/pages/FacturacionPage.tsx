@@ -330,7 +330,9 @@ export default function FacturacionPage() {
                     ? `${f.document_number} asociada a la ${f.target.label}. Pasa a la liquidación ERP.`
                   : f.target?.type === 'orden'
                     ? `${f.document_number} asociada a la ${f.target.label}. Pasa a la entrada de almacén.`
-                    : `${f.document_number} asociada al ${f.target?.label}. Se notificó para Multifox.`,
+                    : f.document_type === 'nota_credito'
+                      ? `${f.document_number} aplicada al ${f.target?.label}. No requiere Multifox ni aprobación.`
+                      : `${f.document_number} asociada al ${f.target?.label}. Se notificó para Multifox.`,
                 'success'
               );
               refresh();
