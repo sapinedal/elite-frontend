@@ -88,6 +88,8 @@ export interface CuentaCobro {
   contractor: { id: number; name: string; nit: string | null } | null;
   document_number: string;
   amount: number;
+  /** Valor que Contabilidad confirma al aprobar (factura asociada en las directas) */
+  payable_amount?: number | null;
   description: string | null;
   status: CuentaCobroStatus;
   status_label: string;

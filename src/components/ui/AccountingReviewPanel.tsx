@@ -17,6 +17,8 @@ interface AccountingReviewPanelProps {
   askAmount?: boolean;
   /** Valor ya registrado (se precarga para confirmarlo o corregirlo) */
   currentAmount?: number | null;
+  /** Etiqueta del campo de valor (por defecto "Valor de la factura") */
+  amountLabel?: string;
 }
 
 /**
@@ -26,6 +28,7 @@ interface AccountingReviewPanelProps {
  */
 export const AccountingReviewPanel: React.FC<AccountingReviewPanelProps> = ({
   subject, returnsTo, approvesTo = 'cuentas por pagar', onSubmit, compact = false, askAmount = false, currentAmount = null,
+  amountLabel = 'Valor de la factura',
 }) => {
   const [decision, setDecision] = useState<AccountingDecision | null>(null);
   const [amount, setAmount] = useState(currentAmount ? formatMoneyInput(String(Math.round(currentAmount))) : '');
@@ -41,7 +44,7 @@ export const AccountingReviewPanel: React.FC<AccountingReviewPanelProps> = ({
     }
     const value = askAmount ? parseMoney(amount) : null;
     if (askAmount && decision === 'aprobar' && !value) {
-      setError('Indica el valor de la factura para pasarla a cuentas por pagar.');
+      setError(`Indica el ${amountLabel.toLowerCase()} para aprobar.`);
       return;
     }
     setSaving(true);
@@ -93,7 +96,7 @@ export const AccountingReviewPanel: React.FC<AccountingReviewPanelProps> = ({
           {askAmount && (
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
-                Valor de la factura {decision === 'aprobar' ? '*' : '(opcional)'}
+                {amountLabel} {decision === 'aprobar' ? '*' : '(opcional)'}
               </label>
               <div className="relative">
                 <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>

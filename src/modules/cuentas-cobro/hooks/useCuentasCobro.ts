@@ -114,8 +114,8 @@ export function useCuentasCobro() {
   const uploadDocument = useCallback((id: number, payload: CuentaCobroDocumentPayload) =>
     run(() => cuentaCobroService.uploadDocument(id, payload), 'Error al cargar el documento.'), [run]);
 
-  const reviewAccounting = useCallback((id: number, decision: 'aprobar' | 'devolver', comment?: string) =>
-    run(() => cuentaCobroService.reviewAccounting(id, decision, comment), 'Error al registrar la aprobación de Contabilidad.'), [run]);
+  const reviewAccounting = useCallback((id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) =>
+    run(() => cuentaCobroService.reviewAccounting(id, decision, comment, amount), 'Error al registrar la aprobación de Contabilidad.'), [run]);
 
   return {
     catalogs,

@@ -27,7 +27,7 @@ interface CuentaCobroDetailModalProps {
   onRegisterMultifox: (id: number, payload: CuentaCobroMultifoxPayload) => Promise<CuentaCobro>;
   /** Directa: cargue ERP o liquidación ERP */
   onUploadDocument: (id: number, payload: CuentaCobroDocumentPayload) => Promise<CuentaCobro>;
-  onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<CuentaCobro>;
+  onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => Promise<CuentaCobro>;
   /** Después de eliminar la cuenta (cerrar y refrescar el listado) */
   onDeleted?: () => void;
 }
@@ -419,7 +419,10 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
                 subject={`Cuenta de cobro ${cuenta.code}${cuenta.multifox_number ? ` (Multifox N.º ${cuenta.multifox_number})` : cuenta.requires_multifox === false ? ' (no requiere Multifox)' : ''}`}
                 returnsTo={cuenta.is_directa ? 'la liquidación ERP' : 'Multifox'}
                 approvesTo="el cuadro de pagos"
-                onSubmit={async (decision, comment) => setCuenta(await onReviewAccounting(cuenta.id, decision, comment))} />
+                askAmount
+                amountLabel="Valor a pagar"
+                currentAmount={cuenta.payable_amount ?? cuenta.amount}
+                onSubmit={async (decision, comment, amount) => setCuenta(await onReviewAccounting(cuenta.id, decision, comment, amount))} />
             )}
           </>
         )}

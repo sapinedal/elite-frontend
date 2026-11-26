@@ -99,8 +99,8 @@ export default function CuentasCobroPage() {
     return cuenta;
   };
 
-  const handleReviewAccounting = async (id: number, decision: 'aprobar' | 'devolver', comment?: string) => {
-    const cuenta = await reviewAccounting(id, decision, comment);
+  const handleReviewAccounting = async (id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => {
+    const cuenta = await reviewAccounting(id, decision, comment, amount);
     showNotification(decision === 'aprobar' ? `${cuenta.code} aprobada: pasó al cuadro de pagos.`
       : cuenta.is_directa ? `${cuenta.code} devuelta a la liquidación ERP.` : `${cuenta.code} devuelta a Multifox.`, 'success');
     return cuenta;

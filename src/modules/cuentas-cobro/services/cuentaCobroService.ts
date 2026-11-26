@@ -85,8 +85,8 @@ export const cuentaCobroService = {
   },
 
   /** Contabilidad aprueba la cuenta (pasa al cuadro de pagos) o la devuelve a Multifox / liquidación */
-  reviewAccounting: async (id: number, decision: 'aprobar' | 'devolver', comment?: string): Promise<CuentaCobro> => {
-    const { data } = await api.post(`${BASE}/${id}/accounting`, { decision, comment: comment || null });
+  reviewAccounting: async (id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null): Promise<CuentaCobro> => {
+    const { data } = await api.post(`${BASE}/${id}/accounting`, { decision, comment: comment || null, amount: amount ?? null });
     return data.data;
   },
 
