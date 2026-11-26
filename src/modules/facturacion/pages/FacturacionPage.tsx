@@ -183,7 +183,7 @@ export default function FacturacionPage() {
           {f.can_delete && f.delete_requires_reason && (
             <DeleteRecordButton compact
               title={`Eliminar ${f.document_number}`}
-              message={`Esta factura ya está asociada${f.target ? ` a ${f.target.label}` : ''}. Se elimina con lo que generó: se quita del corte, la orden vuelve a pendiente de factura o se elimina el anticipo, y su cuenta por pagar se anula (no se puede si ya tiene pagos). El archivo se borra de la carpeta del mes.`}
+              message={`Esta factura ya está asociada${f.target ? ` a ${f.target.label}` : ''}. Se elimina con lo que generó: se quita del corte; la orden o la cuenta de cobro vuelven a pendiente de factura (también se quita la entrada o la liquidación que dependían de ella); o se elimina el anticipo. Su cuenta por pagar se anula (no se puede si ya tiene pagos). El archivo se borra de la carpeta del mes.`}
               successMessage={`${f.document_number} eliminada.`}
               onDelete={(reason) => facturacionService.deleteFactura(f.id, reason)}
               onDeleted={refresh}

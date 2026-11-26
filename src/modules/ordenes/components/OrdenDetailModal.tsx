@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { progressWindow } from '../../../utils/progressWindow';
 import { X, ShoppingCart, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Paperclip, Download } from 'lucide-react';
 import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import { formatBytes } from '../../cortes/utils/format';
@@ -147,13 +148,13 @@ const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { or
             <>
               {/* Fases del flujo: aprobaciones, documentos y aprobación de Contabilidad */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {(orden.progress ?? []).map((step, index) => {
+                {progressWindow(orden.progress ?? []).map(({ step, index }) => {
                   const style = STEP_STYLES[step.state];
                   return (
                     <div key={step.key} className={`rounded-3xl border p-4 flex items-center gap-3 ${style.tone}`}>
                       <div className="shrink-0">{style.icon}</div>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Fase {index + 1}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Fase {index + 1} de {orden.progress?.length}</p>
                         <p className="font-black text-slate-700">{step.label}</p>
                         <p className="text-[11px] font-bold truncate" title={step.user ?? undefined}>
                           {STATE_TEXT[step.kind][step.state]}{step.user ? ` · ${step.user}` : ''}

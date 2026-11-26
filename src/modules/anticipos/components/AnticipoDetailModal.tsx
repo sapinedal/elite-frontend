@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { progressWindow } from '../../../utils/progressWindow';
 import { Link } from 'react-router-dom';
 import { HandCoins, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Download, Database, FileText, Wallet, FileSignature } from 'lucide-react';
 import { AccountingReviewPanel } from '../../../components/ui/AccountingReviewPanel';
@@ -223,19 +224,19 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
             </div>
 
             {/* Fases: Director, Gerencia, anticipo en Multifox y aprobación de Contabilidad */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-              {(anticipo.progress ?? []).map((step, index) => {
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {progressWindow(anticipo.progress ?? []).map(({ step, index }) => {
                 const style = STEP_STYLES[step.state];
                 return (
-                  <div key={step.key} className={`rounded-3xl border p-4 flex flex-col gap-2 ${style.tone}`}>
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Fase {index + 1}</p>
-                      {style.icon}
+                  <div key={step.key} className={`rounded-3xl border p-4 flex items-center gap-3 ${style.tone}`}>
+                    <div className="shrink-0">{style.icon}</div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Fase {index + 1} de {anticipo.progress?.length}</p>
+                      <p className="font-black text-slate-700">{step.label}</p>
+                      <p className="text-[11px] font-bold truncate" title={step.user ?? undefined}>
+                        {STATE_TEXT[step.kind][step.state]}{step.user ? ` · ${step.user}` : ''}
+                      </p>
                     </div>
-                    <p className="font-black text-slate-700 text-sm leading-tight">{step.label}</p>
-                    <p className="text-[11px] font-bold truncate" title={step.user ?? undefined}>
-                      {STATE_TEXT[step.kind][step.state]}{step.user ? ` · ${step.user}` : ''}
-                    </p>
                   </div>
                 );
               })}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { progressWindow } from '../../../utils/progressWindow';
 import { Link } from 'react-router-dom';
 import {
   Receipt, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Download, Database, FileText, Paperclip, Wallet, ArrowRight, Upload,
@@ -52,6 +53,7 @@ const ACTION_LABELS: Record<CuentaCobroHistoryEntry['action'], { label: string; 
   requiere_multifox: { label: 'Requiere Multifox', tone: 'text-[#004C6C]' },
   multifox: { label: 'Cargada en Multifox', tone: 'text-[#004C6C]' },
   documento: { label: 'Documento cargado', tone: 'text-[#004C6C]' },
+  documento_eliminado: { label: 'Documento eliminado', tone: 'text-rose-600' },
   contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
   eliminada: { label: 'Cuenta de cobro eliminada', tone: 'text-rose-600' },
@@ -205,19 +207,19 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {(cuenta.progress ?? []).map((step, index) => {
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {progressWindow(cuenta.progress ?? []).map(({ step, index }) => {
                 const style = STEP_STYLES[step.state];
                 return (
-                  <div key={step.key} className={`rounded-3xl border p-4 flex flex-col gap-2 ${style.tone}`}>
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Fase {index + 1}</p>
-                      {style.icon}
+                  <div key={step.key} className={`rounded-3xl border p-4 flex items-center gap-3 ${style.tone}`}>
+                    <div className="shrink-0">{style.icon}</div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Fase {index + 1} de {cuenta.progress?.length}</p>
+                      <p className="font-black text-slate-700">{step.label}</p>
+                      <p className="text-[11px] font-bold truncate" title={step.user ?? undefined}>
+                        {STATE_TEXT[step.kind][step.state]}{step.user ? ` · ${step.user}` : ''}
+                      </p>
                     </div>
-                    <p className="font-black text-slate-700 text-sm leading-tight">{step.label}</p>
-                    <p className="text-[11px] font-bold truncate" title={step.user ?? undefined}>
-                      {STATE_TEXT[step.kind][step.state]}{step.user ? ` · ${step.user}` : ''}
-                    </p>
                   </div>
                 );
               })}

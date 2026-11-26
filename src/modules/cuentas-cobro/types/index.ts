@@ -63,7 +63,7 @@ export interface CuentaCobroProgressStep {
 
 export interface CuentaCobroHistoryEntry {
   id: number;
-  action: 'radicada' | 'aprobado' | 'devuelto' | 'reenviada' | 'sin_multifox' | 'requiere_multifox' | 'multifox' | 'documento' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'eliminada';
+  action: 'radicada' | 'aprobado' | 'devuelto' | 'reenviada' | 'sin_multifox' | 'requiere_multifox' | 'multifox' | 'documento' | 'documento_eliminado' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'eliminada';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
