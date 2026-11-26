@@ -326,7 +326,9 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
                   <h3 className="font-black text-[#004C6C] tracking-tight">Adjuntar contrato u orden de compra</h3>
                 </div>
                 <p className="text-xs font-bold text-slate-500">
-                  El anticipo ya fue aprobado. Adjunta el contrato u orden de compra al que se asocia; luego Contabilidad lo genera en Multifox y lo aprueba para el cuadro de pagos.
+                  {anticipo.status === 'pendiente_soporte'
+                    ? 'El anticipo ya fue aprobado. Adjunta el contrato u orden de compra al que se asocia; luego Contabilidad lo genera en Multifox y lo aprueba para el cuadro de pagos.'
+                    : 'Este anticipo se aprobó antes de que existiera este paso. Adjunta el contrato u orden de compra al que se asocia para completar su soporte; su estado no cambia.'}
                 </p>
                 <div className="space-y-2">
                   <label className={labelClass}>Contrato / orden de compra *</label>
@@ -338,7 +340,7 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
                 <button type="button" onClick={handleSupport} disabled={saving}
                   className="w-full px-6 py-4 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2 disabled:opacity-60">
                   {saving ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                  {saving && progress !== null && progress < 100 ? `Subiendo archivo... ${progress}%` : 'Adjuntar y enviar a Contabilidad'}
+                  {saving && progress !== null && progress < 100 ? `Subiendo archivo... ${progress}%` : anticipo.status === 'pendiente_soporte' ? 'Adjuntar y enviar a Contabilidad' : 'Adjuntar contrato / OC'}
                 </button>
               </div>
             )}

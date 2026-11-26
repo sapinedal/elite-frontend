@@ -76,7 +76,9 @@ export default function AnticiposPage() {
 
   const handleSupport = async (id: number, payload: SupportPayload) => {
     const anticipo = await uploadSupport(id, payload);
-    showNotification(`Anticipo ${anticipo.code}: contrato / OC adjunto. Se notificó a Contabilidad para Multifox.`, 'success');
+    showNotification(anticipo.status === 'pendiente_contabilidad'
+      ? `Anticipo ${anticipo.code}: contrato / OC adjunto. Se notificó a Contabilidad para Multifox.`
+      : `Anticipo ${anticipo.code}: contrato / OC adjunto.`, 'success');
     return anticipo;
   };
 
