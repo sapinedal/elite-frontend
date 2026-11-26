@@ -263,6 +263,7 @@ export default function OrdenesPage() {
         onReviewAccounting={handleReviewAccounting}
         steps={catalogs?.steps ?? []}
         maxUploadMb={catalogs?.max_upload_mb ?? 1024}
+        contractors={catalogs?.contractors ?? []}
         onDeleted={() => { closeDetail(); refresh(); }}
       />
     </div>

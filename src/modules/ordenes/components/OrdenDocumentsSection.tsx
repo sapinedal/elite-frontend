@@ -5,7 +5,8 @@ import { isAxiosError } from 'axios';
 import { Receipt, Download, Loader2, Send, AlertCircle, ArrowRight, Clock } from 'lucide-react';
 import { FileDrop } from '../../../components/ui/FileDrop';
 import { formatDateTime } from '../../../utils/dateUtils';
-import { formatMoney } from '../../../utils/money';
+import { formatMoney, formatMoneyInput, parseMoney } from '../../../utils/money';
+import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { inputClass, labelClass } from '../../../components/ui/ModalShell';
 import { formatBytes, formatMaxSize } from '../../cortes/utils/format';
 import { ordenService, getApiErrorMessage } from '../services/ordenService';
@@ -18,6 +19,8 @@ interface OrdenDocumentsSectionProps {
   maxUploadMb: number;
   /** El residente responsable asocia la factura del proveedor desde Facturas del mes (igual que en cortes) */
   canAssociate: boolean;
+  /** Proveedores para la orden ERP enviada a cuentas por pagar */
+  contractors: OrdenCatalogs['contractors'];
   onUpload: (id: number, payload: OrdenDocumentPayload) => Promise<Orden>;
   onUploaded: (orden: Orden) => void;
 }
@@ -30,8 +33,8 @@ const STEP_STYLES: Record<OrdenStepKey, string> = {
 
 // Indicaciones para quien carga cada documento de Almacén
 const STEP_HINTS: Partial<Record<OrdenStepKey, string>> = {
-  orden_erp: 'Crea la orden de compra en el ERP y adjunta el archivo que genera. Luego el residente asocia la factura del proveedor.',
-  entrada: 'Registra la entrada de almacén y adjunta el soporte. Con esto la orden pasa a la aprobación de Contabilidad.',
+  orden_erp: 'Crea la orden de compra en el ERP y adjunta el archivo que genera. Luego el residente asocia la factura del proveedor. Si la orden se paga antes de recibir el material, márcala para enviarla de una vez a cuentas por pagar.',
+  entrada: 'Registra la entrada de almacén y adjunta el soporte. Con esto la orden pasa a la aprobación de Contabilidad (o a su legalización, si ya se pagó desde la orden ERP).',
 };
 
 /**
@@ -42,12 +45,15 @@ const STEP_HINTS: Partial<Record<OrdenStepKey, string>> = {
  *  - Orden ERP y entrada de almacén: Almacén carga el número y el archivo (directo a S3).
  * Con la entrada, la orden pasa a la aprobación de Contabilidad y de ahí a cuentas por pagar.
  */
-export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ orden, steps, maxUploadMb, canAssociate, onUpload, onUploaded }) => {
+export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ orden, steps, maxUploadMb, canAssociate, contractors, onUpload, onUploaded }) => {
   const documents = orden.documents ?? [];
   const [number, setNumber] = useState('');
   const [observation, setObservation] = useState('');
-  // Entrada de almacén ya aprobada con el cargue: pasa directo a cuentas por pagar (sin aprobación de Contabilidad)
-  const [approvedWithUpload, setApprovedWithUpload] = useState(false);
+  // Orden ERP que se paga antes de la entrada: pasa de una vez a cuentas por pagar con su valor y proveedor;
+  // la entrada de almacén y la aprobación de Contabilidad quedan para legalizarla
+  const [paidInAdvance, setPaidInAdvance] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [contractorId, setContractorId] = useState<number | null>(null);
   const [file, setFile] = useState<File | null>(null);
   // Si el registro falla por validación no hay que volver a subir el archivo
   const [uploadedToken, setUploadedToken] = useState<string | null>(null);
@@ -87,6 +93,8 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
     e.preventDefault();
     if (!number.trim()) return setError(`Indica el ${orden.current_step_number_label ?? 'número del documento'}.`);
     if (!file) return setError('Adjunta el archivo del documento.');
+    if (uploadStep === 'orden_erp' && paidInAdvance && !parseMoney(amount)) return setError('Indica el valor de la orden de compra para enviarla a cuentas por pagar.');
+    if (uploadStep === 'orden_erp' && paidInAdvance && !contractorId) return setError('Indica el proveedor de la orden de compra.');
 
     setSubmitting(true);
     setError(null);
@@ -109,11 +117,15 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
         number: number.trim(),
         observation: observation.trim() || null,
         upload_token: token,
-        ...(uploadStep === 'entrada' ? { approved_with_upload: approvedWithUpload } : {}),
+        ...(uploadStep === 'orden_erp' && paidInAdvance
+          ? { paid_in_advance: true, amount: parseMoney(amount), contractor_id: contractorId }
+          : {}),
       });
       setNumber('');
       setObservation('');
-      setApprovedWithUpload(false);
+      setPaidInAdvance(false);
+      setAmount('');
+      setContractorId(null);
       setFile(null);
       setUploadedToken(null);
       setProgress(null);
@@ -200,7 +212,9 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
       )}
       {orden.status === 'pendiente_aprobacion_contable' && (
         <p className="flex items-center gap-1 text-[11px] font-bold text-orange-600">
-          <Clock size={13} /> Pendiente de aprobación de Contabilidad para pasar a cuentas por pagar.
+          <Clock size={13} /> {orden.paid_in_advance
+            ? 'Pendiente de Contabilidad para legalizar la entrada (ya está en cuentas por pagar desde la orden ERP).'
+            : 'Pendiente de aprobación de Contabilidad para pasar a cuentas por pagar.'}
         </p>
       )}
 
@@ -229,15 +243,35 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
               hint="Arrastra el archivo o haz clic para seleccionarlo" />
           </div>
 
-          {uploadStep === 'entrada' && (
-            <label className="flex items-start gap-3 p-4 rounded-2xl border border-slate-200 bg-slate-50 cursor-pointer">
-              <input type="checkbox" disabled={submitting} className="mt-0.5 h-4 w-4 accent-[#004C6C]"
-                checked={approvedWithUpload} onChange={(e) => setApprovedWithUpload(e.target.checked)} />
-              <span>
-                <span className="block text-sm font-black text-slate-700">Aprobada con el cargue</span>
-                <span className="block text-xs font-bold text-slate-400">La orden queda completada y pasa directo a cuentas por pagar, sin la aprobación de Contabilidad.</span>
-              </span>
-            </label>
+          {uploadStep === 'orden_erp' && (
+            <div className="space-y-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" disabled={submitting} className="mt-0.5 h-4 w-4 accent-[#004C6C]"
+                  checked={paidInAdvance} onChange={(e) => setPaidInAdvance(e.target.checked)} />
+                <span>
+                  <span className="block text-sm font-black text-slate-700">Enviar a cuentas por pagar con este cargue</span>
+                  <span className="block text-xs font-bold text-slate-400">Orden que se paga antes de recibir el material. La entrada de almacén se carga después y Contabilidad la aprueba solo para legalizarla.</span>
+                </span>
+              </label>
+              {paidInAdvance && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className={labelClass}>Valor de la orden *</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
+                      <input disabled={submitting} inputMode="numeric" className={`${inputClass} pl-8`} placeholder="0"
+                        value={amount} onChange={(e) => setAmount(formatMoneyInput(e.target.value))} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 min-w-0">
+                    <label className={labelClass}>Proveedor *</label>
+                    <CustomSelect pyClass="py-3" placeholder="Buscar proveedor" disabled={submitting}
+                      options={contractors.map((c) => ({ value: c.id, label: c.name, sublabel: c.nit ? `NIT ${c.nit}` : undefined }))}
+                      value={contractorId} onChange={(v) => setContractorId(Number(v))} />
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           <button type="submit" disabled={submitting}

@@ -24,6 +24,8 @@ interface OrdenDetailModalProps {
   onDeleted?: () => void;
   steps: OrdenCatalogs['steps'];
   maxUploadMb: number;
+  /** Proveedores para la orden ERP enviada a cuentas por pagar */
+  contractors?: OrdenCatalogs['contractors'];
 }
 
 // Mismo estilo de fases que el Registro de Corte
@@ -46,6 +48,7 @@ const ACTION_LABELS: Record<OrdenHistoryEntry['action'], { label: string; tone: 
   devuelto: { label: 'Devuelta', tone: 'text-red-600' },
   documento: { label: 'Documento cargado', tone: 'text-[#004C6C]' },
   contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
+  pago_anticipado: { label: 'Enviada a cuentas por pagar con la orden ERP', tone: 'text-green-700' },
   aprobada_con_cargue: { label: 'Aprobada con el cargue', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
   documento_eliminado: { label: 'Documento eliminado', tone: 'text-rose-600' },
@@ -60,7 +63,7 @@ export const OrdenDetailModal: React.FC<OrdenDetailModalProps> = ({ ordenId, ...
 );
 
 const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { ordenId: number }> = ({
-  ordenId, onClose, onReview, onResubmit, onUploadDocument, onReviewAccounting, steps, maxUploadMb, onDeleted,
+  ordenId, onClose, onReview, onResubmit, onUploadDocument, onReviewAccounting, steps, maxUploadMb, contractors, onDeleted,
 }) => {
   const { user } = useAuth();
   const [orden, setOrden] = useState<Orden | null>(null);
@@ -260,6 +263,7 @@ const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { or
                   orden={orden}
                   steps={steps}
                   maxUploadMb={maxUploadMb}
+                  contractors={contractors ?? []}
                   canAssociate={orden.current_step === 'factura' && orden.created_by?.id === user?.id}
                   onUpload={onUploadDocument}
                   onUploaded={setOrden}
@@ -270,7 +274,8 @@ const OrdenDetailContent: React.FC<Omit<OrdenDetailModalProps, 'ordenId'> & { or
                 <AccountingReviewPanel
                   subject={`Orden ${orden.code}`}
                   returnsTo="Almacén"
-                  askAmount
+                  approvesTo={orden.paid_in_advance ? 'legalizada (ya está en cuentas por pagar)' : 'cuentas por pagar'}
+                  askAmount={!orden.paid_in_advance}
                   currentAmount={orden.documents?.find((d) => d.step === 'factura')?.amount ?? null}
                   onSubmit={async (accountingDecision, accountingComment, amount) => setOrden(await onReviewAccounting(orden.id, accountingDecision, accountingComment, amount))} />
               )}

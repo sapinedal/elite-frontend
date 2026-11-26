@@ -53,7 +53,7 @@ export interface OrdenProgressStep {
 
 export interface OrdenHistoryEntry {
   id: number;
-  action: 'registrada' | 'aprobado' | 'devuelto' | 'reenviada' | 'documento' | 'contabilidad_aprobada' | 'aprobada_con_cargue' | 'contabilidad_devuelta' | 'documento_eliminado' | 'eliminada';
+  action: 'registrada' | 'aprobado' | 'devuelto' | 'reenviada' | 'documento' | 'contabilidad_aprobada' | 'pago_anticipado' | 'aprobada_con_cargue' | 'contabilidad_devuelta' | 'documento_eliminado' | 'eliminada';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
@@ -106,6 +106,8 @@ export interface Orden {
   can_resubmit: boolean;
   /** ordenes.eliminar: eliminar la orden cargada por error */
   can_delete?: boolean;
+  /** Enviada a cuentas por pagar desde la orden ERP: la entrada y Contabilidad son de legalización */
+  paid_in_advance?: boolean;
   can_upload_step: boolean;
   can_review_accounting: boolean;
   // Solo en el detalle
@@ -142,8 +144,8 @@ export interface OrdenDocumentPayload {
   amount?: number | null;
   contractor_id?: number | null;
   upload_token: string;
-  /** Solo en la entrada de almacén: ya quedó aprobada con el cargue, pasa directo a cuentas por pagar */
-  approved_with_upload?: boolean;
+  /** Solo en la orden ERP: pasa de una vez a cuentas por pagar (con valor y proveedor); la entrada se legaliza después */
+  paid_in_advance?: boolean;
 }
 
 export interface OrdenFilters {
