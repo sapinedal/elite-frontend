@@ -2,6 +2,7 @@ export type AnticipoStatus =
   | 'pendiente_director'
   | 'pendiente_gerencia'
   | 'devuelto'
+  | 'pendiente_soporte'
   | 'pendiente_contabilidad'
   | 'pendiente_aprobacion_contable'
   | 'completado';
@@ -48,7 +49,7 @@ export interface AnticipoProgressStep {
 
 export interface AnticipoHistoryEntry {
   id: number;
-  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'eliminado';
+  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'soporte' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'eliminado';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
@@ -88,10 +89,16 @@ export interface Anticipo {
   can_resubmit: boolean;
   /** anticipos.eliminar: eliminar el anticipo cargado por error */
   can_delete?: boolean;
+  /** Después de Gerencia, quien lo radicó adjunta el contrato u orden de compra */
+  can_upload_support?: boolean;
   can_register_multifox: boolean;
   can_review_accounting: boolean;
   // Solo en el detalle
   storage_path?: string | null;
+  support_file_name?: string | null;
+  support_file_size?: number | null;
+  support_by?: string | null;
+  support_at?: string | null;
   multifox_file_name?: string | null;
   multifox_file_size?: number | null;
   multifox_by?: string | null;
@@ -135,4 +142,10 @@ export interface AnticipoCounts {
   pending: number;
   accounting: number;
   accounting_approval: number;
+}
+
+/** Contrato u orden de compra que adjunta el residente después de Gerencia */
+export interface SupportPayload {
+  upload_token: string;
+  comment: string | null;
 }

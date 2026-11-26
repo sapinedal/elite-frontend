@@ -46,6 +46,7 @@ const ACTION_LABELS: Record<OrdenHistoryEntry['action'], { label: string; tone: 
   devuelto: { label: 'Devuelta', tone: 'text-red-600' },
   documento: { label: 'Documento cargado', tone: 'text-[#004C6C]' },
   contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
+  aprobada_con_cargue: { label: 'Aprobada con el cargue', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
   documento_eliminado: { label: 'Documento eliminado', tone: 'text-rose-600' },
   eliminada: { label: 'Orden eliminada', tone: 'text-rose-600' },

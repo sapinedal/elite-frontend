@@ -125,7 +125,7 @@ const eliteMenuItems: SidebarItem[] = [
                 label: 'Facturas del mes',
                 icon: <Receipt className="w-4 h-4" />,
                 href: '/app/contratacion/facturas',
-                permissions: ['cortes.facturar', 'cortes.crear', 'ordenes.crear'],
+                permissions: ['cortes.facturar', 'cortes.crear', 'ordenes.crear', 'cuentas_cobro.crear', 'facturacion.aprobar_indirecto'],
             },
             {
                 id: 'contratacion-pagos',

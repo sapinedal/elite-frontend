@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Receipt, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Download, Database, FileText, Paperclip, Wallet, ArrowRight,
+  Receipt, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Download, Database, FileText, Paperclip, Wallet, ArrowRight, Upload,
 } from 'lucide-react';
 import { HistoryButton, HistoryModal } from '../../../components/ui/HistoryModal';
 import { AccountingReviewPanel } from '../../../components/ui/AccountingReviewPanel';
@@ -14,7 +14,7 @@ import { cuentaCobroService, getApiErrorMessage } from '../services/cuentaCobroS
 import { CuentaCobroStatusBadge } from './CuentaCobroStatusBadge';
 import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import { DeleteRecordButton } from '../../../components/ui/DeleteRecordButton';
-import type { CuentaCobro, CuentaCobroHistoryEntry, CuentaCobroMultifoxPayload, CuentaCobroProgressStep } from '../types';
+import type { CuentaCobro, CuentaCobroDocumentPayload, CuentaCobroHistoryEntry, CuentaCobroMultifoxPayload, CuentaCobroProgressStep } from '../types';
 
 interface CuentaCobroDetailModalProps {
   cuentaId: number | null;
@@ -24,6 +24,8 @@ interface CuentaCobroDetailModalProps {
   onResubmit: (cuenta: CuentaCobro) => void;
   onDecideMultifox: (id: number, requiresMultifox: boolean, comment?: string) => Promise<CuentaCobro>;
   onRegisterMultifox: (id: number, payload: CuentaCobroMultifoxPayload) => Promise<CuentaCobro>;
+  /** Directa: cargue ERP o liquidación ERP */
+  onUploadDocument: (id: number, payload: CuentaCobroDocumentPayload) => Promise<CuentaCobro>;
   onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<CuentaCobro>;
   /** Después de eliminar la cuenta (cerrar y refrescar el listado) */
   onDeleted?: () => void;
@@ -49,6 +51,7 @@ const ACTION_LABELS: Record<CuentaCobroHistoryEntry['action'], { label: string; 
   sin_multifox: { label: 'No requiere Multifox', tone: 'text-[#004C6C]' },
   requiere_multifox: { label: 'Requiere Multifox', tone: 'text-[#004C6C]' },
   multifox: { label: 'Cargada en Multifox', tone: 'text-[#004C6C]' },
+  documento: { label: 'Documento cargado', tone: 'text-[#004C6C]' },
   contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelta por Contabilidad', tone: 'text-red-600' },
   eliminada: { label: 'Cuenta de cobro eliminada', tone: 'text-rose-600' },
@@ -64,7 +67,7 @@ export const CuentaCobroDetailModal: React.FC<CuentaCobroDetailModalProps> = ({ 
 );
 
 const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { cuentaId: number }> = ({
-  cuentaId, maxUploadMb, onClose, onReview, onResubmit, onDecideMultifox, onRegisterMultifox, onReviewAccounting, onDeleted,
+  cuentaId, maxUploadMb, onClose, onReview, onResubmit, onDecideMultifox, onRegisterMultifox, onUploadDocument, onReviewAccounting, onDeleted,
 }) => {
   const [cuenta, setCuenta] = useState<CuentaCobro | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +81,10 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
   const [multifoxNumber, setMultifoxNumber] = useState('');
   const [multifoxFile, setMultifoxFile] = useState<File | null>(null);
   const [multifoxComment, setMultifoxComment] = useState('');
+  // Directa: cargue ERP / liquidación
+  const [stepNumber, setStepNumber] = useState('');
+  const [stepFile, setStepFile] = useState<File | null>(null);
+  const [stepObservation, setStepObservation] = useState('');
 
   useEffect(() => {
     cuentaCobroService.getCuenta(cuentaId)
@@ -85,7 +92,7 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
       .catch((err) => setError(getApiErrorMessage(err, 'Error al cargar la cuenta de cobro.')));
   }, [cuentaId]);
 
-  const download = async (key: string, file: 'cuenta' | 'multifox' | 'adjunto', adjuntoId?: number) => {
+  const download = async (key: string, file: 'cuenta' | 'multifox' | 'adjunto' | 'documento', adjuntoId?: number) => {
     if (!cuenta) return;
     setDownloading(key);
     try {
@@ -128,6 +135,20 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
       const token = multifoxFile ? await cuentaCobroService.uploadFile(multifoxFile) : null;
       return onRegisterMultifox(cuenta.id, { multifox_number: multifoxNumber.trim(), upload_token: token, comment: multifoxComment.trim() || null });
     }, 'Error al cargar en Multifox.');
+  };
+
+  const handleStepUpload = async () => {
+    if (!cuenta) return;
+    if (!stepNumber.trim()) return setError(`Indica el ${cuenta.current_step_number_label ?? 'número del documento'}.`);
+    if (!stepFile) return setError('Adjunta el archivo del documento.');
+    if (await act(async () => {
+      const token = await cuentaCobroService.uploadFile(stepFile);
+      return onUploadDocument(cuenta.id, { number: stepNumber.trim(), observation: stepObservation.trim() || null, upload_token: token });
+    }, 'Error al cargar el documento.')) {
+      setStepNumber('');
+      setStepFile(null);
+      setStepObservation('');
+    }
   };
 
   const fileRow = (key: string, label: string, name: string, size: number | null | undefined, icon: React.ReactNode, onDownload: () => void, getViewUrl?: () => Promise<string>) => (
@@ -212,8 +233,10 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
                   ['Proyecto / Frente', `${cuenta.project?.name ?? '—'} · ${cuenta.tower?.name ?? 'General / Indirectos'}`],
                   ['Contrato', cuenta.contract?.contract_code ?? '—'],
                   ['Radicada por', `${cuenta.created_by?.name ?? '—'} · ${formatDateTime(cuenta.created_at)}`],
-                  ['Multifox', cuenta.requires_multifox === null ? 'Por decidir' : cuenta.requires_multifox
-                    ? (cuenta.multifox_number ? `N.º ${cuenta.multifox_number}` : 'Requiere, pendiente de cargue') : 'No requiere'],
+                  cuenta.is_directa
+                    ? ['Flujo', 'Directa: cargue ERP, factura y liquidación ERP']
+                    : ['Multifox', cuenta.requires_multifox === null ? 'Por decidir' : cuenta.requires_multifox
+                      ? (cuenta.multifox_number ? `N.º ${cuenta.multifox_number}` : 'Requiere, pendiente de cargue') : 'No requiere'],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
@@ -231,6 +254,8 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
                 {fileRow('cuenta', 'Cuenta de cobro', cuenta.file_name, cuenta.file_size, <FileText size={18} className="text-slate-400 shrink-0" />, () => download('cuenta', 'cuenta'), () => cuentaCobroService.getDownloadUrl(cuenta.id, 'cuenta', undefined, true))}
                 {(cuenta.adjuntos ?? []).map((a) => fileRow(`a${a.id}`, 'Adjunto', a.file_name, a.file_size,
                   <Paperclip size={18} className="text-slate-400 shrink-0" />, () => download(`a${a.id}`, 'adjunto', a.id), () => cuentaCobroService.getDownloadUrl(cuenta.id, 'adjunto', a.id, true)))}
+                {(cuenta.documents ?? []).map((d) => fileRow(`d${d.id}`, `${d.step_label} · N.º ${d.number}${d.amount !== null ? ` · ${formatMoney(d.amount)}` : ''}`, d.file_name, d.file_size,
+                  <FileText size={18} className="text-[#004C6C] shrink-0" />, () => download(`d${d.id}`, 'documento', d.id), () => cuentaCobroService.getDownloadUrl(cuenta.id, 'documento', d.id, true)))}
                 {cuenta.multifox_file_name && fileRow('multifox', 'Soporte Multifox', cuenta.multifox_file_name, cuenta.multifox_file_size,
                   <Database size={18} className="text-slate-400 shrink-0" />, () => download('multifox', 'multifox'), () => cuentaCobroService.getDownloadUrl(cuenta.id, 'multifox', undefined, true))}
               </div>
@@ -341,10 +366,56 @@ const DetailContent: React.FC<Omit<CuentaCobroDetailModalProps, 'cuentaId'> & { 
               </div>
             )}
 
+            {/* Directa: esperando la factura desde Facturas del mes */}
+            {cuenta.is_directa && cuenta.current_step === 'factura' && (
+              <div className="bg-amber-50 border border-amber-100 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <p className="text-sm font-bold text-amber-700">
+                  Cargue ERP listo. {cuenta.created_by?.name ?? 'Quien la radicó'} debe asociar la factura desde Facturas del mes; luego sigue la liquidación ERP.
+                </p>
+                <Link to="/app/contratacion/facturas" className="flex items-center justify-center gap-2 bg-[#EE9D4C] hover:bg-[#e08a35] text-white px-5 py-3 rounded-2xl font-bold shrink-0">
+                  <ArrowRight size={16} /> Ir a Facturas del mes
+                </Link>
+              </div>
+            )}
+
+            {/* Directa: cargue ERP o liquidación ERP */}
+            {cuenta.can_upload_step && (
+              <div className="bg-white rounded-3xl border border-blue-100 p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Upload size={18} className="text-[#004C6C]" />
+                  <h3 className="font-black text-[#004C6C] tracking-tight">{cuenta.current_step_label}</h3>
+                </div>
+                <p className="text-xs font-bold text-slate-500">
+                  {cuenta.current_step === 'erp'
+                    ? 'Registra la cuenta de cobro en el ERP y carga el documento. Después se asocia la factura desde Facturas del mes.'
+                    : 'Carga la liquidación del ERP. Con ella pasa a la aprobación de Contabilidad y luego al cuadro de pagos.'}
+                </p>
+                <div className="space-y-2">
+                  <label className={labelClass}>{cuenta.current_step_number_label} *</label>
+                  <input disabled={saving} className={inputClass} placeholder="Número del documento"
+                    value={stepNumber} onChange={(e) => setStepNumber(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <label className={labelClass}>Archivo *</label>
+                  <FileDrop file={stepFile} disabled={saving} hint="Arrastra el documento o haz clic"
+                    onSelect={(f) => {
+                      if (f.size > maxUploadMb * 1024 * 1024) return setError(`El archivo supera el máximo de ${formatMaxSize(maxUploadMb)}.`);
+                      setStepFile(f);
+                    }} />
+                </div>
+                <textarea rows={2} disabled={saving} value={stepObservation} onChange={(e) => setStepObservation(e.target.value)}
+                  className={`${inputClass} resize-none`} placeholder="Observación (opcional)" />
+                <button type="button" onClick={handleStepUpload} disabled={saving}
+                  className="w-full px-6 py-4 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2 disabled:opacity-60">
+                  {saving ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />} Cargar y notificar
+                </button>
+              </div>
+            )}
+
             {cuenta.can_review_accounting && (
               <AccountingReviewPanel
                 subject={`Cuenta de cobro ${cuenta.code}${cuenta.multifox_number ? ` (Multifox N.º ${cuenta.multifox_number})` : cuenta.requires_multifox === false ? ' (no requiere Multifox)' : ''}`}
-                returnsTo="Multifox"
+                returnsTo={cuenta.is_directa ? 'la liquidación ERP' : 'Multifox'}
                 approvesTo="el cuadro de pagos"
                 onSubmit={async (decision, comment) => setCuenta(await onReviewAccounting(cuenta.id, decision, comment))} />
             )}

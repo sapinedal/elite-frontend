@@ -1,6 +1,6 @@
 import axios from 'axios';
 import api from '../../../lib/axios';
-import type { Corte, CorteCatalogs, CorteCounts, CortePage, CortePayload, CorteScope } from '../types';
+import type { Corte, CorteCatalogs, CorteCounts, CortePage, CortePayload, CorteReviewDecision, CorteScope } from '../types';
 
 const BASE = '/v1/cortes';
 
@@ -64,7 +64,7 @@ export const corteService = {
     return data.data;
   },
 
-  reviewCorte: async (id: number, decision: 'aprobar' | 'devolver', comment?: string): Promise<Corte> => {
+  reviewCorte: async (id: number, decision: CorteReviewDecision, comment?: string): Promise<Corte> => {
     const { data } = await api.post(`${BASE}/${id}/review`, { decision, comment: comment || null });
     return data.data;
   },

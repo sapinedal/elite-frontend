@@ -14,7 +14,7 @@ import { useAnticipos } from '../hooks/useAnticipos';
 import { AnticipoFormModal } from '../components/AnticipoFormModal';
 import { AnticipoDetailModal } from '../components/AnticipoDetailModal';
 import { AnticipoStatusBadge } from '../components/AnticipoStatusBadge';
-import type { Anticipo, AnticipoPayload, AnticipoScope, MultifoxPayload } from '../types';
+import type { Anticipo, AnticipoPayload, AnticipoScope, MultifoxPayload, SupportPayload } from '../types';
 
 /**
  * Anticipos: el residente radica la cuenta de cobro del anticipo de un contrato, lo aprueban el Director de Obra
@@ -25,7 +25,7 @@ export default function AnticiposPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     catalogs, anticipos, counts, scope, filters, page, perPage, pagination, loading, error,
-    setScope, setFilter, clearFilters, setPage, changePerPage, createAnticipo, resubmitAnticipo, reviewAnticipo, registerMultifox, reviewAccounting, refresh,
+    setScope, setFilter, clearFilters, setPage, changePerPage, createAnticipo, resubmitAnticipo, reviewAnticipo, registerMultifox, uploadSupport, reviewAccounting, refresh,
   } = useAnticipos();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -71,6 +71,12 @@ export default function AnticiposPage() {
   const handleReview = async (id: number, decision: 'aprobar' | 'devolver', comment?: string) => {
     const anticipo = await reviewAnticipo(id, decision, comment);
     showNotification(decision === 'aprobar' ? 'Anticipo aprobado.' : 'Anticipo devuelto al residente.', 'success');
+    return anticipo;
+  };
+
+  const handleSupport = async (id: number, payload: SupportPayload) => {
+    const anticipo = await uploadSupport(id, payload);
+    showNotification(`Anticipo ${anticipo.code}: contrato / OC adjunto. Se notificó a Contabilidad para Multifox.`, 'success');
     return anticipo;
   };
 
@@ -138,8 +144,8 @@ export default function AnticiposPage() {
       header: 'Acciones',
       className: 'text-right',
       accessor: (a: Anticipo) => {
-        const label = a.can_review || a.can_review_accounting ? 'Aprobar' : a.can_resubmit ? 'Corregir' : a.can_register_multifox ? 'Cargar Multifox' : 'Ver';
-        const highlighted = a.can_review || a.can_resubmit || a.can_register_multifox || a.can_review_accounting;
+        const label = a.can_review || a.can_review_accounting ? 'Aprobar' : a.can_resubmit ? 'Corregir' : a.can_upload_support ? 'Adjuntar contrato / OC' : a.can_register_multifox ? 'Cargar Multifox' : 'Ver';
+        const highlighted = a.can_review || a.can_resubmit || a.can_upload_support || a.can_register_multifox || a.can_review_accounting;
         return (
           <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setDetailId(a.id)}
@@ -257,6 +263,7 @@ export default function AnticiposPage() {
         onReview={handleReview}
         onResubmit={openResubmit}
         onRegisterMultifox={handleMultifox}
+        onUploadSupport={handleSupport}
         onReviewAccounting={handleReviewAccounting}
         onDeleted={() => { closeDetail(); refresh(); }}
       />

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Receipt, Plus, Search, X, FileText, ClipboardCheck, Layers, Eye, Database, Tags, Paperclip, Calculator } from 'lucide-react';
+import { Receipt, Plus, Search, X, FileText, ClipboardCheck, Layers, Eye, Database, Tags, Paperclip, Calculator, Upload } from 'lucide-react';
 import { DataTable } from '../../../components/ui/DataTable';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
@@ -15,7 +15,7 @@ import { CuentaCobroFormModal } from '../components/CuentaCobroFormModal';
 import { CuentaCobroDetailModal } from '../components/CuentaCobroDetailModal';
 import { CuentaCobroStatusBadge } from '../components/CuentaCobroStatusBadge';
 import { TiposPanel } from '../components/TiposPanel';
-import type { CuentaCobro, CuentaCobroMultifoxPayload, CuentaCobroPayload, CuentaCobroScope } from '../types';
+import type { CuentaCobroDocumentPayload, CuentaCobro, CuentaCobroMultifoxPayload, CuentaCobroPayload, CuentaCobroScope } from '../types';
 
 type Tab = CuentaCobroScope | 'tipos';
 
@@ -29,7 +29,7 @@ export default function CuentasCobroPage() {
   const {
     catalogs, cuentas, counts, scope, filters, page, perPage, pagination, loading, error,
     setScope, setFilter, clearFilters, setPage, changePerPage, reloadCatalogs,
-    createCuenta, resubmitCuenta, reviewCuenta, decideMultifox, registerMultifox, reviewAccounting, refresh,
+    createCuenta, resubmitCuenta, reviewCuenta, decideMultifox, registerMultifox, uploadDocument, reviewAccounting, refresh,
   } = useCuentasCobro();
 
   const [tiposOpen, setTiposOpen] = useState(false);
@@ -59,8 +59,9 @@ export default function CuentasCobroPage() {
     ...(catalogs?.can_create ? [{ id: 'mine', label: 'Mis cuentas', icon: <FileText size={14} />, count: counts.mine }] : []),
     ...(isReviewer ? [{ id: 'pending', label: 'Por aprobar', icon: <ClipboardCheck size={14} />, count: counts.pending, alert: true }] : []),
     ...(catalogs?.can_handle_multifox ? [{ id: 'multifox', label: 'Multifox', icon: <Database size={14} />, count: counts.multifox, alert: true }] : []),
+    ...(catalogs?.can_load_erp ? [{ id: 'erp', label: 'Cargue ERP', icon: <Upload size={14} />, count: counts.erp ?? 0, alert: true }] : []),
     ...(catalogs?.can_approve_accounting ? [{ id: 'accounting_approval', label: 'Aprobación Contabilidad', icon: <Calculator size={14} />, count: counts.accounting_approval, alert: true }] : []),
-    ...(catalogs?.can_view_all || catalogs?.can_handle_multifox || catalogs?.can_approve_accounting ? [{ id: 'all', label: 'Todas', icon: <Layers size={14} /> }] : []),
+    ...(catalogs?.can_view_all || catalogs?.can_handle_multifox || catalogs?.can_approve_accounting || catalogs?.can_load_erp ? [{ id: 'all', label: 'Todas', icon: <Layers size={14} /> }] : []),
     ...(catalogs?.can_parametrize ? [{ id: 'tipos', label: 'Tipos', icon: <Tags size={14} /> }] : []),
   ], [counts, isReviewer, catalogs]);
 
@@ -100,7 +101,16 @@ export default function CuentasCobroPage() {
 
   const handleReviewAccounting = async (id: number, decision: 'aprobar' | 'devolver', comment?: string) => {
     const cuenta = await reviewAccounting(id, decision, comment);
-    showNotification(decision === 'aprobar' ? `${cuenta.code} aprobada: pasó al cuadro de pagos.` : `${cuenta.code} devuelta a Multifox.`, 'success');
+    showNotification(decision === 'aprobar' ? `${cuenta.code} aprobada: pasó al cuadro de pagos.`
+      : cuenta.is_directa ? `${cuenta.code} devuelta a la liquidación ERP.` : `${cuenta.code} devuelta a Multifox.`, 'success');
+    return cuenta;
+  };
+
+  const handleUploadDocument = async (id: number, payload: CuentaCobroDocumentPayload) => {
+    const cuenta = await uploadDocument(id, payload);
+    showNotification(cuenta.status === 'pendiente_aprobacion_contable'
+      ? `${cuenta.code}: liquidación cargada. Pasó a la aprobación de Contabilidad.`
+      : `${cuenta.code}: documento cargado. Sigue ${cuenta.current_step_label?.toLowerCase() ?? 'el siguiente paso'}.`, 'success');
     return cuenta;
   };
 
@@ -152,7 +162,7 @@ export default function CuentasCobroPage() {
         <div className="space-y-1">
           <CuentaCobroStatusBadge status={c.status} label={c.status_label} />
           {c.status === 'en_pagos' && (
-            <p className="text-[11px] font-bold text-slate-500 whitespace-nowrap">{c.multifox_number ? `Multifox N.º ${c.multifox_number}` : 'Sin Multifox'}</p>
+            <p className="text-[11px] font-bold text-slate-500 whitespace-nowrap">{c.is_directa ? 'Directa · liquidada en ERP' : c.multifox_number ? `Multifox N.º ${c.multifox_number}` : 'Sin Multifox'}</p>
           )}
         </div>
       ),
@@ -161,8 +171,8 @@ export default function CuentasCobroPage() {
       header: 'Acciones',
       className: 'text-right',
       accessor: (c: CuentaCobro) => {
-        const label = c.can_review || c.can_review_accounting ? 'Aprobar' : c.can_resubmit ? 'Corregir' : c.can_handle_multifox ? 'Multifox' : 'Ver';
-        const highlighted = c.can_review || c.can_resubmit || c.can_handle_multifox || c.can_review_accounting;
+        const label = c.can_review || c.can_review_accounting ? 'Aprobar' : c.can_resubmit ? 'Corregir' : c.can_handle_multifox ? 'Multifox' : c.can_upload_step ? 'Cargar' : 'Ver';
+        const highlighted = c.can_review || c.can_resubmit || c.can_handle_multifox || c.can_review_accounting || c.can_upload_step;
         return (
           <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setDetailId(c.id)}
@@ -241,6 +251,7 @@ export default function CuentasCobroPage() {
               scope === 'pending' ? 'No tienes cuentas de cobro pendientes de aprobación.'
                 : scope === 'multifox' ? 'No hay cuentas de cobro aprobadas pendientes de Multifox.'
                 : scope === 'accounting_approval' ? 'No hay cuentas de cobro pendientes de la aprobación de Contabilidad.'
+                : scope === 'erp' ? 'No hay cuentas de cobro directas pendientes de cargue ERP o liquidación.'
                 : 'Aún no hay cuentas de cobro radicadas.'
             }
           />
@@ -264,6 +275,7 @@ export default function CuentasCobroPage() {
         onResubmit={openResubmit}
         onDecideMultifox={handleDecide}
         onRegisterMultifox={handleMultifox}
+        onUploadDocument={handleUploadDocument}
         onReviewAccounting={handleReviewAccounting}
         onDeleted={() => { closeDetail(); refresh(); }}
       />

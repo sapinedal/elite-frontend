@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { HandCoins, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Download, Database, FileText, Wallet } from 'lucide-react';
+import { HandCoins, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Download, Database, FileText, Wallet, FileSignature } from 'lucide-react';
 import { AccountingReviewPanel } from '../../../components/ui/AccountingReviewPanel';
 import { HistoryButton, HistoryModal } from '../../../components/ui/HistoryModal';
 import { ModalShell, inputClass, labelClass } from '../../../components/ui/ModalShell';
@@ -12,7 +12,7 @@ import { AnticipoStatusBadge } from './AnticipoStatusBadge';
 import { FileDrop } from '../../../components/ui/FileDrop';
 import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import { DeleteRecordButton } from '../../../components/ui/DeleteRecordButton';
-import type { Anticipo, AnticipoHistoryEntry, AnticipoProgressStep, MultifoxPayload } from '../types';
+import type { Anticipo, AnticipoHistoryEntry, AnticipoProgressStep, MultifoxPayload, SupportPayload } from '../types';
 
 interface AnticipoDetailModalProps {
   anticipoId: number | null;
@@ -21,6 +21,8 @@ interface AnticipoDetailModalProps {
   onReview: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Anticipo>;
   onResubmit: (anticipo: Anticipo) => void;
   onRegisterMultifox: (id: number, payload: MultifoxPayload) => Promise<Anticipo>;
+  /** El residente adjunta el contrato / orden de compra después de Gerencia */
+  onUploadSupport: (id: number, payload: SupportPayload) => Promise<Anticipo>;
   onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Anticipo>;
   /** Después de eliminar el anticipo (cerrar y refrescar el listado) */
   onDeleted?: () => void;
@@ -43,6 +45,7 @@ const ACTION_LABELS: Record<AnticipoHistoryEntry['action'], { label: string; ton
   reenviado: { label: 'Reenviado', tone: 'text-[#004C6C]' },
   aprobado: { label: 'Aprobado', tone: 'text-green-600' },
   devuelto: { label: 'Devuelto', tone: 'text-red-600' },
+  soporte: { label: 'Contrato / OC adjunto', tone: 'text-[#004C6C]' },
   multifox: { label: 'Generado en Multifox', tone: 'text-[#004C6C]' },
   contabilidad_aprobada: { label: 'Aprobado por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelto por Contabilidad', tone: 'text-red-600' },
@@ -50,7 +53,7 @@ const ACTION_LABELS: Record<AnticipoHistoryEntry['action'], { label: string; ton
 };
 
 /**
- * Detalle del anticipo: fases (Director, Gerencia, Multifox), datos, archivos, la aprobación de la etapa actual,
+ * Detalle del anticipo: fases (Director, Gerencia, contrato / OC, Multifox), datos, archivos, la aprobación de la etapa actual,
  * el reenvío del residente y el cargue de Contabilidad del anticipo generado en Multifox.
  */
 export const AnticipoDetailModal: React.FC<AnticipoDetailModalProps> = ({ anticipoId, ...props }) => (
@@ -59,7 +62,7 @@ export const AnticipoDetailModal: React.FC<AnticipoDetailModalProps> = ({ antici
 );
 
 const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { anticipoId: number }> = ({
-  anticipoId, maxUploadMb, onClose, onReview, onResubmit, onRegisterMultifox, onReviewAccounting, onDeleted,
+  anticipoId, maxUploadMb, onClose, onReview, onResubmit, onRegisterMultifox, onUploadSupport, onReviewAccounting, onDeleted,
 }) => {
   const [anticipo, setAnticipo] = useState<Anticipo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +76,9 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
   const [multifoxFile, setMultifoxFile] = useState<File | null>(null);
   const [multifoxComment, setMultifoxComment] = useState('');
   const [progress, setProgress] = useState<number | null>(null);
+  // Contrato / orden de compra (residente)
+  const [supportFile, setSupportFile] = useState<File | null>(null);
+  const [supportComment, setSupportComment] = useState('');
 
   useEffect(() => {
     anticipoService.getAnticipo(anticipoId)
@@ -80,7 +86,7 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
       .catch((err) => setError(getApiErrorMessage(err, 'Error al cargar el anticipo.')));
   }, [anticipoId]);
 
-  const download = async (file: 'cuenta' | 'multifox') => {
+  const download = async (file: 'cuenta' | 'multifox' | 'soporte') => {
     if (!anticipo) return;
     setDownloading(file);
     try {
@@ -142,7 +148,27 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
     }
   };
 
-  const fileRow = (key: 'cuenta' | 'multifox', label: string, name: string, size: number | null | undefined, icon: React.ReactNode) => (
+  const handleSupport = async () => {
+    if (!anticipo) return;
+    if (!supportFile) return setError('Adjunta el contrato u orden de compra al que se asocia el anticipo.');
+    if (supportFile.size > maxUploadMb * 1024 * 1024) return setError(`El archivo supera el máximo de ${formatMaxSize(maxUploadMb)}.`);
+    setSaving(true);
+    setError(null);
+    try {
+      setProgress(0);
+      const token = await anticipoService.uploadFile(supportFile, setProgress);
+      setAnticipo(await onUploadSupport(anticipo.id, { upload_token: token, comment: supportComment.trim() || null }));
+      setSupportFile(null);
+      setSupportComment('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al adjuntar el contrato u orden de compra.');
+    } finally {
+      setSaving(false);
+      setProgress(null);
+    }
+  };
+
+  const fileRow = (key: 'cuenta' | 'multifox' | 'soporte', label: string, name: string, size: number | null | undefined, icon: React.ReactNode) => (
     <div className="flex items-center justify-between gap-3 bg-slate-50 rounded-2xl p-3">
       <span className="flex items-center gap-2 min-w-0">
         {icon}
@@ -197,7 +223,7 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
             </div>
 
             {/* Fases: Director, Gerencia, anticipo en Multifox y aprobación de Contabilidad */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
               {(anticipo.progress ?? []).map((step, index) => {
                 const style = STEP_STYLES[step.state];
                 return (
@@ -241,6 +267,7 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
               )}
               <div className="space-y-2">
                 {fileRow('cuenta', 'Cuenta de cobro', anticipo.file_name, anticipo.file_size, <FileText size={18} className="text-slate-400 shrink-0" />)}
+                {anticipo.support_file_name && fileRow('soporte', 'Contrato / orden de compra', anticipo.support_file_name, anticipo.support_file_size, <FileSignature size={18} className="text-slate-400 shrink-0" />)}
                 {anticipo.multifox_file_name && fileRow('multifox', 'Anticipo Multifox', anticipo.multifox_file_name, anticipo.multifox_file_size, <Database size={18} className="text-slate-400 shrink-0" />)}
               </div>
               {anticipo.status === 'completado' && (
@@ -287,6 +314,31 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
                 <button onClick={() => onResubmit(anticipo)}
                   className="flex items-center justify-center gap-2 bg-[#EE9D4C] hover:bg-[#e08a35] text-white px-5 py-3 rounded-2xl font-bold shrink-0">
                   <RotateCcw size={16} /> Corregir y reenviar
+                </button>
+              </div>
+            )}
+
+            {/* Residente: contrato u orden de compra del anticipo aprobado */}
+            {anticipo.can_upload_support && (
+              <div className="bg-white rounded-3xl border border-orange-100 p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <FileSignature size={18} className="text-[#004C6C]" />
+                  <h3 className="font-black text-[#004C6C] tracking-tight">Adjuntar contrato u orden de compra</h3>
+                </div>
+                <p className="text-xs font-bold text-slate-500">
+                  El anticipo ya fue aprobado. Adjunta el contrato u orden de compra al que se asocia; luego Contabilidad lo genera en Multifox y lo aprueba para el cuadro de pagos.
+                </p>
+                <div className="space-y-2">
+                  <label className={labelClass}>Contrato / orden de compra *</label>
+                  <FileDrop file={supportFile} onSelect={(f) => { setError(null); setSupportFile(f); }} disabled={saving} progress={progress}
+                    hint="Arrastra el contrato u orden de compra o haz clic" />
+                </div>
+                <textarea rows={2} disabled={saving} value={supportComment} onChange={(e) => setSupportComment(e.target.value)}
+                  className={`${inputClass} resize-none`} placeholder="Observación (opcional)" />
+                <button type="button" onClick={handleSupport} disabled={saving}
+                  className="w-full px-6 py-4 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2 disabled:opacity-60">
+                  {saving ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                  {saving && progress !== null && progress < 100 ? `Subiendo archivo... ${progress}%` : 'Adjuntar y enviar a Contabilidad'}
                 </button>
               </div>
             )}

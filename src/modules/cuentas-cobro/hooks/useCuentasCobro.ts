@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { cuentaCobroService, getApiErrorMessage } from '../services/cuentaCobroService';
-import type {
+import type { CuentaCobroDocumentPayload,
   CuentaCobro, CuentaCobroCatalogs, CuentaCobroCounts, CuentaCobroFilters, CuentaCobroMultifoxPayload, CuentaCobroPayload, CuentaCobroScope,
 } from '../types';
 
@@ -13,7 +13,7 @@ const EMPTY_FILTERS: CuentaCobroFilters = { search: '', status: '', project_id: 
 export function useCuentasCobro() {
   const [catalogs, setCatalogs] = useState<CuentaCobroCatalogs | null>(null);
   const [cuentas, setCuentas] = useState<CuentaCobro[]>([]);
-  const [counts, setCounts] = useState<CuentaCobroCounts>({ mine: 0, pending: 0, multifox: 0, accounting_approval: 0 });
+  const [counts, setCounts] = useState<CuentaCobroCounts>({ mine: 0, pending: 0, multifox: 0, accounting_approval: 0, erp: 0 });
   const [scope, setScopeState] = useState<CuentaCobroScope>('mine');
   const [filters, setFilters] = useState<CuentaCobroFilters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
@@ -111,6 +111,9 @@ export function useCuentasCobro() {
   const registerMultifox = useCallback((id: number, payload: CuentaCobroMultifoxPayload) =>
     run(() => cuentaCobroService.registerMultifox(id, payload), 'Error al cargar en Multifox.'), [run]);
 
+  const uploadDocument = useCallback((id: number, payload: CuentaCobroDocumentPayload) =>
+    run(() => cuentaCobroService.uploadDocument(id, payload), 'Error al cargar el documento.'), [run]);
+
   const reviewAccounting = useCallback((id: number, decision: 'aprobar' | 'devolver', comment?: string) =>
     run(() => cuentaCobroService.reviewAccounting(id, decision, comment), 'Error al registrar la aprobación de Contabilidad.'), [run]);
 
@@ -137,6 +140,7 @@ export function useCuentasCobro() {
     reviewCuenta,
     decideMultifox,
     registerMultifox,
+    uploadDocument,
     reviewAccounting,
   };
 }

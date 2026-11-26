@@ -53,7 +53,7 @@ export interface OrdenProgressStep {
 
 export interface OrdenHistoryEntry {
   id: number;
-  action: 'registrada' | 'aprobado' | 'devuelto' | 'reenviada' | 'documento' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'documento_eliminado' | 'eliminada';
+  action: 'registrada' | 'aprobado' | 'devuelto' | 'reenviada' | 'documento' | 'contabilidad_aprobada' | 'aprobada_con_cargue' | 'contabilidad_devuelta' | 'documento_eliminado' | 'eliminada';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
@@ -142,6 +142,8 @@ export interface OrdenDocumentPayload {
   amount?: number | null;
   contractor_id?: number | null;
   upload_token: string;
+  /** Solo en la entrada de almacén: ya quedó aprobada con el cargue, pasa directo a cuentas por pagar */
+  approved_with_upload?: boolean;
 }
 
 export interface OrdenFilters {

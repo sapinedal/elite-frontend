@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link2, Loader2, AlertCircle, Scissors, ShoppingCart, CheckCircle2, HandCoins } from 'lucide-react';
+import { Link2, Loader2, AlertCircle, Scissors, ShoppingCart, CheckCircle2, HandCoins, Receipt } from 'lucide-react';
 import { formatMoney, formatMoneyInput, parseMoney } from '../../../utils/money';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { fitsOrden, isAnticipo } from '../utils/draft';
@@ -47,8 +47,9 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
     facturacionService.getTargets(factura.id)
       .then((data) => {
         setTargets(data);
-        // Sin cortes pero con órdenes, arranca en órdenes
+        // Sin cortes pero con órdenes (o cuentas de cobro), arranca en lo que tenga
         if (!asAnticipo && !data.cortes.length && data.ordenes.length) setTargetType('orden');
+        else if (!asAnticipo && !data.cortes.length && !data.ordenes.length && data.cuentas_cobro?.length) setTargetType('cuenta_cobro');
       })
       .catch((err) => setError(getApiErrorMessage(err, asAnticipo ? 'Error al cargar los contratos.' : 'Error al cargar tus cortes y órdenes.')));
   }, [factura.id, asAnticipo]);
@@ -61,6 +62,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
   }, [targets, factura.contractor]);
   const ordenes = targets?.ordenes ?? [];
   const contratos = targets?.contratos ?? [];
+  const cuentasCobro = targets?.cuentas_cobro ?? [];
   const isOrdenCompatible = fitsOrden(factura.document_type);
   // El anticipo necesita valor y proveedor: se piden solo si Contabilidad no los registró
   const needsAmount = asAnticipo && factura.amount === null;
@@ -68,7 +70,10 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
 
   const handleSubmit = async () => {
     if (!targetId) {
-      return setError({ corte: 'Elige el corte de la factura.', orden: 'Elige la orden de la factura.', anticipo: 'Elige el contrato del anticipo.' }[targetType]);
+      return setError({
+        corte: 'Elige el corte de la factura.', orden: 'Elige la orden de la factura.', anticipo: 'Elige el contrato del anticipo.',
+        cuenta_cobro: 'Elige la cuenta de cobro de la factura.',
+      }[targetType]);
     }
     if (needsContractor && !contractorId) return setError('Indica el proveedor de la cotización.');
     if (needsAmount && !parseMoney(amount)) return setError('Indica el valor del anticipo.');
@@ -145,6 +150,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
             <div className="flex flex-col sm:flex-row gap-2">
               {typeButton('corte', 'Mis cortes aprobados', <Scissors size={16} />, cortes.length)}
               {typeButton('orden', 'Mis órdenes de compra', <ShoppingCart size={16} />, ordenes.length, !isOrdenCompatible)}
+              {typeButton('cuenta_cobro', 'Mis cuentas de cobro', <Receipt size={16} />, cuentasCobro.length, !isOrdenCompatible)}
             </div>
           </div>
         )}
@@ -188,6 +194,24 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
               {factura.document_type === 'nota_credito' || factura.document_type === 'factura_reemplazo'
                 ? 'No tienes cortes con factura asociada que este documento pueda afectar.'
                 : 'No tienes cortes con las tres aprobaciones pendientes de factura. La factura se asocia cuando el corte quede aprobado.'}
+            </p>
+          )
+        ) : targetType === 'cuenta_cobro' ? (
+          cuentasCobro.length ? (
+            <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {cuentasCobro.map((c) => option(
+                c.id,
+                targetId === c.id,
+                <><span className="font-black text-[#004C6C]">{c.label}</span><span className="text-xs font-bold text-slate-500 truncate">{c.contractor ?? 'Sin proveedor'}</span></>,
+                [c.project, c.tower, `N.º ${c.document_number}`, formatMoney(c.amount)].filter(Boolean).join(' · '),
+                factura.contractor && c.contractor_id === factura.contractor.id
+                  ? <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-green-50 text-green-700">Mismo proveedor</span>
+                  : undefined,
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm font-bold text-slate-400 bg-white rounded-2xl p-4 border border-slate-100">
+              No tienes cuentas de cobro directas esperando la factura (después del cargue ERP).
             </p>
           )
         ) : ordenes.length ? (
@@ -247,6 +271,9 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
         )}
         {targetType === 'anticipo' && (
           <p className="text-[11px] font-bold text-slate-400">Al radicarla, la cotización se copia a la carpeta del anticipo (08 ANTICIPOS) del contrato y queda pendiente del Director de Obra, luego Gerencia y Contabilidad.</p>
+        )}
+        {targetType === 'cuenta_cobro' && (
+          <p className="text-[11px] font-bold text-slate-400">Al asociarla, la factura se copia a la carpeta de la cuenta de cobro y pasa a la liquidación ERP. Con la aprobación de Contabilidad pasa al cuadro de pagos.</p>
         )}
         {targetType === 'orden' && (
           <p className="text-[11px] font-bold text-slate-400">Al asociarla, la factura se copia a la carpeta de la orden y la orden pasa a la entrada de almacén. Con la aprobación de Contabilidad pasa a cuentas por pagar.</p>

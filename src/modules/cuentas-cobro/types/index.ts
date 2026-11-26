@@ -5,11 +5,17 @@ export type CuentaCobroStatus =
   | 'pendiente_revision'
   | 'pendiente_multifox'
   | 'pendiente_aprobacion_contable'
+  | 'pendiente_erp'
+  | 'pendiente_factura'
+  | 'pendiente_liquidacion'
   | 'en_pagos';
+
+/** Pasos de las cuentas directas (con frente): la factura se asocia desde Facturas del mes */
+export type CuentaCobroStepKey = 'erp' | 'factura' | 'liquidacion_erp';
 
 export type CuentaCobroStageKey = 'director_obra' | 'gerencia';
 
-export type CuentaCobroScope = 'mine' | 'pending' | 'multifox' | 'accounting_approval' | 'all';
+export type CuentaCobroScope = 'mine' | 'pending' | 'multifox' | 'accounting_approval' | 'erp' | 'all';
 
 export interface CuentaCobroTipo {
   id: number;
@@ -35,11 +41,14 @@ export interface CuentaCobroCatalogs {
   can_handle_multifox: boolean;
   /** Aprueba en Contabilidad antes del cuadro de pagos (cuentas_cobro.aprobar_contabilidad) */
   can_approve_accounting: boolean;
+  /** Cargue ERP y liquidación de las directas (cuentas_cobro.cargar_erp), además de quien la radicó */
+  can_load_erp?: boolean;
   /** CRUD de tipos */
   can_parametrize: boolean;
   /** Crear tipos desde el formulario de radicación (cuentas_cobro.crear o parametrizar) */
   can_create_tipo?: boolean;
   stages: { key: CuentaCobroStageKey; label: string; status: CuentaCobroStatus }[];
+  steps?: { key: CuentaCobroStepKey; label: string; status: CuentaCobroStatus; number_label: string }[];
   statuses: { key: CuentaCobroStatus; label: string }[];
 }
 
@@ -54,7 +63,7 @@ export interface CuentaCobroProgressStep {
 
 export interface CuentaCobroHistoryEntry {
   id: number;
-  action: 'radicada' | 'aprobado' | 'devuelto' | 'reenviada' | 'sin_multifox' | 'requiere_multifox' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'eliminada';
+  action: 'radicada' | 'aprobado' | 'devuelto' | 'reenviada' | 'sin_multifox' | 'requiere_multifox' | 'multifox' | 'documento' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'eliminada';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
@@ -85,6 +94,13 @@ export interface CuentaCobro {
   current_stage: CuentaCobroStageKey | null;
   current_stage_label: string | null;
   returned_stage_label: string | null;
+  /** Directa (con frente): Cargue ERP -> Factura -> Liquidación ERP en lugar de Multifox */
+  is_directa: boolean;
+  current_step: CuentaCobroStepKey | null;
+  current_step_label: string | null;
+  current_step_number_label: string | null;
+  /** Puede cargar el documento del paso actual (cargue ERP o liquidación) */
+  can_upload_step: boolean;
   /** null mientras Paula no decide */
   requires_multifox: boolean | null;
   multifox_number: string | null;
@@ -103,12 +119,32 @@ export interface CuentaCobro {
   can_review_accounting: boolean;
   // Solo en el detalle
   adjuntos?: { id: number; file_name: string; file_size: number; uploaded_by: string | null; created_at: string }[];
+  documents?: CuentaCobroDocument[];
   multifox_file_name?: string | null;
   multifox_file_size?: number | null;
   multifox_by?: string | null;
   multifox_decided_by?: string | null;
   progress?: CuentaCobroProgressStep[];
   history?: CuentaCobroHistoryEntry[];
+}
+
+export interface CuentaCobroDocument {
+  id: number;
+  step: CuentaCobroStepKey;
+  step_label: string;
+  number: string;
+  amount: number | null;
+  observation: string | null;
+  file_name: string;
+  file_size: number | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
+export interface CuentaCobroDocumentPayload {
+  number: string;
+  observation: string | null;
+  upload_token: string;
 }
 
 export interface CuentaCobroPayload {
@@ -159,4 +195,5 @@ export interface CuentaCobroCounts {
   pending: number;
   multifox: number;
   accounting_approval: number;
+  erp?: number;
 }

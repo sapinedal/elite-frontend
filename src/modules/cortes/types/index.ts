@@ -53,14 +53,14 @@ export interface CorteCatalogs {
 export interface CorteProgressStep {
   key: CorteStageKey;
   label: string;
-  state: 'aprobado' | 'devuelto' | 'actual' | 'pendiente';
+  state: 'aprobado' | 'devuelto' | 'rechazado_continua' | 'actual' | 'pendiente';
   user: string | null;
   at: string | null;
 }
 
 export interface CorteHistoryEntry {
   id: number;
-  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'factura' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'factura_eliminada' | 'eliminado';
+  action: 'radicado' | 'aprobado' | 'devuelto' | 'rechazado_continua' | 'reenviado' | 'factura' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'factura_eliminada' | 'eliminado';
   stage: CorteStageKey | null;
   stage_label: string | null;
   comment: string | null;
@@ -88,6 +88,10 @@ export interface Corte {
   current_stage: CorteStageKey | null;
   current_stage_label: string | null;
   returned_stage_label: string | null;
+  /** Rechazado por el Interventor pero continuó el flujo (Rechazado pero aprobado) */
+  interventor_rejected: boolean;
+  /** El Interventor puede rechazar y dejar que el corte continúe */
+  can_reject_continue: boolean;
   file_name: string;
   file_size: number;
   created_by: { id: number; name: string } | null;
@@ -168,3 +172,6 @@ export interface CorteCounts {
   /** Cortes con facturas cargadas en Multifox por aprobar en Contabilidad */
   accounting: number;
 }
+
+/** rechazar_continuar: el Interventor no aprueba pero el corte sigue al Director de Obra */
+export type CorteReviewDecision = 'aprobar' | 'devolver' | 'rechazar_continuar';

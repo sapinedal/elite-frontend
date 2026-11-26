@@ -46,6 +46,8 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
   const documents = orden.documents ?? [];
   const [number, setNumber] = useState('');
   const [observation, setObservation] = useState('');
+  // Entrada de almacén ya aprobada con el cargue: pasa directo a cuentas por pagar (sin aprobación de Contabilidad)
+  const [approvedWithUpload, setApprovedWithUpload] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   // Si el registro falla por validación no hay que volver a subir el archivo
   const [uploadedToken, setUploadedToken] = useState<string | null>(null);
@@ -103,9 +105,15 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
         }
         setUploadedToken(token);
       }
-      const updated = await onUpload(orden.id, { number: number.trim(), observation: observation.trim() || null, upload_token: token });
+      const updated = await onUpload(orden.id, {
+        number: number.trim(),
+        observation: observation.trim() || null,
+        upload_token: token,
+        ...(uploadStep === 'entrada' ? { approved_with_upload: approvedWithUpload } : {}),
+      });
       setNumber('');
       setObservation('');
+      setApprovedWithUpload(false);
       setFile(null);
       setUploadedToken(null);
       setProgress(null);
@@ -220,6 +228,17 @@ export const OrdenDocumentsSection: React.FC<OrdenDocumentsSectionProps> = ({ or
             <FileDrop file={file} onSelect={selectFile} disabled={submitting} progress={progress}
               hint="Arrastra el archivo o haz clic para seleccionarlo" />
           </div>
+
+          {uploadStep === 'entrada' && (
+            <label className="flex items-start gap-3 p-4 rounded-2xl border border-slate-200 bg-slate-50 cursor-pointer">
+              <input type="checkbox" disabled={submitting} className="mt-0.5 h-4 w-4 accent-[#004C6C]"
+                checked={approvedWithUpload} onChange={(e) => setApprovedWithUpload(e.target.checked)} />
+              <span>
+                <span className="block text-sm font-black text-slate-700">Aprobada con el cargue</span>
+                <span className="block text-xs font-bold text-slate-400">La orden queda completada y pasa directo a cuentas por pagar, sin la aprobación de Contabilidad.</span>
+              </span>
+            </label>
+          )}
 
           <button type="submit" disabled={submitting}
             className="w-full px-6 py-3.5 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 disabled:opacity-60">

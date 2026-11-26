@@ -1,7 +1,7 @@
 import axios from 'axios';
 import api from '../../../lib/axios';
 import type {
-  CuentaCobro, CuentaCobroCatalogs, CuentaCobroCounts, CuentaCobroMultifoxPayload, CuentaCobroPage, CuentaCobroPayload,
+  CuentaCobro, CuentaCobroCatalogs, CuentaCobroCounts, CuentaCobroDocumentPayload, CuentaCobroMultifoxPayload, CuentaCobroPage, CuentaCobroPayload,
   CuentaCobroScope, CuentaCobroTipo, CuentaCobroTipoPayload,
 } from '../types';
 
@@ -78,14 +78,20 @@ export const cuentaCobroService = {
     return data.data;
   },
 
-  /** Contabilidad aprueba la cuenta (pasa al cuadro de pagos) o la devuelve a Multifox */
+  /** Directa: cargue ERP o liquidación ERP del paso actual */
+  uploadDocument: async (id: number, payload: CuentaCobroDocumentPayload): Promise<CuentaCobro> => {
+    const { data } = await api.post(`${BASE}/${id}/documents`, payload);
+    return data.data;
+  },
+
+  /** Contabilidad aprueba la cuenta (pasa al cuadro de pagos) o la devuelve a Multifox / liquidación */
   reviewAccounting: async (id: number, decision: 'aprobar' | 'devolver', comment?: string): Promise<CuentaCobro> => {
     const { data } = await api.post(`${BASE}/${id}/accounting`, { decision, comment: comment || null });
     return data.data;
   },
 
   /** inline: URL para ver el archivo en el navegador (PDF) en lugar de descargarlo */
-  getDownloadUrl: async (id: number, file: 'cuenta' | 'multifox' | 'adjunto' = 'cuenta', adjuntoId?: number, inline = false): Promise<string> => {
+  getDownloadUrl: async (id: number, file: 'cuenta' | 'multifox' | 'adjunto' | 'documento' = 'cuenta', adjuntoId?: number, inline = false): Promise<string> => {
     const { data } = await api.get(`${BASE}/${id}/download`, { params: { file, adjunto: adjuntoId, ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },

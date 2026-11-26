@@ -8,7 +8,7 @@ import type { Factura, FacturacionCatalogs, FacturaCounts, FacturaScope } from '
 export function useFacturas() {
   const [catalogs, setCatalogs] = useState<FacturacionCatalogs | null>(null);
   const [facturas, setFacturas] = useState<Factura[]>([]);
-  const [counts, setCounts] = useState<FacturaCounts>({ pending: 0, suggested: 0 });
+  const [counts, setCounts] = useState<FacturaCounts>({ pending: 0, suggested: 0, indirectos: 0 });
   const [scope, setScopeState] = useState<FacturaScope>('pending');
   // '' = todos los meses (las pendientes de meses anteriores también deben verse)
   const [period, setPeriodState] = useState('');

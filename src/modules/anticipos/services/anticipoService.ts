@@ -1,6 +1,6 @@
 import axios from 'axios';
 import api from '../../../lib/axios';
-import type { Anticipo, AnticipoCatalogs, AnticipoCounts, AnticipoPage, AnticipoPayload, AnticipoScope, MultifoxPayload } from '../types';
+import type { Anticipo, AnticipoCatalogs, AnticipoCounts, AnticipoPage, AnticipoPayload, AnticipoScope, MultifoxPayload, SupportPayload } from '../types';
 
 const BASE = '/v1/anticipos';
 
@@ -64,6 +64,12 @@ export const anticipoService = {
   },
 
   /** Contabilidad carga el anticipo generado en Multifox: pasa al cuadro de pagos */
+  /** El residente adjunta el contrato / orden de compra: pasa a Contabilidad (Multifox) */
+  uploadSupport: async (id: number, payload: SupportPayload): Promise<Anticipo> => {
+    const { data } = await api.post(`${BASE}/${id}/support`, payload);
+    return data.data;
+  },
+
   registerMultifox: async (id: number, payload: MultifoxPayload): Promise<Anticipo> => {
     const { data } = await api.post(`${BASE}/${id}/multifox`, payload);
     return data.data;
@@ -76,7 +82,7 @@ export const anticipoService = {
   },
 
   /** inline: URL para ver el archivo en el navegador (PDF) en lugar de descargarlo */
-  getDownloadUrl: async (id: number, file: 'cuenta' | 'multifox' = 'cuenta', inline = false): Promise<string> => {
+  getDownloadUrl: async (id: number, file: 'cuenta' | 'multifox' | 'soporte' = 'cuenta', inline = false): Promise<string> => {
     const { data } = await api.get(`${BASE}/${id}/download`, { params: { file, ...(inline ? { inline: 1 } : {}) } });
     return data.data.download_url;
   },

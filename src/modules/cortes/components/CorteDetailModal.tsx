@@ -1,23 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import {
-  X, Scissors, Download, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, FileText,
+  X, Scissors, Download, Loader2, CheckCircle2, Undo2, ShieldAlert, Clock, Circle, RotateCcw, Send, AlertCircle, FileText,
 } from 'lucide-react';
 import { Portal } from '../../../components/ui/Portal';
 import { useAuth } from '../../../context/AuthContext';
 import { HistoryButton, HistoryModal } from '../../../components/ui/HistoryModal';
 import { formatDateTime } from '../../../utils/dateUtils';
 import { corteService, getApiErrorMessage } from '../services/corteService';
-import { CorteStatusBadge } from './CorteStatusBadge';
+import { CorteStatusBadge, InterventorRejectedBadge } from './CorteStatusBadge';
 import { CorteInvoicesSection } from './CorteInvoicesSection';
 import { formatBytes } from '../utils/format';
 import { ViewPdfButton } from '../../../components/ui/ViewPdfButton';
 import { DeleteRecordButton } from '../../../components/ui/DeleteRecordButton';
-import type { Corte, CorteHistoryEntry, CorteProgressStep } from '../types';
+import type { Corte, CorteHistoryEntry, CorteProgressStep, CorteReviewDecision } from '../types';
 
 interface CorteDetailModalProps {
   corteId: number | null;
   onClose: () => void;
-  onReview: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Corte>;
+  onReview: (id: number, decision: CorteReviewDecision, comment?: string) => Promise<Corte>;
   onResubmit: (corte: Corte) => void;
   onConfirmMultifox: (invoiceId: number, file: File, onProgress?: (percent: number) => void) => Promise<Corte>;
   onReviewAccounting: (invoiceId: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => Promise<Corte>;
@@ -28,6 +28,7 @@ interface CorteDetailModalProps {
 const STEP_STYLES: Record<CorteProgressStep['state'], { icon: React.ReactNode; tone: string; text: string }> = {
   aprobado: { icon: <CheckCircle2 size={20} />, tone: 'bg-green-50 text-green-600 border-green-100', text: 'Aprobado' },
   devuelto: { icon: <Undo2 size={20} />, tone: 'bg-red-50 text-red-600 border-red-100', text: 'Devuelto' },
+  rechazado_continua: { icon: <ShieldAlert size={20} />, tone: 'bg-amber-50 text-amber-700 border-amber-100', text: 'Rechazado, continúa' },
   actual: { icon: <Clock size={20} />, tone: 'bg-orange-50 text-[#EE9D4C] border-orange-100', text: 'En revisión' },
   pendiente: { icon: <Circle size={20} />, tone: 'bg-slate-50 text-slate-300 border-slate-100', text: 'Pendiente' },
 };
@@ -37,6 +38,7 @@ const ACTION_LABELS: Record<CorteHistoryEntry['action'], { label: string; tone: 
   reenviado: { label: 'Reenviado', tone: 'text-[#004C6C]' },
   aprobado: { label: 'Aprobado', tone: 'text-green-600' },
   devuelto: { label: 'Devuelto', tone: 'text-red-600' },
+  rechazado_continua: { label: 'Rechazado pero aprobado (continúa)', tone: 'text-amber-600' },
   factura: { label: 'Documento de facturación cargado', tone: 'text-[#004C6C]' },
   multifox: { label: 'Cargada en Multifox', tone: 'text-green-700' },
   contabilidad_aprobada: { label: 'Aprobada por Contabilidad', tone: 'text-green-700' },
@@ -59,7 +61,7 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
   const [corte, setCorte] = useState<Corte | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [decision, setDecision] = useState<'aprobar' | 'devolver' | null>(null);
+  const [decision, setDecision] = useState<CorteReviewDecision | null>(null);
   const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -86,8 +88,10 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
 
   const handleReview = async () => {
     if (!corte || !decision) return;
-    if (decision === 'devolver' && !comment.trim()) {
-      setError('Indica el motivo de la devolución para que el residente sepa qué corregir.');
+    if (decision !== 'aprobar' && !comment.trim()) {
+      setError(decision === 'devolver'
+        ? 'Indica el motivo de la devolución para que el residente sepa qué corregir.'
+        : 'Indica el motivo del rechazo: queda en el historial del corte.');
       return;
     }
     setSaving(true);
@@ -118,7 +122,7 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
             <div className="min-w-0">
               <h2 className="text-2xl font-black text-[#004C6C] tracking-tight truncate">{corte ? corte.label : 'Corte'}</h2>
               {corte && (
-                <div className="mt-1"><CorteStatusBadge status={corte.status} label={corte.status_label} /></div>
+                <div className="mt-1 flex flex-wrap gap-1"><CorteStatusBadge status={corte.status} label={corte.status_label} />{corte.interventor_rejected && <InterventorRejectedBadge />}</div>
               )}
             </div>
           </div>
@@ -210,7 +214,7 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
               {corte.can_review && (
                 <div className="bg-white rounded-3xl border border-orange-100 p-6 space-y-4">
                   <h3 className="font-black text-[#004C6C] tracking-tight">Tu revisión como {corte.current_stage_label}</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className={`grid gap-3 ${corte.can_reject_continue ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'}`}>
                     <button type="button" onClick={() => setDecision('aprobar')} disabled={saving}
                       className={`px-4 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${decision === 'aprobar' ? 'bg-green-600 text-white shadow-lg' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}>
                       <CheckCircle2 size={18} /> Aprobar (OK)
@@ -219,16 +223,26 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
                       className={`px-4 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${decision === 'devolver' ? 'bg-red-600 text-white shadow-lg' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}>
                       <Undo2 size={18} /> Devolver
                     </button>
+                    {corte.can_reject_continue && (
+                      <button type="button" onClick={() => setDecision('rechazar_continuar')} disabled={saving}
+                        title="No apruebas el corte, pero sigue al Director de Obra marcado como rechazado"
+                        className={`px-4 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${decision === 'rechazar_continuar' ? 'bg-amber-500 text-white shadow-lg' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}>
+                        <ShieldAlert size={18} /> Rechazar y continuar
+                      </button>
+                    )}
                   </div>
+                  {decision === 'rechazar_continuar' && (
+                    <p className="text-xs font-bold text-amber-700">El corte queda como «Rechazado pero aprobado» y continúa al Director de Obra sin tu aprobación.</p>
+                  )}
                   {decision && (
                     <>
                       <textarea rows={3} disabled={saving} value={comment} onChange={(e) => setComment(e.target.value)}
                         className="w-full bg-white border border-slate-100 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-700 focus:border-[#004C6C] outline-none shadow-sm resize-none placeholder:text-slate-300"
-                        placeholder={decision === 'devolver' ? 'Motivo de la devolución (obligatorio)' : 'Comentario (opcional)'} />
+                        placeholder={decision === 'devolver' ? 'Motivo de la devolución (obligatorio)' : decision === 'rechazar_continuar' ? 'Motivo del rechazo (obligatorio)' : 'Comentario (opcional)'} />
                       <button type="button" onClick={handleReview} disabled={saving}
                         className="w-full px-6 py-4 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold shadow-xl flex items-center justify-center gap-2 disabled:opacity-60">
                         {saving ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                        {decision === 'aprobar' ? 'Confirmar aprobación' : 'Confirmar devolución'}
+                        {decision === 'aprobar' ? 'Confirmar aprobación' : decision === 'rechazar_continuar' ? 'Confirmar rechazo y continuar' : 'Confirmar devolución'}
                       </button>
                     </>
                   )}

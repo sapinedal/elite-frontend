@@ -13,8 +13,8 @@ import { formatDateTime } from '../../../utils/dateUtils';
 import { useCortes } from '../hooks/useCortes';
 import { CorteFormModal } from '../components/CorteFormModal';
 import { CorteDetailModal } from '../components/CorteDetailModal';
-import { CorteStatusBadge } from '../components/CorteStatusBadge';
-import type { Corte, CortePayload, CorteScope } from '../types';
+import { CorteStatusBadge, InterventorRejectedBadge } from '../components/CorteStatusBadge';
+import type { Corte, CortePayload, CorteReviewDecision, CorteScope } from '../types';
 
 export default function CortesPage() {
   const { useCan, user } = useAuth();
@@ -67,9 +67,9 @@ export default function CortesPage() {
     return saved;
   };
 
-  const handleReview = async (id: number, decision: 'aprobar' | 'devolver', comment?: string) => {
+  const handleReview = async (id: number, decision: CorteReviewDecision, comment?: string) => {
     const corte = await reviewCorte(id, decision, comment);
-    showNotification(decision === 'aprobar' ? 'Corte aprobado.' : 'Corte devuelto al residente.', 'success');
+    showNotification(decision === 'aprobar' ? 'Corte aprobado.' : decision === 'rechazar_continuar' ? 'Corte rechazado. Continúa el flujo sin la aprobación del Interventor.' : 'Corte devuelto al residente.', 'success');
     return corte;
   };
 
@@ -130,7 +130,7 @@ export default function CortesPage() {
     },
     {
       header: 'Estado',
-      accessor: (c: Corte) => <CorteStatusBadge status={c.status} label={c.status_label} />,
+      accessor: (c: Corte) => <div className="flex flex-wrap gap-1"><CorteStatusBadge status={c.status} label={c.status_label} />{c.interventor_rejected && <InterventorRejectedBadge />}</div>,
     },
     {
       header: 'Acciones',

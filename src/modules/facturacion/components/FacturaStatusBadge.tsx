@@ -4,6 +4,7 @@ import type { FacturaStatus } from '../types';
 const STYLES: Record<FacturaStatus, string> = {
   pendiente: 'bg-orange-50 text-orange-700 border-orange-100',
   procesada: 'bg-green-50 text-green-700 border-green-100',
+  pendiente_contable: 'bg-blue-50 text-[#004C6C] border-blue-100',
 };
 
 export const FacturaStatusBadge: React.FC<{ status: FacturaStatus; label: string }> = ({ status, label }) => (

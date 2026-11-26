@@ -1,11 +1,15 @@
 export type FacturaDocumentType = 'factura' | 'cuenta_cobro' | 'nota_credito' | 'factura_reemplazo' | 'reembolso' | 'cotizacion' | 'indirecto';
 
-/** A dónde va el documento: la cotización se radica como anticipo; el indirecto pasa directo a cuentas por pagar */
-export type FacturaTargetType = 'corte' | 'orden' | 'anticipo' | 'pagos';
+/**
+ * A dónde va el documento: la cotización se radica como anticipo; el indirecto pasa a cuentas por pagar cuando el
+ * analista contable lo aprueba; la cuenta de cobro directa recibe su factura después del cargue ERP.
+ */
+export type FacturaTargetType = 'corte' | 'orden' | 'anticipo' | 'cuenta_cobro' | 'pagos';
 
-export type FacturaStatus = 'pendiente' | 'procesada';
+/** pendiente_contable: indirecto cargado sin valor, espera al analista contable */
+export type FacturaStatus = 'pendiente' | 'procesada' | 'pendiente_contable';
 
-export type FacturaScope = 'pending' | 'processed' | 'all';
+export type FacturaScope = 'pending' | 'processed' | 'indirectos' | 'all';
 
 export interface ContractorOption {
   id: number;
@@ -25,6 +29,8 @@ export interface FacturacionCatalogs {
   can_manage: boolean;
   /** Residente (cortes.crear / ordenes.crear / anticipos.crear): asocia facturas a sus cortes y órdenes, y radica cotizaciones como anticipo */
   can_associate: boolean;
+  /** Analista contable (facturacion.aprobar_indirecto): registra el valor del indirecto y lo pasa a cuentas por pagar */
+  can_approve_indirecto?: boolean;
 }
 
 export interface Factura {
@@ -61,6 +67,8 @@ export interface Factura {
   /** La eliminación pide motivo (ya procesada por obra o en cuentas por pagar) */
   delete_requires_reason?: boolean;
   can_associate: boolean;
+  /** Indirecto pendiente: el analista contable lo aprueba con el valor */
+  can_approve_indirecto?: boolean;
 }
 
 export interface FacturaPayload {
@@ -112,9 +120,25 @@ export interface ContratoTarget {
   tower: string | null;
 }
 
+/** Cuenta de cobro directa (con frente) esperando la factura */
+export interface CuentaCobroTarget {
+  id: number;
+  code: string;
+  /** "CC-0004 · SST" */
+  label: string;
+  document_number: string;
+  amount: number;
+  contractor_id: number | null;
+  contractor: string | null;
+  project: string | null;
+  tower: string | null;
+  approved_at: string | null;
+}
+
 export interface FacturaTargets {
   cortes: CorteTarget[];
   ordenes: OrdenTarget[];
+  cuentas_cobro?: CuentaCobroTarget[];
   /** Solo para cotizaciones */
   contratos: ContratoTarget[];
 }
@@ -141,6 +165,8 @@ export interface FacturaCounts {
   pending: number;
   /** Pendientes de proveedores con cortes del usuario esperando factura */
   suggested: number;
+  /** Indirectos pendientes de la aprobación del analista contable */
+  indirectos?: number;
 }
 
 export interface PanelWaitingItem {

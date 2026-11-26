@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { anticipoService, getApiErrorMessage } from '../services/anticipoService';
-import type { Anticipo, AnticipoCatalogs, AnticipoCounts, AnticipoFilters, AnticipoPayload, AnticipoScope, MultifoxPayload } from '../types';
+import type { Anticipo, AnticipoCatalogs, AnticipoCounts, AnticipoFilters, AnticipoPayload, AnticipoScope, MultifoxPayload, SupportPayload } from '../types';
 
 const EMPTY_FILTERS: AnticipoFilters = { search: '', status: '', project_id: '' };
 
@@ -96,6 +96,9 @@ export function useAnticipos() {
   const reviewAnticipo = useCallback((id: number, decision: 'aprobar' | 'devolver', comment?: string) =>
     run(() => anticipoService.reviewAnticipo(id, decision, comment), 'Error al registrar la aprobación.'), [run]);
 
+  const uploadSupport = useCallback((id: number, payload: SupportPayload) =>
+    run(() => anticipoService.uploadSupport(id, payload), 'Error al adjuntar el contrato u orden de compra.'), [run]);
+
   const registerMultifox = useCallback((id: number, payload: MultifoxPayload) =>
     run(() => anticipoService.registerMultifox(id, payload), 'Error al cargar el anticipo de Multifox.'), [run]);
 
@@ -123,6 +126,7 @@ export function useAnticipos() {
     resubmitAnticipo,
     reviewAnticipo,
     registerMultifox,
+    uploadSupport,
     reviewAccounting,
   };
 }

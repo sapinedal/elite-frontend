@@ -17,7 +17,7 @@ export const affectsAnother = (type: FacturaDocumentType) => type === 'nota_cred
 /** La cotización no va a cortes ni órdenes: el residente la radica como anticipo de un contrato */
 export const isAnticipo = (type: FacturaDocumentType) => type === 'cotizacion';
 
-/** El indirecto no se asocia a obra: al cargarlo pasa directo a cuentas por pagar (por eso exige el valor) */
+/** El indirecto no se asocia a obra: se carga sin valor y el analista contable lo registra al aprobarlo */
 export const isIndirecto = (type: FacturaDocumentType) => type === 'indirecto';
 
 /** Documentos del proveedor que se asocian a una orden de compra */
@@ -28,7 +28,6 @@ export const draftError = (draft: FacturaDraft): string | null => {
   if (!draft.invoiceNumber.trim()) return 'Indica el número del documento.';
   if (!draft.contractorId && !draft.supplierName.trim()) return 'Indica el proveedor.';
   if (affectsAnother(draft.documentType) && !draft.relatedDocument.trim()) return 'Indica la factura que se afecta o reemplaza.';
-  if (isIndirecto(draft.documentType) && !parseMoney(draft.amount)) return 'Indica el valor: el indirecto pasa directo a cuentas por pagar.';
   return null;
 };
 
@@ -39,6 +38,7 @@ export const draftToPayload = (draft: FacturaDraft, period: string): FacturaPayl
   contractor_id: draft.contractorId,
   supplier_name: draft.supplierName.trim() || null,
   related_document: affectsAnother(draft.documentType) ? draft.relatedDocument.trim() : null,
-  amount: parseMoney(draft.amount),
+  // El valor del indirecto lo registra el analista contable al aprobarlo
+  amount: isIndirecto(draft.documentType) ? null : parseMoney(draft.amount),
   observation: draft.observation.trim() || null,
 });

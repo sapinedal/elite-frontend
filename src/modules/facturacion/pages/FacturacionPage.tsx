@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Receipt, Upload, Search, X, Clock, CheckCircle2, Layers, LayoutDashboard, Link2, Eye, Pencil, Trash2, Download, Loader2, Sparkles } from 'lucide-react';
+import { Receipt, Upload, Search, X, Clock, CheckCircle2, Layers, LayoutDashboard, Link2, Eye, Pencil, Trash2, Download, Loader2, Sparkles, BadgeDollarSign } from 'lucide-react';
 import { DataTable } from '../../../components/ui/DataTable';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import { Pagination } from '../../../components/ui/Pagination';
@@ -13,6 +13,7 @@ import { useFacturas } from '../hooks/useFacturas';
 import { facturacionService, getApiErrorMessage } from '../services/facturacionService';
 import { BulkUploadModal } from '../components/BulkUploadModal';
 import { AssociateModal } from '../components/AssociateModal';
+import { ApproveIndirectoModal } from '../components/ApproveIndirectoModal';
 import { FacturaDetailModal } from '../components/FacturaDetailModal';
 import { FacturaEditModal } from '../components/FacturaEditModal';
 import { FacturaStatusBadge } from '../components/FacturaStatusBadge';
@@ -38,6 +39,7 @@ export default function FacturacionPage() {
   const [panelPeriod, setPanelPeriod] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [associating, setAssociating] = useState<Factura | null>(null);
+  const [approving, setApproving] = useState<Factura | null>(null);
   const [editing, setEditing] = useState<Factura | null>(null);
   const [deleting, setDeleting] = useState<Factura | null>(null);
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -47,16 +49,20 @@ export default function FacturacionPage() {
   // Registro desde el Sidebar: ?nuevo=1 abre el cargue de facturas
   const [wantsNew, clearNew] = useNewFromQuery();
   const canAssociate = catalogs?.can_associate ?? false;
+  const canApproveIndirecto = catalogs?.can_approve_indirecto ?? false;
   const currentPeriod = catalogs?.current_period ?? '';
 
   const tabs = useMemo(() => [
     { id: 'pending', label: canManage ? 'Pendientes de obra' : 'Por asociar', icon: <Clock size={14} />, count: counts.pending, alert: !canManage },
     { id: 'processed', label: canManage ? 'Procesadas' : 'Asociadas por mí', icon: <CheckCircle2 size={14} /> },
+    ...(canManage || canApproveIndirecto ? [
+      { id: 'indirectos', label: 'Indirectos por aprobar', icon: <BadgeDollarSign size={14} />, count: counts.indirectos ?? 0, alert: canApproveIndirecto },
+    ] : []),
     ...(canManage ? [
       { id: 'all', label: 'Todas', icon: <Layers size={14} /> },
       { id: 'panel', label: 'Panel', icon: <LayoutDashboard size={14} /> },
     ] : []),
-  ], [counts, canManage]);
+  ], [counts, canManage, canApproveIndirecto]);
 
   const changeTab = (id: string) => {
     setTab(id as Tab);
@@ -109,7 +115,9 @@ export default function FacturacionPage() {
     {
       header: 'Valor',
       className: 'text-right',
-      accessor: (f: Factura) => <span className="font-black text-slate-700 whitespace-nowrap">{formatMoney(f.amount)}</span>,
+      accessor: (f: Factura) => f.status === 'pendiente_contable' && f.amount === null
+        ? <span className="text-[11px] font-bold text-slate-400 whitespace-nowrap">Lo registra el analista contable</span>
+        : <span className="font-black text-slate-700 whitespace-nowrap">{formatMoney(f.amount)}</span>,
     },
     {
       header: 'Mes / Cargada',
@@ -144,7 +152,13 @@ export default function FacturacionPage() {
               <Link2 size={15} /> Asociar
             </button>
           )}
-          {!f.can_associate && (
+          {f.can_approve_indirecto && (
+            <button onClick={() => setApproving(f)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap bg-[#EE9D4C] text-white hover:bg-[#e08a35]">
+              <BadgeDollarSign size={15} /> Aprobar
+            </button>
+          )}
+          {!f.can_associate && !f.can_approve_indirecto && (
             <button onClick={() => setDetailId(f.id)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#004C6C] hover:bg-blue-50">
               <Eye size={15} /> Ver
             </button>
@@ -266,6 +280,7 @@ export default function FacturacionPage() {
             emptyMessage={
               scope === 'pending' ? 'No hay facturas pendientes de asociar.'
                 : scope === 'processed' ? 'Aún no hay facturas procesadas por obra.'
+                : scope === 'indirectos' ? 'No hay indirectos pendientes de la aprobación contable.'
                 : 'Aún no hay facturas cargadas.'
             }
           />
@@ -293,9 +308,9 @@ export default function FacturacionPage() {
             onUploaded={(count, indirectos) => {
               showNotification(
                 indirectos === count
-                  ? `${count} indirecto(s) cargado(s). Pasaron directo a cuentas por pagar.`
+                  ? `${count} indirecto(s) cargado(s). Quedan pendientes de la aprobación del analista contable.`
                   : indirectos
-                    ? `${count} factura(s) cargada(s): ${indirectos} indirecto(s) a cuentas por pagar y ${count - indirectos} pendiente(s) de obra.`
+                    ? `${count} factura(s) cargada(s): ${indirectos} indirecto(s) pendientes del analista contable y ${count - indirectos} pendiente(s) de obra.`
                     : `${count} factura(s) cargada(s). Quedan pendientes de obra.`,
                 'success'
               );
@@ -311,11 +326,22 @@ export default function FacturacionPage() {
               showNotification(
                 f.target?.type === 'anticipo'
                   ? `${f.document_number} radicada como anticipo ${f.target.label}. Se notificó al Director de Obra.`
+                  : f.target?.type === 'cuenta_cobro'
+                    ? `${f.document_number} asociada a la ${f.target.label}. Pasa a la liquidación ERP.`
                   : f.target?.type === 'orden'
                     ? `${f.document_number} asociada a la ${f.target.label}. Pasa a la entrada de almacén.`
                     : `${f.document_number} asociada al ${f.target?.label}. Se notificó para Multifox.`,
                 'success'
               );
+              refresh();
+            }}
+          />
+          <ApproveIndirectoModal
+            factura={approving}
+            onClose={() => setApproving(null)}
+            onApproved={(f) => {
+              setApproving(null);
+              showNotification(`${f.document_number} aprobado por ${formatMoney(f.amount)}. Pasó a cuentas por pagar.`, 'success');
               refresh();
             }}
           />

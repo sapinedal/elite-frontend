@@ -76,6 +76,12 @@ export const facturacionService = {
     return data.data;
   },
 
+  /** Analista contable: registra el valor del indirecto y lo pasa a cuentas por pagar */
+  approveIndirecto: async (id: number, amount: number, comment?: string | null): Promise<Factura> => {
+    const { data } = await api.post(`${BASE}/${id}/approve-indirecto`, { amount, comment: comment || null });
+    return data.data;
+  },
+
   getPanel: async (period: string): Promise<FacturacionPanelData> => {
     const { data } = await api.get(`${BASE}/panel`, { params: { period } });
     return data.data;

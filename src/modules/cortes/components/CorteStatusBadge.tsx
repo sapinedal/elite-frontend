@@ -16,3 +16,11 @@ export const CorteStatusBadge: React.FC<{ status: CorteStatus; label: string }> 
   </span>
 );
 
+/** El Interventor rechazó el corte pero dejó que continuara el flujo */
+export const InterventorRejectedBadge: React.FC = () => (
+  <span title="El Interventor rechazó el corte pero continuó el flujo sin su aprobación"
+    className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg whitespace-nowrap bg-amber-50 text-amber-700">
+    Rechazado pero aprobado
+  </span>
+);
+

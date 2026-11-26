@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { corteService, getApiErrorMessage } from '../services/corteService';
-import type { Corte, CorteCatalogs, CorteCounts, CorteFilters, CortePayload, CorteScope } from '../types';
+import type { Corte, CorteCatalogs, CorteCounts, CorteFilters, CortePayload, CorteReviewDecision, CorteScope } from '../types';
 
 const EMPTY_FILTERS: CorteFilters = { search: '', status: '', project_id: '' };
 
@@ -92,7 +92,7 @@ export function useCortes() {
     }
   }, [fetchCortes]);
 
-  const reviewCorte = useCallback(async (id: number, decision: 'aprobar' | 'devolver', comment?: string) => {
+  const reviewCorte = useCallback(async (id: number, decision: CorteReviewDecision, comment?: string) => {
     try {
       const corte = await corteService.reviewCorte(id, decision, comment);
       await fetchCortes();
