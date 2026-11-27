@@ -57,6 +57,7 @@ const DetailContent: React.FC<{ facturaId: number; onClose: () => void }> = ({ f
       corte: `/app/contratacion/cortes?corte=${factura.target.id}`,
       orden: '/app/contratacion/ordenes',
       anticipo: `/app/contratacion/anticipos?anticipo=${factura.target.id}`,
+      legalizacion_anticipo: `/app/contratacion/anticipos?anticipo=${factura.target.id}`,
       cuenta_cobro: `/app/contratacion/cuentas-cobro?cuenta=${factura.target.id}`,
       pagos: '/app/contratacion/cuentas-por-pagar',
     }[factura.target.type]
