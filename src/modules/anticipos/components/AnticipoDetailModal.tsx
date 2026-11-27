@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { progressWindow } from '../../../utils/progressWindow';
 import { Link } from 'react-router-dom';
-import { HandCoins, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Download, Database, FileText, Wallet, FileSignature } from 'lucide-react';
+import { HandCoins, Loader2, CheckCircle2, Undo2, Clock, Circle, RotateCcw, Send, AlertCircle, Download, Database, FileText, Wallet, FileSignature, Receipt } from 'lucide-react';
 import { AccountingReviewPanel } from '../../../components/ui/AccountingReviewPanel';
 import { HistoryButton, HistoryModal } from '../../../components/ui/HistoryModal';
 import { ModalShell, inputClass, labelClass } from '../../../components/ui/ModalShell';
@@ -51,6 +51,7 @@ const ACTION_LABELS: Record<AnticipoHistoryEntry['action'], { label: string; ton
   contabilidad_aprobada: { label: 'Aprobado por Contabilidad', tone: 'text-green-700' },
   contabilidad_devuelta: { label: 'Devuelto por Contabilidad', tone: 'text-red-600' },
   eliminado: { label: 'Anticipo eliminado', tone: 'text-rose-600' },
+  legalizado: { label: 'Legalizado con factura', tone: 'text-green-700' },
 };
 
 /**
@@ -87,11 +88,11 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
       .catch((err) => setError(getApiErrorMessage(err, 'Error al cargar el anticipo.')));
   }, [anticipoId]);
 
-  const download = async (file: 'cuenta' | 'multifox' | 'soporte') => {
+  const download = async (file: 'cuenta' | 'multifox' | 'soporte' | 'legalizacion', invoiceId?: number) => {
     if (!anticipo) return;
-    setDownloading(file);
+    setDownloading(invoiceId ? `legalizacion-${invoiceId}` : file);
     try {
-      window.open(await anticipoService.getDownloadUrl(anticipo.id, file), '_blank', 'noopener');
+      window.open(await anticipoService.getDownloadUrl(anticipo.id, file, false, invoiceId), '_blank', 'noopener');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Error al descargar el archivo.'));
     } finally {
@@ -270,6 +271,25 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
                 {fileRow('cuenta', 'Cuenta de cobro', anticipo.file_name, anticipo.file_size, <FileText size={18} className="text-slate-400 shrink-0" />)}
                 {anticipo.support_file_name && fileRow('soporte', 'Contrato / orden de compra', anticipo.support_file_name, anticipo.support_file_size, <FileSignature size={18} className="text-slate-400 shrink-0" />)}
                 {anticipo.multifox_file_name && fileRow('multifox', 'Anticipo Multifox', anticipo.multifox_file_name, anticipo.multifox_file_size, <Database size={18} className="text-slate-400 shrink-0" />)}
+                {(anticipo.legalizaciones ?? []).map((l) => (
+                  <div key={l.id} className="flex items-center justify-between gap-3 bg-green-50/60 rounded-2xl p-3">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <Receipt size={18} className="text-green-600 shrink-0" />
+                      <span className="min-w-0">
+                        <span className="block text-[10px] font-black text-green-700 uppercase tracking-widest">Legalización · {l.document_type_label} {l.document_number}</span>
+                        <span className="block text-xs font-bold text-slate-700 truncate">
+                          {[l.amount !== null ? formatMoney(l.amount) : null, l.file_name, l.file_size ? formatBytes(l.file_size) : null, l.processed_by].filter(Boolean).join(' · ')}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1 shrink-0">
+                      <ViewPdfButton fileName={l.file_name} getUrl={() => anticipoService.getDownloadUrl(anticipo.id, 'legalizacion', true, l.id)} size={16} />
+                      <button type="button" onClick={() => download('legalizacion', l.id)} className="p-2 rounded-xl text-[#004C6C] hover:bg-blue-50 shrink-0" title="Descargar">
+                        {downloading === `legalizacion-${l.id}` ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                      </button>
+                    </span>
+                  </div>
+                ))}
               </div>
               {anticipo.status === 'completado' && (
                 <Link to="/app/contratacion/cuentas-por-pagar" className="inline-flex items-center gap-1.5 text-xs font-black text-[#004C6C] hover:underline">

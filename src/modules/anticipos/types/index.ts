@@ -49,7 +49,7 @@ export interface AnticipoProgressStep {
 
 export interface AnticipoHistoryEntry {
   id: number;
-  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'soporte' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'eliminado';
+  action: 'radicado' | 'aprobado' | 'devuelto' | 'reenviado' | 'soporte' | 'multifox' | 'contabilidad_aprobada' | 'contabilidad_devuelta' | 'eliminado' | 'legalizado';
   stage: string | null;
   stage_label: string | null;
   comment: string | null;
@@ -104,6 +104,19 @@ export interface Anticipo {
   multifox_by?: string | null;
   progress?: AnticipoProgressStep[];
   history?: AnticipoHistoryEntry[];
+  /** Facturas de Facturas del mes que legalizan el anticipo */
+  legalizaciones?: AnticipoLegalizacion[];
+}
+
+export interface AnticipoLegalizacion {
+  id: number;
+  document_type_label: string;
+  document_number: string;
+  amount: number | null;
+  file_name: string;
+  file_size: number | null;
+  processed_by: string | null;
+  processed_at: string | null;
 }
 
 export interface AnticipoPayload {

@@ -4,7 +4,8 @@ export type FacturaDocumentType = 'factura' | 'cuenta_cobro' | 'nota_credito' | 
  * A dónde va el documento: la cotización se radica como anticipo; el indirecto pasa a cuentas por pagar cuando el
  * analista contable lo aprueba; la cuenta de cobro directa recibe su factura después del cargue ERP.
  */
-export type FacturaTargetType = 'corte' | 'orden' | 'anticipo' | 'cuenta_cobro' | 'pagos';
+/** anticipo: radica un anticipo nuevo del contrato; legalizacion_anticipo: la factura legaliza un anticipo ya radicado */
+export type FacturaTargetType = 'corte' | 'orden' | 'anticipo' | 'cuenta_cobro' | 'legalizacion_anticipo' | 'pagos';
 
 /** pendiente_contable: indirecto cargado sin valor, espera al analista contable */
 export type FacturaStatus = 'pendiente' | 'procesada' | 'pendiente_contable';
@@ -135,17 +136,34 @@ export interface CuentaCobroTarget {
   approved_at: string | null;
 }
 
+/** Anticipo ya radicado por el residente: la factura lo legaliza */
+export interface AnticipoTarget {
+  id: number;
+  code: string;
+  /** "ANT-0001 · Contrato 2759" */
+  label: string;
+  status: string;
+  status_label: string;
+  amount: number;
+  document_number: string | null;
+  contractor_id: number | null;
+  contractor: string | null;
+  project: string | null;
+  tower: string | null;
+}
+
 export interface FacturaTargets {
   cortes: CorteTarget[];
   ordenes: OrdenTarget[];
   cuentas_cobro?: CuentaCobroTarget[];
-  /** Solo para cotizaciones */
+  anticipos?: AnticipoTarget[];
+  /** Contratos para radicar el documento como anticipo nuevo */
   contratos: ContratoTarget[];
 }
 
 export interface AssociatePayload {
   target_type: FacturaTargetType;
-  /** Corte, orden o, para el anticipo, el contrato */
+  /** Corte, orden, cuenta de cobro, anticipo a legalizar o, para un anticipo nuevo, el contrato */
   target_id: number;
   amount: number | null;
   contractor_id: number | null;

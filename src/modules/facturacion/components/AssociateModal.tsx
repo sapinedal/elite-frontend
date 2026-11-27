@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link2, Loader2, AlertCircle, Scissors, ShoppingCart, CheckCircle2, HandCoins, Receipt } from 'lucide-react';
 import { formatMoney, formatMoneyInput, parseMoney } from '../../../utils/money';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
-import { fitsOrden, isAnticipo } from '../utils/draft';
+import { isAnticipo } from '../utils/draft';
 import { formatDate } from '../../../utils/dateUtils';
 import { facturacionService, getApiErrorMessage } from '../services/facturacionService';
 import { ModalShell, inputClass, labelClass } from '../../../components/ui/ModalShell';
@@ -24,8 +24,10 @@ type TargetType = Exclude<FacturaTargetType, 'pagos'>;
  * sale de la factura del mes (no se pide) y los soportes los carga después quien sigue en el flujo.
  * Reemplaza el cambio de nombre que hacían en Drive para indicar que la factura quedó procesada por obra.
  *
- * La cotización no va a cortes ni órdenes: se radica como anticipo de un contrato (pide el valor y el proveedor si
- * Contabilidad no los registró, porque el anticipo los necesita para su aprobación).
+ * Cualquier documento (factura, cuenta de cobro, reembolso, cotización, nota crédito, reemplazo) se asocia a un corte,
+ * una orden (entrada), una cuenta de cobro o un anticipo: a un anticipo ya radicado lo legaliza (no crea otra cuenta
+ * por pagar) y con un contrato se radica como anticipo nuevo (pide el valor y el proveedor si Contabilidad no los
+ * registró, porque el anticipo los necesita para su aprobación).
  */
 export const AssociateModal: React.FC<AssociateModalProps> = ({ factura, ...props }) => (
   // Se monta por cada factura (`key`) para arrancar sin la selección anterior
@@ -33,9 +35,9 @@ export const AssociateModal: React.FC<AssociateModalProps> = ({ factura, ...prop
 );
 
 const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = ({ factura, catalogs, onClose, onAssociated }) => {
-  const asAnticipo = isAnticipo(factura.document_type);
+  const isCotizacion = isAnticipo(factura.document_type);
   const [targets, setTargets] = useState<FacturaTargets | null>(null);
-  const [targetType, setTargetType] = useState<TargetType>(asAnticipo ? 'anticipo' : 'corte');
+  const [targetType, setTargetType] = useState<TargetType>(isCotizacion ? 'anticipo' : 'corte');
   const [amount, setAmount] = useState('');
   const [contractorId, setContractorId] = useState<number | null>(null);
   const [targetId, setTargetId] = useState<number | null>(null);
@@ -47,12 +49,16 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
     facturacionService.getTargets(factura.id)
       .then((data) => {
         setTargets(data);
-        // Sin cortes pero con órdenes (o cuentas de cobro), arranca en lo que tenga
-        if (!asAnticipo && !data.cortes.length && data.ordenes.length) setTargetType('orden');
-        else if (!asAnticipo && !data.cortes.length && !data.ordenes.length && data.cuentas_cobro?.length) setTargetType('cuenta_cobro');
+        // La cotización arranca en anticipo nuevo; lo demás, en el primer tipo que tenga registros
+        if (isCotizacion && data.contratos.length) return;
+        const first = ([
+          ['corte', data.cortes.length], ['orden', data.ordenes.length], ['cuenta_cobro', data.cuentas_cobro?.length ?? 0],
+          ['legalizacion_anticipo', data.anticipos?.length ?? 0], ['anticipo', data.contratos.length],
+        ] as [TargetType, number][]).find(([, count]) => count > 0);
+        if (first) setTargetType(first[0]);
       })
-      .catch((err) => setError(getApiErrorMessage(err, asAnticipo ? 'Error al cargar los contratos.' : 'Error al cargar tus cortes y órdenes.')));
-  }, [factura.id, asAnticipo]);
+      .catch((err) => setError(getApiErrorMessage(err, 'Error al cargar tus cortes, órdenes, cuentas de cobro y anticipos.')));
+  }, [factura.id, isCotizacion]);
 
   // Primero los cortes del mismo proveedor de la factura
   const cortes = useMemo(() => {
@@ -63,8 +69,10 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
   const ordenes = targets?.ordenes ?? [];
   const contratos = targets?.contratos ?? [];
   const cuentasCobro = targets?.cuentas_cobro ?? [];
-  const isOrdenCompatible = fitsOrden(factura.document_type);
-  // El anticipo necesita valor y proveedor: se piden solo si Contabilidad no los registró
+  // Primero los anticipos del mismo proveedor (el backend ya los ordena así)
+  const anticipos = targets?.anticipos ?? [];
+  const asAnticipo = targetType === 'anticipo';
+  // El anticipo nuevo necesita valor y proveedor: se piden solo si Contabilidad no los registró
   const needsAmount = asAnticipo && factura.amount === null;
   const needsContractor = asAnticipo && !factura.contractor;
 
@@ -72,10 +80,10 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
     if (!targetId) {
       return setError({
         corte: 'Elige el corte de la factura.', orden: 'Elige la orden de la factura.', anticipo: 'Elige el contrato del anticipo.',
-        cuenta_cobro: 'Elige la cuenta de cobro de la factura.',
+        cuenta_cobro: 'Elige la cuenta de cobro de la factura.', legalizacion_anticipo: 'Elige el anticipo que legaliza la factura.',
       }[targetType]);
     }
-    if (needsContractor && !contractorId) return setError('Indica el proveedor de la cotización.');
+    if (needsContractor && !contractorId) return setError('Indica el proveedor del documento.');
     if (needsAmount && !parseMoney(amount)) return setError('Indica el valor del anticipo.');
 
     setSubmitting(true);
@@ -129,7 +137,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
         <button type="button" onClick={handleSubmit} disabled={submitting || !targets}
           className="w-full px-6 py-3.5 bg-[#004C6C] hover:bg-[#003a53] text-white rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-60">
           {submitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-          {submitting ? (asAnticipo ? 'Radicando...' : 'Asociando...') : (asAnticipo ? 'Radicar anticipo' : 'Asociar y Marcar')}
+          {submitting ? (asAnticipo ? 'Radicando...' : 'Asociando...') : (asAnticipo ? 'Radicar anticipo' : targetType === 'legalizacion_anticipo' ? 'Legalizar anticipo' : 'Asociar y Marcar')}
         </button>
       }
     >
@@ -140,20 +148,21 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
           </div>
         )}
 
-        {asAnticipo ? (
-          <div className="flex items-center gap-2 text-sm font-bold text-[#004C6C] bg-blue-50/60 border border-blue-100 rounded-2xl p-3">
-            <HandCoins size={18} className="shrink-0" /> La cotización entra como anticipo: elige el contrato al que corresponde.
+        <div className="space-y-2">
+          <label className={labelClass}>¿A qué corresponde? *</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {typeButton('corte', 'Mis cortes', <Scissors size={16} />, cortes.length)}
+            {typeButton('orden', 'Mis órdenes / entradas', <ShoppingCart size={16} />, ordenes.length)}
+            {typeButton('cuenta_cobro', 'Mis cuentas de cobro', <Receipt size={16} />, cuentasCobro.length)}
+            {typeButton('legalizacion_anticipo', 'Mis anticipos', <HandCoins size={16} />, anticipos.length)}
           </div>
-        ) : (
-          <div className="space-y-2">
-            <label className={labelClass}>¿A qué corresponde? *</label>
-            <div className="flex flex-col sm:flex-row gap-2">
-              {typeButton('corte', 'Mis cortes aprobados', <Scissors size={16} />, cortes.length)}
-              {typeButton('orden', 'Mis órdenes de compra', <ShoppingCart size={16} />, ordenes.length, !isOrdenCompatible)}
-              {typeButton('cuenta_cobro', 'Mis cuentas de cobro', <Receipt size={16} />, cuentasCobro.length, !isOrdenCompatible)}
-            </div>
-          </div>
-        )}
+          {contratos.length > 0 && (
+            <button type="button" disabled={submitting} onClick={() => { setTargetType('anticipo'); setTargetId(null); }}
+              className={`w-full text-xs font-black px-4 py-2 rounded-xl transition-all ${asAnticipo ? 'bg-blue-50 text-[#004C6C] ring-2 ring-blue-100' : 'text-[#004C6C] hover:bg-blue-50'}`}>
+              {asAnticipo ? 'Radicando como anticipo nuevo de un contrato' : '¿Es un anticipo nuevo? Radícalo con un contrato →'}
+            </button>
+          )}
+        </div>
 
         {!targets ? (
           <div className="flex justify-center py-6"><Loader2 className="animate-spin text-slate-300" /></div>
@@ -173,6 +182,24 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
           ) : (
             <p className="text-sm font-bold text-slate-400 bg-white rounded-2xl p-4 border border-slate-100">
               No hay contratos de tus proyectos para este proveedor, o no tienes permiso para radicar anticipos.
+            </p>
+          )
+        ) : targetType === 'legalizacion_anticipo' ? (
+          anticipos.length ? (
+            <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {anticipos.map((a) => option(
+                a.id,
+                targetId === a.id,
+                <><span className="font-black text-[#004C6C]">{a.label}</span><span className="text-xs font-bold text-slate-500 truncate">{a.contractor ?? 'Sin proveedor'}</span></>,
+                [a.project, a.tower, a.document_number && `N.º ${a.document_number}`, formatMoney(a.amount), a.status_label].filter(Boolean).join(' · '),
+                factura.contractor && a.contractor_id === factura.contractor.id
+                  ? <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-green-50 text-green-700">Mismo proveedor</span>
+                  : undefined,
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm font-bold text-slate-400 bg-white rounded-2xl p-4 border border-slate-100">
+              No tienes anticipos radicados para legalizar.
             </p>
           )
         ) : targetType === 'corte' ? (
@@ -260,7 +287,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
         <div className="space-y-1.5">
           <label className={labelClass}>Observación</label>
           <textarea rows={2} disabled={submitting} className={`${inputClass} resize-none`}
-            placeholder={asAnticipo ? 'Ej: anticipo 30% del contrato...' : 'Ej: corte 6634 de Multifox, liquidación parcial...'}
+            placeholder={asAnticipo ? 'Ej: anticipo 30% del contrato...' : targetType === 'legalizacion_anticipo' ? 'Ej: factura que legaliza el anticipo del 30%...' : 'Ej: corte 6634 de Multifox, liquidación parcial...'}
             value={comment} onChange={(e) => setComment(e.target.value)} />
         </div>
 
@@ -272,7 +299,10 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
           </p>
         )}
         {targetType === 'anticipo' && (
-          <p className="text-[11px] font-bold text-slate-400">Al radicarla, la cotización se copia a la carpeta del anticipo (08 ANTICIPOS) del contrato y queda pendiente del Director de Obra, luego Gerencia y Contabilidad.</p>
+          <p className="text-[11px] font-bold text-slate-400">Al radicarlo, el documento se copia a la carpeta del anticipo (08 ANTICIPOS) del contrato y queda pendiente del Director de Obra, luego Gerencia y Contabilidad.</p>
+        )}
+        {targetType === 'legalizacion_anticipo' && (
+          <p className="text-[11px] font-bold text-slate-400">La factura legaliza el anticipo: se copia a su carpeta (Legalizacion) y queda en su historial. No crea otra cuenta por pagar ni cambia el estado del anticipo.</p>
         )}
         {targetType === 'cuenta_cobro' && (
           <p className="text-[11px] font-bold text-slate-400">Al asociarla, la factura se copia a la carpeta de la cuenta de cobro y pasa a la liquidación ERP. Con la aprobación de Contabilidad pasa al cuadro de pagos.</p>
