@@ -80,27 +80,49 @@ export default function TasksPage() {
   // Control colapsable del Panel Izquierdo (Sidebar de Filtros)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // Determinamos el filtro de tarjeta activo basándonos en los filtros reales del hook
-  const activeCardFilter = 
-    filters.priority === 'P0' ? 'critical' :
-    filters.status === 'Por hacer' ? 'todo' :
-    filters.status === 'En espera' ? 'waiting' :
-    filters.status === 'En progreso' ? 'in_progress' :
-    filters.status === 'Completada' ? 'completed' : 'all';
+  // Las tarjetas funcionan como filtros combinables: se pueden activar varios estados
+  // a la vez y sumarles "Críticas" (P0). "Totales" quita toda la segmentación.
+  type CardKey = 'all' | 'todo' | 'waiting' | 'in_progress' | 'completed' | 'critical';
+  const cardStatus: Record<Exclude<CardKey, 'all' | 'critical'>, TaskStatus> = {
+    todo: 'Por hacer',
+    waiting: 'En espera',
+    in_progress: 'En progreso',
+    completed: 'Completada',
+  };
+  const cardLabels: Record<Exclude<CardKey, 'all'>, string> = {
+    todo: 'Por Hacer',
+    waiting: 'En Espera',
+    in_progress: 'En Progreso',
+    completed: 'Completadas',
+    critical: 'Críticas P0',
+  };
 
-  const handleCardClick = (card: 'all' | 'todo' | 'waiting' | 'in_progress' | 'completed' | 'critical') => {
+  const selectedStatuses = filters.status;
+  const isCriticalActive = filters.priority === 'P0';
+  const hasCardFilter = selectedStatuses.length > 0 || isCriticalActive;
+
+  const isCardActive = (card: CardKey) => {
+    if (card === 'all') return !hasCardFilter;
+    if (card === 'critical') return isCriticalActive;
+    return selectedStatuses.includes(cardStatus[card]);
+  };
+
+  const activeCardLabels = (Object.keys(cardLabels) as Exclude<CardKey, 'all'>[])
+    .filter(isCardActive)
+    .map(card => cardLabels[card]);
+
+  const handleCardClick = (card: CardKey) => {
     if (card === 'all') {
-      applyFilters({ status: '', priority: '' });
-    } else if (card === 'todo') {
-      applyFilters({ status: 'Por hacer', priority: '' });
-    } else if (card === 'waiting') {
-      applyFilters({ status: 'En espera', priority: '' });
-    } else if (card === 'in_progress') {
-      applyFilters({ status: 'En progreso', priority: '' });
-    } else if (card === 'completed') {
-      applyFilters({ status: 'Completada', priority: '' });
+      applyFilters({ status: [], priority: '' });
     } else if (card === 'critical') {
-      applyFilters({ status: '', priority: 'P0' });
+      applyFilters({ priority: isCriticalActive ? '' : 'P0' });
+    } else {
+      const status = cardStatus[card];
+      applyFilters({
+        status: selectedStatuses.includes(status)
+          ? selectedStatuses.filter(s => s !== status)
+          : [...selectedStatuses, status],
+      });
     }
   };
 
@@ -360,7 +382,7 @@ export default function TasksPage() {
           {/* 1. Tareas Totales */}
           <div
             onClick={() => handleCardClick('all')}
-            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'all'
+            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${isCardActive('all')
               ? 'border-[#004C6C] ring-2 ring-[#004C6C]/10 bg-blue-50/5'
               : 'border-slate-100 hover:border-[#004C6C]/30'
               }`}
@@ -374,7 +396,7 @@ export default function TasksPage() {
                 <p className="text-2xl font-black text-[#004C6C] tracking-tight">{totalTasks}</p>
               )}
             </div>
-            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'all' ? 'bg-[#004C6C] text-white' : 'bg-blue-50 text-[#004C6C] group-hover:rotate-6'
+            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${isCardActive('all') ? 'bg-[#004C6C] text-white' : 'bg-blue-50 text-[#004C6C] group-hover:rotate-6'
               }`}>
               <BarChart3 size={18} />
             </div>
@@ -383,7 +405,7 @@ export default function TasksPage() {
           {/* 2. Por Hacer */}
           <div
             onClick={() => handleCardClick('todo')}
-            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'todo'
+            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${isCardActive('todo')
               ? 'border-[#EE9D4C] ring-2 ring-[#EE9D4C]/10 bg-orange-50/5'
               : 'border-slate-100 hover:border-[#EE9D4C]/30'
               }`}
@@ -397,7 +419,7 @@ export default function TasksPage() {
                 <p className="text-2xl font-black text-[#EE9D4C] tracking-tight">{todoTasks}</p>
               )}
             </div>
-            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'todo' ? 'bg-[#EE9D4C] text-white' : 'bg-orange-50 text-[#EE9D4C] group-hover:rotate-6'
+            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${isCardActive('todo') ? 'bg-[#EE9D4C] text-white' : 'bg-orange-50 text-[#EE9D4C] group-hover:rotate-6'
               }`}>
               <Clock size={18} />
             </div>
@@ -406,7 +428,7 @@ export default function TasksPage() {
           {/* 2b. En Espera */}
           <div
             onClick={() => handleCardClick('waiting')}
-            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'waiting'
+            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${isCardActive('waiting')
               ? 'border-[#005981] ring-2 ring-[#005981]/10 bg-[#005981]/5'
               : 'border-slate-100 hover:border-[#005981]/30'
               }`}
@@ -420,7 +442,7 @@ export default function TasksPage() {
                 <p className="text-2xl font-black text-[#005981] tracking-tight">{waitingTasks}</p>
               )}
             </div>
-            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'waiting' ? 'bg-[#005981] text-white' : 'bg-[#005981]/10 text-[#005981] group-hover:rotate-6'
+            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${isCardActive('waiting') ? 'bg-[#005981] text-white' : 'bg-[#005981]/10 text-[#005981] group-hover:rotate-6'
               }`}>
               <PauseCircle size={18} />
             </div>
@@ -429,7 +451,7 @@ export default function TasksPage() {
           {/* 3. En Progreso */}
           <div
             onClick={() => handleCardClick('in_progress')}
-            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'in_progress'
+            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${isCardActive('in_progress')
               ? 'border-sky-500 ring-2 ring-sky-500/10 bg-sky-50/5'
               : 'border-slate-100 hover:border-sky-500/30'
               }`}
@@ -443,7 +465,7 @@ export default function TasksPage() {
                 <p className="text-2xl font-black text-sky-500 tracking-tight">{inProgressTasks}</p>
               )}
             </div>
-            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'in_progress' ? 'bg-sky-500 text-white' : 'bg-sky-50 text-sky-500 group-hover:rotate-6'
+            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${isCardActive('in_progress') ? 'bg-sky-500 text-white' : 'bg-sky-50 text-sky-500 group-hover:rotate-6'
               }`}>
               <PlayCircle size={18} />
             </div>
@@ -452,7 +474,7 @@ export default function TasksPage() {
           {/* 4. Completas */}
           <div
             onClick={() => handleCardClick('completed')}
-            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'completed'
+            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${isCardActive('completed')
               ? 'border-emerald-500 ring-2 ring-emerald-500/10 bg-emerald-50/5'
               : 'border-slate-100 hover:border-emerald-500/30'
               }`}
@@ -466,7 +488,7 @@ export default function TasksPage() {
                 <p className="text-2xl font-black text-emerald-600 tracking-tight">{completedTasks}</p>
               )}
             </div>
-            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'completed' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-600 group-hover:rotate-6'
+            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${isCardActive('completed') ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-600 group-hover:rotate-6'
               }`}>
               <CheckCircle2 size={18} />
             </div>
@@ -475,7 +497,7 @@ export default function TasksPage() {
           {/* 5. Críticas */}
           <div
             onClick={() => handleCardClick('critical')}
-            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${activeCardFilter === 'critical'
+            className={`bg-white rounded-[24px] p-5 flex items-center justify-between border shadow-xs relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer ${isCardActive('critical')
               ? 'border-rose-500 ring-2 ring-rose-500/10 bg-rose-50/5'
               : 'border-slate-100 hover:border-rose-500/30'
               }`}
@@ -489,7 +511,7 @@ export default function TasksPage() {
                 <p className="text-2xl font-black text-rose-600 tracking-tight">{criticalTasks}</p>
               )}
             </div>
-            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${activeCardFilter === 'critical' ? 'bg-rose-500 text-white' : 'bg-rose-50 text-rose-600 group-hover:rotate-6'
+            <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center transition-all ${isCardActive('critical') ? 'bg-rose-500 text-white' : 'bg-rose-50 text-rose-600 group-hover:rotate-6'
               }`}>
               <AlertTriangle size={18} />
             </div>
@@ -536,18 +558,12 @@ export default function TasksPage() {
         <div className="flex justify-between items-center px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl animate-fade-in">
           <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
             Visualizando <strong className="text-[#004C6C] font-black">{filteredTasks.length}</strong> de <strong className="text-slate-700 font-black">{totalTasks}</strong> compromisos en bitácora
-            {activeCardFilter !== 'all' && (
-              <span> (Segmentado por: <strong className="text-[#004C6C] font-black">{
-                activeCardFilter === 'todo' ? 'Por Hacer' :
-                activeCardFilter === 'waiting' ? 'En Espera' :
-                  activeCardFilter === 'in_progress' ? 'En Progreso' :
-                    activeCardFilter === 'completed' ? 'Completadas' :
-                      'Críticas P0'
-              }</strong>)</span>
+            {hasCardFilter && (
+              <span> (Segmentado por: <strong className="text-[#004C6C] font-black">{activeCardLabels.join(' + ')}</strong>)</span>
             )}
           </span>
 
-          {activeCardFilter !== 'all' && (
+          {hasCardFilter && (
             <button
               onClick={() => handleCardClick('all')}
               className="flex items-center gap-1.5 text-[9px] font-black text-[#004C6C] uppercase tracking-widest hover:underline cursor-pointer transition-all animate-fade-in"

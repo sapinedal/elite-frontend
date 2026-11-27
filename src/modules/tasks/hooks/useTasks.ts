@@ -36,7 +36,8 @@ export function useTasks() {
 
   // Filtros activos
   const [filters, setFilters] = useState({
-    status: '' as TaskStatus | '',
+    // Selección múltiple de estados (tarjetas): vacío = todos
+    status: [] as TaskStatus[],
     priority: '' as TaskPriority | '',
     area_id: '',
     responsible_id: '',
@@ -73,7 +74,10 @@ export function useTasks() {
         per_page: perPage,
       };
       Object.entries(filters).forEach(([key, value]) => {
-        if (value !== '') {
+        if (Array.isArray(value)) {
+          // Los estados múltiples viajan como lista separada por comas
+          if (value.length > 0) activeFilters[key] = value.join(',');
+        } else if (value !== '') {
           activeFilters[key] = value;
         }
       });
@@ -153,7 +157,7 @@ export function useTasks() {
   // Limpia todos los filtros
   const clearFilters = useCallback(() => {
     setFilters({
-      status: '',
+      status: [],
       priority: '',
       area_id: '',
       responsible_id: '',

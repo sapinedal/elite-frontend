@@ -72,8 +72,11 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
   // Primero los anticipos del mismo proveedor (el backend ya los ordena así)
   const anticipos = targets?.anticipos ?? [];
   const asAnticipo = targetType === 'anticipo';
-  // El anticipo nuevo necesita valor y proveedor: se piden solo si Contabilidad no los registró
-  const needsAmount = asAnticipo && factura.amount === null;
+  const asLegalizacion = targetType === 'legalizacion_anticipo';
+  // El anticipo nuevo necesita valor y proveedor, y la legalización el valor de la factura: se piden solo si
+  // Contabilidad no los registró
+  const needsAmount = (asAnticipo || asLegalizacion) && factura.amount === null;
+  const amountLabel = asLegalizacion ? 'Valor de la factura' : 'Valor del anticipo';
   const needsContractor = asAnticipo && !factura.contractor;
 
   const handleSubmit = async () => {
@@ -84,7 +87,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
       }[targetType]);
     }
     if (needsContractor && !contractorId) return setError('Indica el proveedor del documento.');
-    if (needsAmount && !parseMoney(amount)) return setError('Indica el valor del anticipo.');
+    if (needsAmount && !parseMoney(amount)) return setError(`Indica el ${amountLabel.toLowerCase()}.`);
 
     setSubmitting(true);
     setError(null);
@@ -273,7 +276,7 @@ const AssociateContent: React.FC<AssociateModalProps & { factura: Factura }> = (
             )}
             {needsAmount && (
               <div className="space-y-1.5">
-                <label className={labelClass}>Valor del anticipo *</label>
+                <label className={labelClass}>{amountLabel} *</label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
                   <input disabled={submitting} inputMode="numeric" className={`${inputClass} pl-8`} placeholder="0"
