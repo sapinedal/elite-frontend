@@ -102,8 +102,8 @@ export function useAnticipos() {
   const registerMultifox = useCallback((id: number, payload: MultifoxPayload) =>
     run(() => anticipoService.registerMultifox(id, payload), 'Error al cargar el anticipo de Multifox.'), [run]);
 
-  const reviewAccounting = useCallback((id: number, decision: 'aprobar' | 'devolver', comment?: string) =>
-    run(() => anticipoService.reviewAccounting(id, decision, comment), 'Error al registrar la aprobación de Contabilidad.'), [run]);
+  const reviewAccounting = useCallback((id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) =>
+    run(() => anticipoService.reviewAccounting(id, decision, comment, amount), 'Error al registrar la aprobación de Contabilidad.'), [run]);
 
   return {
     catalogs,

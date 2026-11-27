@@ -88,8 +88,8 @@ export default function AnticiposPage() {
     return anticipo;
   };
 
-  const handleReviewAccounting = async (id: number, decision: 'aprobar' | 'devolver', comment?: string) => {
-    const anticipo = await reviewAccounting(id, decision, comment);
+  const handleReviewAccounting = async (id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => {
+    const anticipo = await reviewAccounting(id, decision, comment, amount);
     showNotification(decision === 'aprobar' ? `Anticipo ${anticipo.code} aprobado. Pasó al cuadro de pagos.` : `Anticipo ${anticipo.code} devuelto a Multifox.`, 'success');
     return anticipo;
   };

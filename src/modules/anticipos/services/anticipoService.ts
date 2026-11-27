@@ -76,8 +76,8 @@ export const anticipoService = {
   },
 
   /** Contabilidad aprueba el anticipo cargado en Multifox (pasa al cuadro de pagos) o lo devuelve a Multifox */
-  reviewAccounting: async (id: number, decision: 'aprobar' | 'devolver', comment?: string): Promise<Anticipo> => {
-    const { data } = await api.post(`${BASE}/${id}/accounting`, { decision, comment: comment || null });
+  reviewAccounting: async (id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null): Promise<Anticipo> => {
+    const { data } = await api.post(`${BASE}/${id}/accounting`, { decision, comment: comment || null, amount: amount ?? null });
     return data.data;
   },
 

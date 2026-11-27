@@ -24,7 +24,7 @@ interface AnticipoDetailModalProps {
   onRegisterMultifox: (id: number, payload: MultifoxPayload) => Promise<Anticipo>;
   /** El residente adjunta el contrato / orden de compra después de Gerencia */
   onUploadSupport: (id: number, payload: SupportPayload) => Promise<Anticipo>;
-  onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string) => Promise<Anticipo>;
+  onReviewAccounting: (id: number, decision: 'aprobar' | 'devolver', comment?: string, amount?: number | null) => Promise<Anticipo>;
   /** Después de eliminar el anticipo (cerrar y refrescar el listado) */
   onDeleted?: () => void;
 }
@@ -379,7 +379,10 @@ const DetailContent: React.FC<Omit<AnticipoDetailModalProps, 'anticipoId'> & { a
                 subject={`Anticipo ${anticipo.code}${anticipo.multifox_number ? ` (Multifox N.º ${anticipo.multifox_number})` : ''}`}
                 returnsTo="Multifox"
                 approvesTo="el cuadro de pagos"
-                onSubmit={async (decision, comment) => setAnticipo(await onReviewAccounting(anticipo.id, decision, comment))} />
+                askAmount
+                amountLabel="Valor del anticipo"
+                currentAmount={anticipo.amount}
+                onSubmit={async (decision, comment, amount) => setAnticipo(await onReviewAccounting(anticipo.id, decision, comment, amount))} />
             )}
           </>
         )}
