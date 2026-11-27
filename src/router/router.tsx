@@ -242,7 +242,7 @@ export const router = createBrowserRouter([
       {
         path: 'contratacion/facturas',
         element: (
-          <ProtectedRoute permissions={['cortes.facturar', 'cortes.crear', 'ordenes.crear', 'cuentas_cobro.crear', 'facturacion.aprobar_indirecto']}>
+          <ProtectedRoute permissions={['cortes.facturar', 'cortes.crear', 'cortes.eliminar', 'ordenes.crear', 'cuentas_cobro.crear', 'anticipos.crear', 'facturacion.aprobar_indirecto']}>
             <FacturacionPage />
           </ProtectedRoute>
         ),

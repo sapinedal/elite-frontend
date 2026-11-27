@@ -265,7 +265,7 @@ const CorteDetailContent: React.FC<Omit<CorteDetailModalProps, 'corteId'> & { co
               {(isInvoiceable || (corte.invoices?.length ?? 0) > 0) && (
                 <CorteInvoicesSection
                   corte={corte}
-                  canAssociate={isInvoiceable && corte.created_by?.id === user?.id}
+                  canAssociate={isInvoiceable && (corte.can_associate_invoice ?? corte.created_by?.id === user?.id)}
                   onCreated={setCorte}
                   onConfirmMultifox={onConfirmMultifox}
                   onReviewAccounting={onReviewAccounting}

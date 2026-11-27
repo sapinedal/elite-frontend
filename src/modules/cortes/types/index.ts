@@ -41,6 +41,8 @@ export interface CorteCatalogs {
   can_view_all: boolean;
   /** Contabilidad (cortes.facturar): ve los cortes aprobados que esperan factura */
   can_invoice: boolean;
+  /** Botón "Asociar factura": quien lo radicó o quien elimina facturas de cortes */
+  can_associate_invoice?: boolean;
   /** Registra las facturas en Multifox y confirma la carga (cargo de Paula) */
   can_confirm_multifox: boolean;
   /** Contabilidad (cortes.aprobar_contabilidad): aprueba las facturas cargadas en Multifox */
@@ -103,6 +105,8 @@ export interface Corte {
   /** cortes.eliminar: eliminar el corte cargado por error (reversa cuentas por pagar y facturas del mes) */
   can_delete?: boolean;
   can_invoice: boolean;
+  /** Botón "Asociar factura": quien lo radicó o quien elimina facturas de cortes */
+  can_associate_invoice?: boolean;
   invoices_count: number;
   // Solo en el detalle
   progress?: CorteProgressStep[];
